@@ -4,7 +4,7 @@
 \alias{OraConnection-class}
 \title{Class OraConnection}
 \description{Oracle connection class.}
-\section{Generators}
+\section{Generators}{
     The method \code{\link[DBI]{dbConnect}} is the main generator.
 }
 \section{Extends}{

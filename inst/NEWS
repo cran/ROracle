@@ -1,3 +1,7 @@
+Version 0.5-5
+
+* Fixed documentation types.
+
 Version 0.5-4
 
 * Fixed a bug in configure.in that was statically linking 
