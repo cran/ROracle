@@ -10,11 +10,15 @@
 
 * Performance. We haven't done anything on this yet.
 
-* Long term. We should reimplement the guts to sue OCI instead of
-  the ProC/C++.
+* Long term. We should reimplement the guts to use OCI instead of
+  the embedded ProC/C++.  A gentler (but not optimal) update would
+  be to move to the ANSI dynamic embedded API available in Oracle
+  since ~8.1.7(?) instead of the current Oracle-specific embedding
+  approach (besides, it seems that the ANSI dynamic implementation
+  doesn't have as many limitations as the API we're currently using).
 
 * The RS-DBI needs to be finalized.  Once the R-SIG-DB agrees on
   a final API implement it. (We need to specify transactions, 
-  asynchronous operations, bindings, security.)
+  asynchronous operations, bindings, security, connection pooling,
+  etc.)
 
- 

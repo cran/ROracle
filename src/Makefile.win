@@ -1,0 +1,71 @@
+## 
+## $Id: Makefile.win,v 1.3 2003/10/30 16:25:26 dj Exp dj $
+##
+## We need the Microsoft Visual C/C++ to compile ROracle.dll in order
+## to satisfy Oracle's requirements (I think).  See the manual 
+## "Pro*C/C++ Precompiler" Release 9.2 for Windows (Part No. A96111-01),
+## in particular the section "Library Files" in Chapter 2.
+## You may also want to take a look at the batch file
+##    $(ORACLE_HOME)/precomp/demo/proc/pcmake.bat 
+## used for compiling and linking the Pro*C/C++ demo programs.
+##
+## Also very helpful are Duncan Murdoch's "Using external compilers with R"
+## at http://www.stats.uwo.ca/faculty/murdoch/software/compilingDLLs/
+## and the "readme.packages" in $(R_HOME)/src/gnuwin32
+##
+## Required environment variables:
+##   $(R_HOME) and $(ORACLE_HOME)
+## Required directories in your $PATH (most likely in this order):
+##   (1) $(R_HOME)/bin and Rtools
+##   (2) $(ORACLE_HOME)/bin
+##   (3) $(MSVCDir),  Microsoft Visual C++ tools (cl, lib, link, etc.)
+##
+## TODO:  Automate the creation of ROracle.def
+## TODO:  Create the Rdll.lib import only if needed (currently we create
+##        it unconditionally).
+
+#R_HOME = c:\\cygwin\\home\\dj\\R-1.7.1
+#ORACLE_HOME = c:\\oracle\\ora92
+SRC  = RS-DBI.h RS-DBI.c RS-Oracle.h RS-Oracle.pc S4R.h
+RLIB = $(R_HOME)\\src\\gnuwin32\\Rdll.lib
+OBJ  = RS-DBI.obj RS-Oracle.obj 
+
+##
+## The Oracle ProC/C++ precompiler and options we need (these have worked
+## on Linux, Solaris, and Windows 2000).
+##
+
+PROC=proc              ## this is the ProC/C++ executable
+CODE=ANSI_C            ## the following are ProC/C++ options
+MODE=ORACLE
+PARSE=NONE             ## don't do any C parse
+LINES=false            ## use true for debugging
+
+ROracle.dll:  $(OBJ) $(RLIB)
+	(cd $(R_HOME)\\src\\gnuwin32 && lib /def:R.exp /out:Rdll.lib)
+	link /dll /def:ROracle.def /out:ROracle.dll $(ORACLE_HOME)\\precomp\\lib\\orasql9.lib *.obj $(R_HOME)\\src\\gnuwin32\\Rdll.lib 
+	
+RS-DBI.obj: RS-DBI.h RS-DBI.c S4R.h
+	cl /I$(R_HOME)\\src\\include /MT /Ox /D "MSVC" /D "WIN32" /c RS-DBI.c
+
+RS-Oracle.obj: RS-Oracle.h RS-Oracle.c S4R.h
+	cl /I$(R_HOME)\\src\\include /MT /Ox /D "MSVC" /D "WIN32" /c RS-Oracle.c
+
+RS-Oracle.c: RS-Oracle.h RS-Oracle.pc 
+	$(PROC) CODE=$(CODE) MODE=$(MODE) INCLUDE=$(R_HOME)/include \
+                PARSE=$(PARSE) LINES=$(LINES) RS-Oracle.pc
+force-Rdll.lib:
+	(cd $(R_HOME)\\src\\gnuwin32 && lib /def:R.exp /out:Rdll.lib)
+clean:
+	rm -f $(OBJ) *.a *.d *.rc 
+clobber:
+	rm -f $(RLIB) $(OBJ) RS-Oracle.c *.a *.d *.rc *.dll 
+
+##
+## the following is the manual compilation I used (by following 
+## Duncan Murdoch's help and Oracle's documentation.
+##
+
+# cl /Ic:\cygwin\home\dj\R-1.7.1\src\include /MT /Ox /D "WIN32" /c *.c
+# link /dll /def:ROracle.def /out:ROracle.dll c:\oracle\ora92\precomp\lib\orasql9.lib *.obj ..\..\..\gnuwin32\Rdll.lib 
+

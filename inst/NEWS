@@ -1,3 +1,32 @@
+Version 0.5-2
+
+* Ported to Windows 2000 (see src/Makefile.win for details).
+
+* Fixed a bug in RS_Ora_cpyOraToDataFrame that manifest (apparently)
+  only in 64-bit version of R *and* Oracle when copying integers from
+  Oracle's buffers to the output data.frame (thanks to Joerg Shaber
+  for helping identifying this one).
+
+* Added  --enable-oracle32=[default|yes|no] to the configure script
+  to allow R 32-bit binaries to access Oracle's 64-lib installations
+  (thanks to Don MacQueen for finding the right incantation).
+  See the file INSTALL for more details.  
+
+* Added a patch to work around a bug in (what I think) is in the
+  Oracle 9 Pro C/C++ sqlgls() function.  See the file README.Oracle9.
+
+Version 0.5-1
+
+* Fixed a bug in oraQuickSQL() that would incorrectly return an
+  OraPrepareStatement object instead of plain OraResult with
+  select statements.
+
+* Fixed a typo in dbExistsTable().
+
+* Fixed a bug where an invalid connection string of the form 
+  "user@password" (instead of the correct "user/password[@dbname]") 
+  would cause a crash.
+
 Version 0.5-0
 
 * This version has an experimental dynamic SQL binding to data frame
@@ -108,7 +137,7 @@ Version 0.3-1
 
 * Ported to R, added a configure script.  
 
-* Implemented a work­around to the very nasty bug in the linux
+* Implemented a workaround to the very nasty bug in the linux
   implementation of the ProC/C++ (as of 8.1.[567]) (see the function
   filter_buggy_error() in RS-Oracle.pc) The sign was that Oracle
   would give a "fetch out of order" error when there was no fetching

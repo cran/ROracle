@@ -1,7 +1,7 @@
 #ifndef _RS_DBI_H
 #define _RS_DBI_H 1
 /*  
- *  $Id: RS-DBI.h,v 1.1 2003/04/18 14:58:38 dj Exp $
+ *  $Id: RS-DBI.h,v 1.6 2003/11/04 15:57:14 dj Exp dj $
  *
  * Copyright (C) 1999-2002 The Omega Project for Statistical Computing.
  *
@@ -30,7 +30,15 @@ extern "C" {
 #endif
 
 #include "S4R.h"
+
+/* Microsoft Visual C++ uses int _getpid()  */
+#ifdef MSVC
+#include <process.h>
+#define getpid _getpid
+#define pid_t int
+#else           
 #include <unistd.h>
+#endif
 
 pid_t getpid(); 
 

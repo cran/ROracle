@@ -1,3 +1,4 @@
+% $Id: oraSupport.Rd,v 1.2 2003/11/04 03:09:25 dj Exp dj $
 \name{oraSupport}
 \alias{oraInitDriver}            % driver-related function
 \alias{oraDriverInfo}
@@ -26,6 +27,7 @@
 \alias{oraWriteTable}            % convenience functions
 \alias{oraTableFields}
 \alias{oraDataType}
+\alias{ora9.workaround}          % bug workaround
 \alias{.OraPkgName}              % constants
 \alias{.OraPkgVersion}
 \alias{.OraPkgRCS}
@@ -54,9 +56,10 @@
    oraConnectionInfo(obj, what)
    oraDescribeConnection(obj, verbose = FALSE, ...)
    oraCloseConnection(con, ..., force = FALSE)
+   ora9.workaround(con)
 
    ## OraResult-related
-   oraExecStatement(con, statement, ora.buf.size = 1)
+   oraExecStatement(ps, data = NULL, ora.buf.size = -1)
    oraFetch(res, n=0, ..., ora.buf.size)
    oraQuickSQL(con, statement, ...)
    oraExecDirect(con, statement, ora.buf.size = 500)

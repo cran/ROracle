@@ -1,6 +1,6 @@
 #ifndef _RS_Oracle_H
 #define _RS_Oracle_H 1
-/*  $Id: RS-Oracle.h,v 1.4 2003/04/18 14:58:38 dj Exp $
+/*  $Id: RS-Oracle.h,v 1.5 2003/10/30 16:30:56 dj Exp dj $
  *
  * Copyright (C) 1999 The Omega Project for Statistical Computing.
  *
@@ -25,7 +25,7 @@
 extern "C" {
 #endif
  
-#define  RS_ORA_VERSION "$Revision: 1.4 $"   
+#define  RS_ORA_VERSION "$Revision: 1.5 $"   
 #include "RS-DBI.h"
 
 #define RS_Ora_Min(a, b)  ((a)<=(b) ? (a) : (b))
@@ -38,16 +38,20 @@ typedef struct st_ora_conparams{
   char *passwd;
 } RS_Ora_conParams;
 
-/* We use these (instead of the SQLAlloc, etc.) for Oracle Version 7's sake*/
-extern void sqlnul();   /* reads/clears NULL column attributes */
-extern void sqlprc();   /* decodes Oracles' data types precision/scale */
-extern void sqlglm();   /* extracts detail error messages/codes (p. 11-23) */
-extern void sqlgls();   /* returns SQL in dyn statement (p. 11-32) */
-extern void sqlclu();   /* copied from Oracle's sqlcpr.h */
+EXEC SQL INCLUDE sqlca;    /* #include <sqlca.h>, defines the sqlca struct*/
+EXEC SQL INCLUDE sqlda;    /* i.e., #include <sqlda.h> */
 
-EXEC SQL INCLUDE sqlca; /* #include <sqlca.h>, defines the sqlca struct*/
-EXEC SQL INCLUDE sqlda; /* i.e., #include <sqlda.h> */
-extern SQLDA *sqlald(); /* allocates bind variables, field-descriptors */
+/* We use these (instead of the SQLAlloc, etc.) for Oracle Version 7's sake*/
+#if 1
+  extern void sqlnul();   /* reads/clears NULL column attributes */
+  extern void sqlprc();   /* decodes Oracles' data types precision/scale */
+  extern void sqlglm();   /* extracts detail error messages/codes (p. 11-23) */
+  extern void sqlgls();   /* returns SQL in dyn statement (p. 11-32) */
+  extern void sqlclu();   /* copied from Oracle's sqlcpr.h */
+  extern SQLDA *sqlald(); /* allocates bind variables, field-descriptors */
+#else
+  EXEC SQL INCLUDE sqlcpr;
+#endif
 
 /* Oracle-specific magic numbers */
 #define RS_ORA_MAX_STRING      4000  /* max VARCHAR2/String we'll import */

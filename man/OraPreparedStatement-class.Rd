@@ -1,7 +1,7 @@
+% $Id: OraPreparedStatement-class.Rd,v 1.2 2003/11/04 03:09:25 dj Exp dj $
 \name{OraPreparedStatement-class}
 \docType{class}
 \alias{OraPreparedStatement-class}
-\alias{DBIPreparedStatement-class}
 \title{Oracle Prepared Statement}
 \description{
 A class that encapsulates the information on an Oracle
@@ -63,7 +63,7 @@ of the R/S Database Interface definition (DBI).}
 \references{
   See the Database Interface definition document
   \code{DBI.pdf} in the base directory of this package
-  or \url{http://developer.r-project.org/db}.
+  or \url{http://stat.bell-labs.com/RS-DBI}.
 }
 
 \seealso{
