@@ -14,11 +14,16 @@ ac_default_prefix=/usr/local
 ac_help="$ac_help
 --with-oracle=VERSION     Oracle version (7/8/[9]/10) installation"
 ac_help="$ac_help
---enable-static           use static linking to Oracle libraries"
+--enable-static=[yes|no]  use static linking to Oracle libraries
+                          ('yes' by default)"
 ac_help="$ac_help
 --enable-oracle32=arg     use Oracle 32-bit libs?  arg can be
-                          "yes" for 32-bit libs, "no" for 64-bit libs,
-                          and "default" for Oracle's default libs)"
+                          'yes' to use 32-bit libs, 
+                          'no' to use 64-bit libs, or
+                          'default' to use Oracle's own default libs)"
+ac_help="$ac_help
+--enable-extralibs=[-lsqlplus] list of extra libs to link,
+                          a workaround for some Oracle 9 Linux installations"
 
 # Initialize some variables set by options.
 # The variables have the same names as the options, with
@@ -531,7 +536,7 @@ fi
 
 
 echo $ac_n "checking how to run the C preprocessor""... $ac_c" 1>&6
-echo "configure:535: checking how to run the C preprocessor" >&5
+echo "configure:540: checking how to run the C preprocessor" >&5
 # On Suns, sometimes $CPP names a directory.
 if test -n "$CPP" && test -d "$CPP"; then
   CPP=
@@ -546,13 +551,13 @@ else
   # On the NeXT, cc -E runs the code through the compiler's parser,
   # not just through cpp.
   cat > conftest.$ac_ext <<EOF
-#line 550 "configure"
+#line 555 "configure"
 #include "confdefs.h"
 #include <assert.h>
 Syntax Error
 EOF
 ac_try="$ac_cpp conftest.$ac_ext >/dev/null 2>conftest.out"
-{ (eval echo configure:556: \"$ac_try\") 1>&5; (eval $ac_try) 2>&5; }
+{ (eval echo configure:561: \"$ac_try\") 1>&5; (eval $ac_try) 2>&5; }
 ac_err=`grep -v '^ *+' conftest.out | grep -v "^conftest.${ac_ext}\$"`
 if test -z "$ac_err"; then
   :
@@ -563,13 +568,13 @@ else
   rm -rf conftest*
   CPP="${CC-cc} -E -traditional-cpp"
   cat > conftest.$ac_ext <<EOF
-#line 567 "configure"
+#line 572 "configure"
 #include "confdefs.h"
 #include <assert.h>
 Syntax Error
 EOF
 ac_try="$ac_cpp conftest.$ac_ext >/dev/null 2>conftest.out"
-{ (eval echo configure:573: \"$ac_try\") 1>&5; (eval $ac_try) 2>&5; }
+{ (eval echo configure:578: \"$ac_try\") 1>&5; (eval $ac_try) 2>&5; }
 ac_err=`grep -v '^ *+' conftest.out | grep -v "^conftest.${ac_ext}\$"`
 if test -z "$ac_err"; then
   :
@@ -580,13 +585,13 @@ else
   rm -rf conftest*
   CPP="${CC-cc} -nologo -E"
   cat > conftest.$ac_ext <<EOF
-#line 584 "configure"
+#line 589 "configure"
 #include "confdefs.h"
 #include <assert.h>
 Syntax Error
 EOF
 ac_try="$ac_cpp conftest.$ac_ext >/dev/null 2>conftest.out"
-{ (eval echo configure:590: \"$ac_try\") 1>&5; (eval $ac_try) 2>&5; }
+{ (eval echo configure:595: \"$ac_try\") 1>&5; (eval $ac_try) 2>&5; }
 ac_err=`grep -v '^ *+' conftest.out | grep -v "^conftest.${ac_ext}\$"`
 if test -z "$ac_err"; then
   :
@@ -655,7 +660,8 @@ case "${ORA_VERSION}" in
 esac
 
 #
-# static or shared link to oracle's libraries? Defaults to "shared".
+# static or shared link to oracle's libraries? New (as of 0.5-4) default 
+# is "static" (use -enable-static=no for dynamic).
 #
 # Check whether --enable-static or --disable-static was given.
 if test "${enable_static+set}" = set; then
@@ -663,7 +669,7 @@ if test "${enable_static+set}" = set; then
   :
 fi
 
-if test -n "${enable_static}" -a "${enable_static}" = "yes" ; then
+if test -z "${enable_static}" -o "${enable_static}" = "yes" ; then
    load="static"
 else
    load="shared"
@@ -689,6 +695,19 @@ case "${ORA_LIB}" in
 esac
 
 #
+# On some Linux systems, apparently the libclntsh.so is incorrectly(?)
+# created/installed and it does not have the "sqla" symbol.  Adding
+# -lsqlplus seems to be a good workaround.
+# Check whether --enable-extralibs or --disable-extralibs was given.
+if test "${enable_extralibs+set}" = set; then
+  enableval="$enable_extralibs"
+  :
+fi
+
+test "${enable_extralibs}" = yes &&  enable_extralibs="-lsqlplus"
+test "${enable_extralibs}" = no  &&  enable_extralibs=""
+
+#
 # compute the list of Oracle libraries we need to hand off to R SHLIB
 #
 tmp_makefile=/tmp/oraLibs$$.mk
@@ -698,8 +717,8 @@ cat > ${tmp_makefile} <<!
 
 include ${ORA_MAKE}
 
-SHLIBS = -L\$(ORACLE_HOME)/${ORA_LIB} -L\$(ORACLE_HOME)/network/${ORA_LIB} \$(STATICPROLDLIBS)
-STLIBS = -L\$(ORACLE_HOME)/${ORA_LIB} -L\$(ORACLE_HOME)/network/${ORA_LIB} \$(PROLDLIBS)
+SHLIBS = -L\$(ORACLE_HOME)/${ORA_LIB} -L\$(ORACLE_HOME)/network/${ORA_LIB} \$(PROLDLIBS)
+STLIBS = -L\$(ORACLE_HOME)/${ORA_LIB} -L\$(ORACLE_HOME)/network/${ORA_LIB} \$(STATICPROLDLIBS)
 
 shared:
 	@echo \$(SHLIBS)
@@ -708,7 +727,8 @@ static:
 !
 
 if test -z "${PKG_LIBS}" ; then
-   PKG_LIBS=`make -f "${tmp_makefile}" "${load}"`
+   PKG_LIBS=`make -f "${tmp_makefile}" "${load}"` 
+   PKG_LIBS="${PKG_LIBS} ${enable_extralibs}"
    export PKG_LIBS 
    rm -rf "${tmp_makefile}"
 fi

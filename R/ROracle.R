@@ -19,7 +19,10 @@ if(usingR()){
 }
 ## $Id: zzz.R,v 1.4 2003/04/18 14:42:57 dj Exp dj $
 .conflicts.OK <- TRUE
-library(DBI, warn.conflicts = FALSE)
+require(methods)
+require(DBI)
+#library(methods, warn.conflicts = FALSE)
+#library(DBI, warn.conflicts = FALSE)
 .First.lib <- function(lib, pkg) {
    library(methods, warn.conflicts = FALSE)
    library(DBI, warn.conflicts = FALSE)
@@ -123,7 +126,7 @@ function(obj)
 
 .OraPkgName <- "ROracle"  
 .OraPkgRCS  <- "$Id: Oracle.R,v 1.6 2003/10/30 16:58:09 dj Exp dj $"
-.OraPkgVersion <- "0.5-2" #package.description(.OraPkgName, fields = "Version")
+.OraPkgVersion <- "0.5-4" #package.description(.OraPkgName, fields = "Version")
 .Ora.NA.string <- ""         ## char that Oracle maps to NULL
 
 setOldClass("data.frame") ## to appease setMethod's signature warnings...
@@ -740,7 +743,7 @@ function(conn, ...)
 {
    if(!isIdCurrent(conn))
       stop("expired connection")
-   .Call("RS_Ora_commit", as(conn, "integer"))
+   .Call("RS_Ora_commit", as(conn, "integer"), PACKAGE = .OraPkgName)
 }
 
 "oraRollback" <-
@@ -752,7 +755,7 @@ function(conn, ...)
    if(!isIdCurrent(conn))
       stop("expired connection")
    rs.ids <- dbListResults(con)
-   out <- .Call("RS_Ora_rollback", as(conn, "integer"))
+   out <- .Call("RS_Ora_rollback", as(conn, "integer"), PACKAGE = .OraPkgName)
    for(rs in rs.ids)
       dbClearResult(rs)       ## TODO: move to .Call("RS_Ora_rollbac")
    out

@@ -1,4 +1,23 @@
-Version 0.5-2
+Version 0.5-4
+
+* Fixed a bug in configure.in that was statically linking 
+  by default when it should have been dynamically linking
+  and ignoring --enable-static=no.  I also changed the default
+  to static linking (this avoids having to set the LD_LIBRARY_PATH).
+
+* Added the configure arg --enable-extralibs (-lsqlplus by default)
+  to append oracle libraries to PKG_LIBS.  This, of course, should
+  never be needed, but on some Linux Oracle 9 systems the libcnltsh.so 
+  library apparently does not include the sqlca symbol.  This argument
+  works around this problem.  For details see the file README.Oracle9.
+
+* added the missing PACKAGE= argument to a couple .Call invocations.
+Version 0.5-3
+
+* Yet many more changes to the documentation structure (not the
+  contents) due to changes in the R help system.
+
+Version 0.5-2 
 
 * Ported to Windows 2000 (see src/Makefile.win for details).
 

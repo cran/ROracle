@@ -1,28 +1,59 @@
 
-Note: This information only applies to ROracle 0.5-2 or later compiled 
-      using Oracle 9.
+Problem: Unresolved sqlca symbol during library(ROracle).
 
-The function ora9.workaround(con) is invoked on every newly open
-connection to work around a bug in the Pro*C/C++ generated code
-under Oracle 9.  The workaround simply issues a dummy query and
-ignores the output.  If you're running Oracle 8 you may safely
-redefine it to, say,
+Description
+-----------
+   This problem has been reported on Oracle 9 (9.2.0.1.0 for sure)
+   running on linux (Gentoo and Red Hat) where ROracle installs but 
+   on invocation produces
 
-   ## Oracle 8 does not need the workaround
-   ora9.workaround <- function(...) TRUE
+      > library(ROracle)
+      Error in dyn.load(x, as.logical(local), as.logical(now)) :
+               unable to load shared library
+      "/home/foo/libs/ROracle/libs/ROracle.so":
+         /home/foo/libs/ROracle/libs/ROracle.so: undefined symbol:
+      sqlca
+      Error in library(ROracle) : .First.lib failed
+  
+   (on the other hand, Oracle 9.0.1.0.0 has been reported to work fine).
+   Sometimes (not always) during an Oracle installation on Linux some 
+   Oracle libraries may not be properly installed/created.  In particular, 
+   this problems seems to be related to the libclntsh.so library (AFAIK 
+   all this hasn't been confirmed, but the fact that this problem hasn't 
+   occurred on Solaris, AIX, HP/UX, nor Mac OSX, seems to point in this 
+   direction.)  
+   
+Workaround
+----------
+   Add the libsqlplus (-lsqplus) library during ROracle configuration.
+   Starting with version 0.5-4, you may specify the --enable-extralibs 
+   configuration argument:
 
-Bug description:
----------------
+   R CMD INSTALL --configure-args='--enable-extralibs' ROracle_0.5-4.tar.gz
 
-Apparently this is a bug in the Oracle 9 ProC/C++ function sqlgls
-that causes a SELECT statement on a newly opened connection to be
-misidentified by sqlgls() as having function code 0, instead of
-the correct code 04 -- this causes ROracle to incorrectly generate the
-error message "cannot retrieve data from non-select" (or something
-like this).
+   (again, this is a questionable workaround to a poorly understood problem.)
 
-Workaround:
+--------------------------------------------------------------------
 
-Immediately after opening a new connection issue a dummy query.
-This is what ora9.workaround(con) does.
+Problem: Error "cannot retrieve data from non-select" with ROracle 
+         0.5-2 compiled using Oracle 9.
 
+Description
+-----------
+   Apparently this is a bug in the Oracle 9 ProC/C++ function sqlgls
+   that causes a SELECT statement on a newly opened connection to be
+   misidentified by sqlgls() as having function code 0, instead of
+   the correct code 04 -- this causes ROracle to incorrectly generate the
+   error message "cannot retrieve data from non-select" (or something
+   similar).
+  
+Workaround
+----------
+   The function ora9.workaround(con) is automatically invoked on every 
+   newly open connection to work around this problem in the Pro*C/C++ 
+   generated code under Oracle 9.  The workaround simply issues a dummy 
+   query and ignores the output.  If you're running Oracle 8 you may safely
+   redefine it to, say,
+   
+      ## Oracle 8 does not need the workaround
+      ora9.workaround <- function(...) TRUE

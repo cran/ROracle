@@ -1,3 +1,13 @@
+* Need to update S4R.h to accommodate S-Plus 6 changes to the
+  S4 API described in the green book.  In particular, I need to
+  set 
+     #define S_COMATIBILITY 10
+  conditionally.  The problem is that there has to be an externally
+  defined macro, say -DUSING_SPLUS=6|5 so that I can include either
+  S.h or S_engine.h (as described in the S-Plus programmer's manual).
+  This will probably kill any remaining hope of using this code 
+  with Bell Labs' S4 implementation.
+
 * [Done] Implement the "bind variables" idea -- useful for writing
   into databases, but not too critical(?) for select operations.
 
