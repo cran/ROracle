@@ -1,20 +1,17 @@
-The ROracle was tested with R 1.3.1, R-1.4.1, and 1.5.x (1.6.0 development)
-and with Oracle 8.0.4 Enterprise as a server on a Solaris
-system. Also, it was tested  on a Linux 8.1.7 client-only
-installation.  (A previous version of ROracle was successfully run
-with Oracle 7 on Solaris).
 
-A note of caution for Linux users.
-----------------------------------
+The ROracle has been tested with R since 1.3.1 upto 1.8.0 and with
+Oracle 8.0.4 Enterprise as a server on a Solaris system. Also, it
+was tested  on a Linux 8.1.7 client-only installation.  (A previous
+version of ROracle was successfully run with Oracle 7 on Solaris).
+People have reported using ROracle on 64-bit AIX and Solaris
+systems.
 
-I've received comments telling me that Oracle9i on Linux (as of 03 Nov 2001)
-created too many problems with the ProC/C++ to be able to compile ROracle.
-Similarly, another person had problems with Oracle 8.0.5 on linux
-(the oracle precompiler "proc" itself core dumped!).  Comments on
-your experience on compiling ROracle on Linux are welcome.
+On Windows 2000, it has been compiled against the Oracle 9.2 client.
 
 Oracle Requirements:
 --------------------
+
+  Unix (and Unix-likes):
 
   For compiling, the R-Oracle interface needs the client part of
   the Oracle distribution (in particular the "programmer" and
@@ -23,6 +20,45 @@ Oracle Requirements:
   Make sure you have the Oracle ProC/C++ properly configure (e.g.,
   $ORACLE_HOME/proc/admin/pcscfg.cfg in Oracle8), otherwise you
   will run into problems either during pre-compilation and/or linking.
+
+  Windows:
+
+  To compile under windows see the Makefile.win in the 'src' directory
+  of the ROracle package.  You'll need the Developer's Package from the
+  Oracle's client software and Microsoft Visual C++.
+
+  To install the Windows binary, you'll need the Oracle runtime libraries
+  (and make sure $ORACLE_HOME/bin is in your PATH).
+
+32-bit vs 64-bit Issues (Unix)
+------------------------------
+
+The configuration option --enable-oracle32 allows you to link
+explicitly against Oracle's 32-bit or 64-bit libraries.  The issue
+is most relevant when a machine has an Oracle installation that uses
+64-bit code and R as a 32-bit application -- the 32-bit/64-bit
+mismatched is the problem.  In this case one needs to explicitly
+link ROracle against the non-default (but available) 32-bit Oracle
+libraries.  E.g., 
+
+    R CMD INSTALL --configure-args='--enable-oracle32' ROracle.<version>.tar.gz
+
+this forces the linking against the libraries under
+$ORACLE_HOME/lib32 and $ORACLE_HOME/network/lib32.  You may set
+--enable-oracle32=no to link against 64-bit libraries.  By default
+ROracle is linked against whatever the Oracle default is. (See the
+configure.in file for the gory details.)
+
+
+A note of caution for Linux users.
+----------------------------------
+
+I've received comments telling me that Oracle9i on Linux (as of
+03 Nov 2001) created too many problems with the ProC/C++ to be
+able to compile ROracle.  Similarly, another person had problems
+with Oracle 8.0.5 on linux (the oracle precompiler "proc" itself
+core dumped!).  Comments on your experience on compiling ROracle
+on Linux are welcome.
 
 Using library(ROracle):
 -----------------------
@@ -46,8 +82,8 @@ Using library(ROracle):
   
   Solution 2: Create a static library (see below).
  
-Installation:
--------------
+Installation: Non-Windows
+-------------------------
 
 Shell variables:
 
@@ -67,11 +103,10 @@ Creating a static library (this is the default):
 
   R CMD INSTALL --configure-args='--enable-static'  ROracle_<version>.tar.gz
 
-Specifying the Oracle versions (7/8/9, version 8 is the default):
+Specifying the Oracle versions (7/8/9, version 9 is the default):
 
   R CMD INSTALL --configure-args='--with-oracle=7'  ROracle_<version>.tar.gz
 
 Note: You may override the Oracle libraries and/or library directories 
 using the PKG_LIBS variable (see "Writing R Extensions").
-
 

@@ -21,7 +21,7 @@ if(usingR()){
 .conflicts.OK <- TRUE
 library(DBI, warn.conflicts = FALSE)
 .First.lib <- function(lib, pkg) {
-   library(methods)
+   library(methods, warn.conflicts = FALSE)
    library(DBI, warn.conflicts = FALSE)
    library.dynam(.OraPkgName, pkg, lib)
 }
@@ -99,7 +99,7 @@ function(obj)
    .Call("RS_DBI_validHandle", obj, PACKAGE = .OraPkgName)
 }
 ##
-## $Id: Oracle.R,v 1.4 2003/04/18 14:42:57 dj Exp dj $
+## $Id: Oracle.R,v 1.6 2003/10/30 16:58:09 dj Exp dj $
 ##
 ## Copyright (C) 1999-2002 The Omega Project for Statistical Computing.
 ##
@@ -122,9 +122,9 @@ function(obj)
 ##
 
 .OraPkgName <- "ROracle"  
-.OraPkgRCS  <- "$Id: Oracle.R,v 1.4 2003/04/18 14:42:57 dj Exp dj $"
-.OraPkgVersion <- "0.5-0"
-.Ora.NA.string <- ""      ## char that Oracle maps to NULL
+.OraPkgRCS  <- "$Id: Oracle.R,v 1.6 2003/10/30 16:58:09 dj Exp dj $"
+.OraPkgVersion <- "0.5-2" #package.description(.OraPkgName, fields = "Version")
+.Ora.NA.string <- ""         ## char that Oracle maps to NULL
 
 setOldClass("data.frame") ## to appease setMethod's signature warnings...
 
@@ -275,7 +275,7 @@ setMethod("dbExistsTable",
    signature(conn="OraConnection", name="character"),
    def = function(conn, name, ...){
       ## TODO: find out the appropriate query to the Oracle metadata
-      match(tolower(name), tolower(dbListTables(con)), nomatch=0)>0
+      match(tolower(name), tolower(dbListTables(conn)), nomatch=0)>0
    },
    valueClass = "logical"
 )
@@ -491,7 +491,7 @@ setMethod("isSQLKeyword",
    valueClass = "character"
 )
 ##
-## $Id: OraSupport.R,v 1.1 2003/04/18 14:42:57 dj Exp dj $
+## $Id: OraSupport.R,v 1.2 2003/05/27 20:05:32 dj Exp $
 ##
 ## Copyright (C) 1999-2002 The Omega Project for Statistical Computing.
 ##
@@ -568,20 +568,25 @@ function(username="", password="",
 {
 ## split a connection string into the tuple (username, password, dbname),
 ## possibly overriding with supplied params (handles Oracle's usr/pwd@dbname)
-   pos <- regexpr("@", username)
-   if(pos>0){  ## extract dbname 
-      dbn <- substring(username, first = pos+1)
-      username <- substring(username, first = 1, last=pos-1)
+   msg <- "invalid connection string user/password@dbname"
+   posAt <- regexpr("@", username)
+   posSlash <- regexpr("/", username)
+   if(posAt>0){  ## extract dbname 
+      if(posSlash<0) 
+         stop(paste(msg, "(must supply password)"))
+      dbn <- substring(username, first = posAt+1)
+      username <- substring(username, first = 1, last=posAt-1)
       if(dbname=="") dbname <- dbn
    }
-   pos <- regexpr("/", username)
-   if(pos>0){
-      pwd <- substring(username, first = pos+1)
-      username <- substring(username, first = 1, last = pos-1)
+   if(posSlash>0){
+      pwd <- substring(username, first = posSlash+1)
+      username <- substring(username, first = 1, last = posSlash-1)
       if(password=="") password <- pwd
    }
    if(username=="" && password=="")
       username <- "/"
+   if(username=="")
+      stop(paste(msg, "(must supply username)"))
    c(username, password, dbname)
 }
 
@@ -652,16 +657,18 @@ function(con, statement, ora.buf.size = 500)
                     as(ora.buf.size,"integer"))
    })
    if(inherits(rc, ErrorClass)){
-      if(!isIdCurrent(ps)) dbClearResult(ps)
-      if(!isIdCurrent(rs)) dbClearResult(rs)
-      stop()
+      if(!is.null(ps) && !isIdCurrent(ps)) dbClearResult(ps)
+      if(!is.null(rs) && !isIdCurrent(rs)) dbClearResult(rs)
+      stop(paste("could not exec direct statement", statement))
    } 
-   rs
+   as(rs, "OraResult")      ## must NOT be a prepared statement
 }
 
 "oraQuickSQL" <- 
 function(con, statement, ...)
 {
+## this function relies critically in dbHasCompleted() being TRUE
+## in the case of non-select statements!
    if(!isIdCurrent(con))
       stop(paste("expired", class(con), deparse(substitute(con))))
    if(length(dbListResults(con))>0){
@@ -858,10 +865,6 @@ function(obj, what)
       info
 }
 
-## Note that originally we had only result both for SELECTs
-## and INSERTS, ...  Later on we created a base class dbResult
-## for non-Select SQL and a derived class result for SELECTS.
-
 "oraResultInfo" <- 
 function(obj, what)
 {
@@ -969,11 +972,11 @@ function(obj, verbose = FALSE, ...)
    to <- min(batch, N)
    while(from<=N){
       if(usingR())
-         write.table(value[from:to, drop=FALSE], file = file, append = TRUE, 
+         write.table(value[from:to,, drop=FALSE], file = file, append = TRUE, 
                quote = TRUE, sep=",", na = .Ora.NA.string, 
                row.names=FALSE, col.names=FALSE, eol = '\n', ...)
       else
-         write.table(value[from:to, drop=FALSE], file = file, append = TRUE, 
+         write.table(value[from:to,, drop=FALSE], file = file, append = TRUE, 
                quote.string = TRUE, sep=",", na = .Ora.NA.string, 
                dimnames.write=FALSE, end.of.row = '\n', ...)
       from <- to+1
@@ -1186,3 +1189,65 @@ c( "ACCESS", "ADD", "ALL", "ALTER", "AND", "ANY", "ARRAY", "AS", "ACS",
    "VARIANCE", "VIEW", "WHEN", "WHENEVER", "WHERE", "WHILE", "WITH", "WORK",
    "WRITE", "YEAR", "ZONE"
 )
+##
+## This file contains a patch to be used only with Oracle 9 (client).
+##
+## Bug description:
+##
+## Apparently there is a bug (either in the Oracle 9 ProC/C++ function 
+## sqlgls or in the ROracle code) that causes a SELECT on a newly opened 
+## connection to be misidentified by sqlgls() as fun code 0, instead of 
+## the correct 04, causing ROracle to incorrectly generate the error 
+## message "cannot retrieve data from non-select" (or somthing like this).
+##
+## Workaround:
+##
+## Source this file either in your global environment, or append it
+## to $R_PACKAGE_DIR/R/ROracle, prior to invoking R.  E.g., 
+##
+##    cat ora9.patch.R >> /home/local/lib/R/library/ROracle/R/ROracle
+##
+## Note: This is a horrible hack that forces a trivial SELECT on every 
+## new connection.
+
+## NOTE: We're defining the default behavior to assume it is 
+## using Oracle 9.  
+
+"ora9.workaround" <-
+function(con)
+{
+   if(exists(".Oracle9") && !.Oracle9)
+      return(FALSE)
+   rs <- dbSendQuery(con, "select * from V$VERSION")
+   dbClearResult(rs)
+}
+
+"oraNewConnection"<- 
+function(drv, username="", password="", 
+   dbname = if(usingR()) Sys.getenv("ORACLE_SID") else getenv("ORACLE_SID"),
+   max.results=1)
+{
+   con.params <- oraParseConParams(username, password, dbname)
+   drvId <- as(drv, "integer")
+   max.results <- as(max.results, "integer")
+   .OraMaxResults <- 1
+   if(max.results>.OraMaxResults){
+      warning(paste("can only have up to", .OraMaxResults, 
+         "results per connection"))
+      max.results <- .OraMaxResults
+   }
+   id <- .Call("RS_Ora_newConnection", drvId, con.params, max.results, 
+               PACKAGE = .OraPkgName)
+   con <- new("OraConnection", Id = id)
+   ora9.workaround(con)
+   con
+}
+
+"oraCloneConnection" <- 
+function(drv, ...)
+{
+   id <- .Call("RS_Ora_cloneConnection", as(drv,"integer"), PACKAGE=.OraPkgName)
+   con <- new("OraConnection", Id = id)
+   ora9.workaround(con)
+   con
+}

@@ -1,0 +1,103 @@
+% $Id: dbReadTable-methods.Rd,v 1.1 2003/11/03 22:41:41 dj Exp $
+\name{dbReadTable-methods}
+\docType{methods}
+\alias{dbReadTable-methods}
+\alias{dbWriteTable-methods}
+\alias{dbExistsTable-methods}
+\alias{dbRemoveTable-methods}
+\alias{dbReadTable,OraConnection,character-method}
+\alias{dbWriteTable,OraConnection,character,data.frame-method}
+\alias{dbExistsTable,OraConnection,character-method}
+\alias{dbRemoveTable,OraConnection,character-method}
+\title{
+  Convenience functions for Importing/Exporting DBMS tables
+}
+\description{
+  These functions mimic their R/S-Plus counterpart 
+  \code{get},
+  \code{assign},
+  \code{exists}, 
+  \code{remove}, and
+  \code{objects},
+  except that they generate code that gets remotely executed
+  in a database engine.  
+}
+\section{Methods}{\describe{
+\item{conn}{
+  an \code{OraConnection} database connection object.
+  }
+\item{name}{
+  a character string specifying a table name.
+  }
+\item{value}{
+  a data.frame (or coercible to data.frame).
+  }
+\item{row.names}{
+  in the case of \code{dbReadTable}, this argument can be a string or
+  an index specifying the column in the DBMS table to be used as 
+  \code{row.names} in the output data.frame (a \code{NULL}, \code{""}, or 0 
+  specifies that no column should be used as \code{row.names} in the output).
+
+  In the case of \code{dbWriteTable}, this argument should be a logical
+  specifying whether the \code{row.names} should be output to the
+  output DBMS table; if \code{TRUE}, an extra field whose name will be 
+  whatever the R/S-Plus identifier \code{"row.names"} maps to the DBMS
+  (see \code{\link[DBI]{make.db.names}}).
+  }
+\item{overwrite}{
+  a logical specifying whether to overwrite an existing table
+  or not.  Its default is \code{FALSE}.
+  }
+\item{append}{
+  a logical specifying whether to append to an existing table
+  in the DBMS.  Its default is \code{FALSE}.
+  }
+\item{\dots }{any optional arguments.}
+}
+}
+
+\value{
+   A data.frame in the case of \code{dbReadTable}; otherwise a logical 
+   indicating whether the operation was successful.  
+}
+\note{
+   Note that the data.frame returned by \code{dbReadTable} only has
+   primitive data, e.g., it does not coerce character data to factors.
+
+   Oracle table names are \emph{not} case sensitive, e.g., table
+   names \code{ABC} and \code{abc} are considered equal.
+}
+\references{
+   See the Database Interface definition document
+   \code{DBI.pdf} in the base directory of this package
+   or \url{http://stat.bell-labs.com/RS-DBI}.
+}
+\seealso{
+  \code{\link{Oracle}},
+  \code{\link[DBI]{dbDriver}},
+  \code{\link[DBI]{dbConnect}},
+  \code{\link[DBI]{dbSendQuery}},
+  \code{\link[DBI]{dbGetQuery}},
+  \code{\link[DBI]{fetch}},
+  \code{\link[DBI]{dbCommit}},
+  \code{\link[DBI]{dbGetInfo}},
+  \code{\link[DBI]{dbListTables}},
+  \code{\link[DBI]{dbReadTable}}.
+}
+\examples{\dontrun{
+conn <- dbConnect("Oracle", "user/password@SID")
+if(dbExistsTable(con, "fuel_frame")){
+   dbRemoveTable(conn, "fuel_frame")
+   dbWriteTable(conn, "fuel_frame", fuel.frame)
+}
+if(dbExistsTable(conn, "RESULTS")){
+   dbWriteTable(conn, "RESULTS", results2000, append = T)
+else
+   dbWriteTable(conn, "RESULTS", results2000)
+}
+}
+}
+\keywords{methods}
+\keyword{interface}
+\keyword{database}
+% vim: syntax=tex

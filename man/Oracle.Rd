@@ -1,3 +1,4 @@
+% $Id: Oracle.Rd,v 1.2 2003/11/04 03:09:25 dj Exp dj $
 \name{Oracle}
 \alias{Oracle}
 \title{
@@ -30,8 +31,7 @@ Oracle(max.con = 10, fetch.default.rec = 500, force.reload = F)
 }
 \value{
 An object \code{OraDriver} whose class extends 
-\code{DBIDriver} and 
-\code{dbObjectId}.
+\code{DBIDriver} and the mixin (helper) class \code{dbObjectId}.
 This object is used to create connections, using the
 function \code{dbConnect},
 to one or several Oracle database engines.
@@ -109,9 +109,12 @@ or roll back your work before issuing any of these helper functions.
 }
 
 \section{References}{
-See the Omega Project for Statistical Computing
-at \url{http://www.omegahat.org}
-for more details on the R/S-Plus database interface.
+For more details on the R/S-Plus database interface
+see the PDF file \code{DBI.pdf} under the \code{doc}
+directory of this package, 
+\url{http://stat.bell-labs/RS-DBI}, and
+the Omega Project for Statistical Computing
+at \url{http://www.omegahat.org}.
 
 See the documentation at the Oracle Web site
 \url{http://www.oracle.com} for details.

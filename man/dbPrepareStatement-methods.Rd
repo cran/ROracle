@@ -1,20 +1,22 @@
-% $Id: dbPrepareStatement.Rd,v 1.2 2003/11/04 03:09:25 dj Exp dj $
-\name{dbPrepareStatement}
-\alias{dbPrepareStatement}
-\alias{dbExecStatement}
+% $Id: dbPrepareStatement-methods.Rd,v 1.2 2003/11/04 03:09:25 dj Exp dj $
+\name{dbPrepareStatement-methods}
+\alias{dbPrepareStatement-methods}
+\docType{methods}
+\alias{dbExecStatement-methods}
+\alias{dbPrepareStatement-methods}
+\alias{dbPrepareStatement,OraConnection,character,character-method}
+\alias{dbPrepareStatement,OraConnection,character,data.frame-method}
+\alias{dbExecStatement,OraPreparedStatement,data.frame-method}
 \title{
 Create a prepared SQL statement for repeated execution
 }
 \description{
-These functions parse and cache SQL statements 
-and binds S data for repeated execution.
-}
-\usage{
-dbPrepareStatement(conn, statement, bind, ...)
-dbExecStatement(ps, data, ...)
+These methods parse and cache SQL statements 
+and binds R data for repeated execution.
 }
 
-\arguments{
+\section{Methods}{\describe{
+
   \item{conn}{a database connection}
   \item{statement}{a string with an SQL statement, possibly with
   embedded column number specifications of the form \code{:columnNum} 
@@ -37,6 +39,7 @@ dbExecStatement(ps, data, ...)
   the size of Oracle's internal binding buffers (ROracle sets these to
   500 elements by default).
   }
+}
 }
 \details{
 Prepared statements are SQL statements that are parsed and cached 
@@ -92,6 +95,7 @@ to the ANSI/ISO SQL99 standard.
 DBI as of version 0.1-7.}
 
 \seealso{
+ \code{\link[ROracle]{DBIPreparedStatement-class}}
  \code{\link{OraPreparedStatement-class}}
  \code{\link{OraResult-class}}
  \code{\link[DBI]{dbSendQuery}}
@@ -123,4 +127,5 @@ DBI as of version 0.1-7.}
 \keyword{database}
 \keyword{interface}
 \keyword{classes}
+\keywords{methods}
 % vim: syntax=tex

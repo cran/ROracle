@@ -1,0 +1,28 @@
+
+Note: This information only applies to ROracle 0.5-2 or later compiled 
+      using Oracle 9.
+
+The function ora9.workaround(con) is invoked on every newly open
+connection to work around a bug in the Pro*C/C++ generated code
+under Oracle 9.  The workaround simply issues a dummy query and
+ignores the output.  If you're running Oracle 8 you may safely
+redefine it to, say,
+
+   ## Oracle 8 does not need the workaround
+   ora9.workaround <- function(...) TRUE
+
+Bug description:
+---------------
+
+Apparently this is a bug in the Oracle 9 ProC/C++ function sqlgls
+that causes a SELECT statement on a newly opened connection to be
+misidentified by sqlgls() as having function code 0, instead of
+the correct code 04 -- this causes ROracle to incorrectly generate the
+error message "cannot retrieve data from non-select" (or something
+like this).
+
+Workaround:
+
+Immediately after opening a new connection issue a dummy query.
+This is what ora9.workaround(con) does.
+

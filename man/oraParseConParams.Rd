@@ -1,3 +1,4 @@
+% $Id: oraParseConParams.Rd,v 1.2 2003/11/04 03:09:25 dj Exp dj $
 \name{oraParseConParams}
 \alias{oraParseConParams}
 \title{Parse an Oracle connection string}
@@ -31,7 +32,7 @@ oraParseConParams(username="", password="", dbname=ifelse(usingR(), Sys.getenv("
   A 3-element character vector with the \code{username}, \code{passwd},
   and \code{dbname} suitable for a call to \code{dbConnect}.
 }
-\references{http://developer.r-project.org/db}
+\references{http://stat.bell-labs.com/RS-DBI}
 \seealso{\code{\link[DBI]{dbConnect}}, \code{\link{Oracle}}}
 \examples{\dontrun{
    conParams <- parse.OraConParams("user/pwd@dbname")

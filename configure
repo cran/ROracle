@@ -12,9 +12,13 @@ ac_help=
 ac_default_prefix=/usr/local
 # Any additions from configure.in:
 ac_help="$ac_help
+--with-oracle=VERSION     Oracle version (7/8/[9]/10) installation"
+ac_help="$ac_help
 --enable-static           use static linking to Oracle libraries"
 ac_help="$ac_help
---with-oracle=VERSION     Oracle version (7/[8]/9) installation"
+--enable-oracle32=arg     use Oracle 32-bit libs?  arg can be
+                          "yes" for 32-bit libs, "no" for 64-bit libs,
+                          and "default" for Oracle's default libs)"
 
 # Initialize some variables set by options.
 # The variables have the same names as the options, with
@@ -527,7 +531,7 @@ fi
 
 
 echo $ac_n "checking how to run the C preprocessor""... $ac_c" 1>&6
-echo "configure:531: checking how to run the C preprocessor" >&5
+echo "configure:535: checking how to run the C preprocessor" >&5
 # On Suns, sometimes $CPP names a directory.
 if test -n "$CPP" && test -d "$CPP"; then
   CPP=
@@ -542,13 +546,13 @@ else
   # On the NeXT, cc -E runs the code through the compiler's parser,
   # not just through cpp.
   cat > conftest.$ac_ext <<EOF
-#line 546 "configure"
+#line 550 "configure"
 #include "confdefs.h"
 #include <assert.h>
 Syntax Error
 EOF
 ac_try="$ac_cpp conftest.$ac_ext >/dev/null 2>conftest.out"
-{ (eval echo configure:552: \"$ac_try\") 1>&5; (eval $ac_try) 2>&5; }
+{ (eval echo configure:556: \"$ac_try\") 1>&5; (eval $ac_try) 2>&5; }
 ac_err=`grep -v '^ *+' conftest.out | grep -v "^conftest.${ac_ext}\$"`
 if test -z "$ac_err"; then
   :
@@ -559,13 +563,13 @@ else
   rm -rf conftest*
   CPP="${CC-cc} -E -traditional-cpp"
   cat > conftest.$ac_ext <<EOF
-#line 563 "configure"
+#line 567 "configure"
 #include "confdefs.h"
 #include <assert.h>
 Syntax Error
 EOF
 ac_try="$ac_cpp conftest.$ac_ext >/dev/null 2>conftest.out"
-{ (eval echo configure:569: \"$ac_try\") 1>&5; (eval $ac_try) 2>&5; }
+{ (eval echo configure:573: \"$ac_try\") 1>&5; (eval $ac_try) 2>&5; }
 ac_err=`grep -v '^ *+' conftest.out | grep -v "^conftest.${ac_ext}\$"`
 if test -z "$ac_err"; then
   :
@@ -576,13 +580,13 @@ else
   rm -rf conftest*
   CPP="${CC-cc} -nologo -E"
   cat > conftest.$ac_ext <<EOF
-#line 580 "configure"
+#line 584 "configure"
 #include "confdefs.h"
 #include <assert.h>
 Syntax Error
 EOF
 ac_try="$ac_cpp conftest.$ac_ext >/dev/null 2>conftest.out"
-{ (eval echo configure:586: \"$ac_try\") 1>&5; (eval $ac_try) 2>&5; }
+{ (eval echo configure:590: \"$ac_try\") 1>&5; (eval $ac_try) 2>&5; }
 ac_err=`grep -v '^ *+' conftest.out | grep -v "^conftest.${ac_ext}\$"`
 if test -z "$ac_err"; then
   :
@@ -631,6 +635,26 @@ fi
 PATH="${PATH}":"${ORACLE_HOME}"/bin
 
 #
+# What version of Oracle do we have (defaults to Oracle8)
+#
+# Check whether --with-oracle or --without-oracle was given.
+if test "${with_oracle+set}" = set; then
+  withval="$with_oracle"
+  ORA_VERSION="${with_oracle}"
+else
+  ORA_VERSION=9
+fi
+
+
+case "${ORA_VERSION}" in 
+  7*)  ORA_MAKE="${ORACLE_HOME}/precomp/env_precomp.mk"    ;;
+  8*)  ORA_MAKE="${ORACLE_HOME}/precomp/lib/env_precomp.mk";;
+  9*)  ORA_MAKE="${ORACLE_HOME}/precomp/lib/env_precomp.mk";;
+  10*) ORA_MAKE="${ORACLE_HOME}/precomp/lib/env_precomp.mk";;
+  *)  { echo "configure: error: unrecognized Oracle version ${VERSION}" 1>&2; exit 1; } ;;
+esac
+
+#
 # static or shared link to oracle's libraries? Defaults to "shared".
 #
 # Check whether --enable-static or --disable-static was given.
@@ -646,21 +670,22 @@ else
 fi
 
 #
-# What version of Oracle do we have (defaults to Oracle8)
+# Should we use the default "lib" subdirectories, "lib32" or "lib64" ?
 #
-# Check whether --with-oracle or --without-oracle was given.
-if test "${with_oracle+set}" = set; then
-  withval="$with_oracle"
-  ORA_VERSION="${with_oracle}"
+# Check whether --enable-oracle32 or --disable-oracle32 was given.
+if test "${enable_oracle32+set}" = set; then
+  enableval="$enable_oracle32"
+  ORA_LIB="${enable_oracle32}"
 else
-  ORA_VERSION=8
+  ORA_LIB=default
 fi
 
-case "${ORA_VERSION}" in 
-  7*) ORA_MAKE="${ORACLE_HOME}/precomp/env_precomp.mk"    ;;
-  8*) ORA_MAKE="${ORACLE_HOME}/precomp/lib/env_precomp.mk";;
-  9*) ORA_MAKE="${ORACLE_HOME}/precomp/lib/env_precomp.mk";;
-  *)  { echo "configure: error: unrecognized Oracle version ${VERSION}" 1>&2; exit 1; } ;;
+
+case "${ORA_LIB}" in 
+  default) ORA_LIB=lib;;
+  yes)     ORA_LIB=lib32;;
+  no)      ORA_LIB=lib64;;
+  *)       { echo "configure: error: unrecognized Oracle libs ${ORA_LIB}" 1>&2; exit 1; };;
 esac
 
 #
@@ -673,8 +698,8 @@ cat > ${tmp_makefile} <<!
 
 include ${ORA_MAKE}
 
-SHLIBS = -L\$(ORACLE_HOME)/lib -L\$(ORACLE_HOME)/network/lib \$(STATICPROLDLIBS)
-STLIBS = -L\$(ORACLE_HOME)/lib -L\$(ORACLE_HOME)/network/lib \$(PROLDLIBS)
+SHLIBS = -L\$(ORACLE_HOME)/${ORA_LIB} -L\$(ORACLE_HOME)/network/${ORA_LIB} \$(STATICPROLDLIBS)
+STLIBS = -L\$(ORACLE_HOME)/${ORA_LIB} -L\$(ORACLE_HOME)/network/${ORA_LIB} \$(PROLDLIBS)
 
 shared:
 	@echo \$(SHLIBS)

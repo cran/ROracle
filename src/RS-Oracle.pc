@@ -1,6 +1,6 @@
 /* R and S-Plus Database Interface to Oracle */
 /* 
- * $Id: RS-Oracle.pc,v 1.5 2003/04/18 21:09:34 dj Exp dj $ 
+ * $Id: RS-Oracle.pc,v 1.7 2003/10/30 16:29:51 dj Exp dj $ 
  *
  * vim:syntax=c 
  */
@@ -133,6 +133,9 @@ RS_Ora_allocConParams(void)
   if(!conParams)
     RS_DBI_errorMessage("could not malloc connection parameters object",
 		 RS_DBI_ERROR);
+  conParams->dbname = (char *) NULL;
+  conParams->user   = (char *) NULL;
+  conParams->passwd = (char *) NULL;
   return conParams;
 }
 
@@ -336,7 +339,7 @@ RS_Ora_prepareStatement(
    * describing the state of the last SQL statement, in particular,
    * sqlca.sqlcode is the return code of the last statemnet, and the
    * array sqlca.sqlerr[] holds number of affected rows, etc. (for details
-   * see the ProC/C++ manual, Ch. 10, p 20.)
+   * see the ProC/C++ manual, Ch. 11, p 15, 12-28, )
    */
   S_EVALUATOR
 
@@ -464,7 +467,8 @@ RS_Ora_prepareStatement(
   result->drvData = (void *) desArea;
 
   /* sqlgls() describes the parsed SQL statements (insert, select, etc.) */
-  sqlgls(deparsed_stmt, &stmt_len, &sqlFunCode);
+  sqlgls(deparsed_stmt, &stmt_len, &sqlFunCode); 
+  /* SQLStmtGetText(SQL_SINGLE_RCTX, deparsed_stmt, &stmt_len, &sqlFunCode); */
   result->isSelect  = (Sint) (sqlFunCode == ORA_SQL_CODE_SELECT);
 
   return rsHandle; 
@@ -784,7 +788,7 @@ RS_Ora_setOraToSMappings(RS_Ora_desArea *desArea)
    *
    * NOTE: The use of host arrays with the ProC/C++ has size limitations, 
    * in particular, each host array has to have less than 32767/sizeof(type) 
-   * elements (ProC/C++ Manula, p. 12-2).
+   * elements (ProC/C++ Manual, p. 12-2).
    */
   int bufferSize = desArea->bufferSize; 
 
@@ -810,9 +814,13 @@ RS_Ora_setOraToSMappings(RS_Ora_desArea *desArea)
 				       select_dp->C[j], /* len of fname*/
 				       0);
     /* We need to clear the high-bit in the type field
-     * (page 14-17 in the ProC/C++ manual). 
+     * (page 14-17 in the ProC/C++ manual). See the "new" SQLLIB names.
      */
-    sqlnul(&(select_dp->T[j]), &(select_dp->T[j]), &null_ok);
+    sqlnul(&(select_dp->T[j]), &(select_dp->T[j]), &null_ok); 
+    /* SQLColumnNullCheck(SQL_SINGLE_RCTX,
+     * &(select_dp->T[j]), &(select_dp->T[j]), &null_ok); 
+     */
+
     flds->nullOk[j] = (Sint) null_ok; 
     flds->type[j] = (Sint) select_dp->T[j];
 
@@ -833,7 +841,10 @@ RS_Ora_setOraToSMappings(RS_Ora_desArea *desArea)
       break;
     case  ORA_IN_NUMBER :
       /* extract precision and scale. */
-      sqlprc(&(select_dp->L[j]), &precision, &scale);
+      sqlprc(&(select_dp->L[j]), &precision, &scale); 
+      /* SQLNumberPrecV6(SQL_SINGLE_RCTX,
+       *  &(select_dp->L[j]), &precision, &scale);
+       */
       if(precision==0 && scale==0){  
 	/* This means the field has an unspecified NUMBER, thus we allow
 	 * for the maximum size of NUMBER (see Table 2 in  the SQL Ref).
@@ -969,7 +980,7 @@ RS_Ora_cpyOraToDataFrame(SQLDA *select_dp, int n_rows,
       case INTEGER_TYPE:
          for(r = 0; r < n_rows; r++){
             if(null_item[r]>=0){
-               LST_INT_EL(output,j,from+r) = ((long *) V)[r];
+               LST_INT_EL(output,j,from+r) = ((Sint *) V)[r];
                if(null_item[r]>0)
                   RS_DBI_errorMessage("truncated value", RS_DBI_WARNING);
             }
@@ -1575,12 +1586,19 @@ RS_Ora_allocDescriptors(int size, int max_vname_len, int max_iname_len,
    * more or less as needed.
    */
   bind_dp = sqlald(size, max_vname_len, max_iname_len);
+  /*
+   * bind_dp = SQLSQLDAAlloc(SQL_SINGLE_RCTX,
+   *            size, max_vname_len, max_iname_len);
+  */
   if(bind_dp == (SQLDA *) 0) {
     RS_DBI_errorMessage("cannot allocate memory for bind descriptor",
 		       RS_DBI_ERROR);
     return (RS_Ora_desArea *) NULL;
   }
-  select_dp = sqlald (size, max_vname_len, max_iname_len);
+  select_dp = sqlald (size, max_vname_len, max_iname_len); 
+  /* select_dp = SQLSQLDAAlloc(SQL_SINGLE_RCTX,
+   *             size, max_vname_len, max_iname_len);
+   */
   if(select_dp == (SQLDA *) 0) {
     /* BUG: free bind_dp */
     RS_DBI_errorMessage("cannot allocate memory for select descriptor",
@@ -1651,8 +1669,12 @@ RS_Ora_freeDescriptors(RS_Ora_desArea *desArea)
   }
 
   /* Free space used by the descriptors themselves. */
-  (void) sqlclu(bind_dp);
+  (void) sqlclu(bind_dp); 
   (void) sqlclu(select_dp);
+  /* 
+   * SQLSQLDAFree(SQL_SINGLE_RCTX, bind_dp);
+   * SQLSQLDAFree(SQL_SINGLE_RCTX, select_dp);
+   */
 
   /* free the R/S-Plus type info */
   if(desArea->Sclass)
@@ -1784,7 +1806,8 @@ RS_Ora_error()
   char ora_msg[512];
   size_t buf_size = 512, msg_len;
 
-  sqlglm(ora_msg, &buf_size, &msg_len);
+  sqlglm(ora_msg, &buf_size, &msg_len); 
+  /* SQLErrorGetText(SQL_SINGLE_RCTX, ora_msg, &buf_size, &msg_len); */
   ora_msg[msg_len++] = '\0';
 
   /* disable error handler (to avoid infinite loops!) */
@@ -1821,7 +1844,8 @@ RS_Ora_getException(s_object *conHandle)
   ora_code = sqlca.sqlcode;
   /* make sure we don't extract last (instead of current) message */
   if(ora_code != 0){ 
-    sqlglm(ora_msg, &buf_size, &msg_len); 
+    sqlglm(ora_msg, &buf_size, &msg_len);
+    /* SQLErrorGetText(SQL_SINGLE_RCTX, ora_msg, &buf_size, &msg_len); */
     ora_msg[msg_len++] = '\0';
   }
   else

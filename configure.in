@@ -1,26 +1,34 @@
 dnl
-dnl ROracle
+dnl $Id: configure.in,v 1.2 2003/10/31 20:27:36 dj Exp $
 dnl
 dnl Generate a "configure" script that will install the ROracle package.
+dnl Usage:  autotconf
 dnl
 dnl Compiling an Oracle application can be tricky.  Compiling an application
 dnl that needs both R and Oracle headers and libraries can be even
 dnl trickier.  So we'll stick closely to the recommended makefiles and
 dnl procedures by both Oracle and R.  The logic is very simple:
 dnl
-dnl 1. Define ORA_VERSION. By default it's 8.  This is needed to find out
-dnl    where the env_precomp.mk makefile resides.
+dnl 1. Define ORA_VERSION. By default it's 9.  This is needed to find out
+dnl    where the env_precomp.mk makefile resides (I believe Oracle 9
+dnl    uses the same location).  Users specify the version number with
+dnl        --with-oracle=7|8|[9]|10
 dnl
 dnl 2. Run a simple make only using the Oracle facilities to query
 dnl    the libraries (and their order) that we need to link against.
-dnl    This run complies nothing.  It links nothing. It only prints
+dnl    This run compiles nothing.  It links nothing. It only prints
 dnl    the correct list of libraries for linking.
+dnl    [Introduced in 0.5-2] We do allow the user to override the 
+dnl    32- or 64-bit version of the Oracle with 
+dnl        --enable-oracle32=default|yes|no
+dnl    where:
+dnl      "default"   links against whatever the Oracle installation uses
+dnl      "yes"       links explicitly against the oracle's "lib32"; 
+dnl      "no"        links explicitly against the "lib64" libraries.
 dnl
 dnl 3. Define the PKG_CPPFLAGS and PKG_LIBS from above.
 dnl    PKG_CPPFLAGS=    
 dnl    PKG_LIBS = `cat oracle.libs`
-dnl
-dnl TODO: implement --enable-static 
 dnl
 
 AC_INIT(src/RS-Oracle.pc)
@@ -51,10 +59,26 @@ fi
 PATH="${PATH}":"${ORACLE_HOME}"/bin
 
 #
+# What version of Oracle do we have (defaults to Oracle8)
+#
+AC_ARG_WITH(oracle,
+   [--with-oracle=VERSION     Oracle version (7/8/[9]/10) installation],
+   ORA_VERSION="${with_oracle}",
+   ORA_VERSION=9)
+
+case "${ORA_VERSION}" in 
+  7*)  ORA_MAKE="${ORACLE_HOME}/precomp/env_precomp.mk"    ;;
+  8*)  ORA_MAKE="${ORACLE_HOME}/precomp/lib/env_precomp.mk";;
+  9*)  ORA_MAKE="${ORACLE_HOME}/precomp/lib/env_precomp.mk";;
+  10*) ORA_MAKE="${ORACLE_HOME}/precomp/lib/env_precomp.mk";;
+  *)  AC_MSG_ERROR([unrecognized Oracle version ${VERSION}]) ;;
+esac
+
+#
 # static or shared link to oracle's libraries? Defaults to "shared".
 #
 AC_ARG_ENABLE(static,
-            [--enable-static           use static linking to Oracle libraries])
+   [--enable-static           use static linking to Oracle libraries])
 if test -n "${enable_static}" -a "${enable_static}" = "yes" ; then
    load="static"
 else
@@ -62,17 +86,20 @@ else
 fi
 
 #
-# What version of Oracle do we have (defaults to Oracle8)
+# Should we use the default "lib" subdirectories, "lib32" or "lib64" ?
 #
-AC_ARG_WITH(oracle,
-            [--with-oracle=VERSION     Oracle version (7/[8]/9) installation],
-            ORA_VERSION="${with_oracle}",
-            ORA_VERSION=8)
-case "${ORA_VERSION}" in 
-  7*) ORA_MAKE="${ORACLE_HOME}/precomp/env_precomp.mk"    ;;
-  8*) ORA_MAKE="${ORACLE_HOME}/precomp/lib/env_precomp.mk";;
-  9*) ORA_MAKE="${ORACLE_HOME}/precomp/lib/env_precomp.mk";;
-  *)  AC_MSG_ERROR([unrecognized Oracle version ${VERSION}]) ;;
+AC_ARG_ENABLE(oracle32,
+   [--enable-oracle32=arg     use Oracle 32-bit libs?  arg can be
+                          "yes" for 32-bit libs, "no" for 64-bit libs,
+                          and "default" for Oracle's default libs)],
+   ORA_LIB="${enable_oracle32}",
+   ORA_LIB=default)
+
+case "${ORA_LIB}" in 
+  default) ORA_LIB=lib;;
+  yes)     ORA_LIB=lib32;;
+  no)      ORA_LIB=lib64;;
+  *)       AC_MSG_ERROR([unrecognized Oracle libs ${ORA_LIB}]);;
 esac
 
 #
@@ -85,8 +112,8 @@ cat > ${tmp_makefile} <<!
 
 include ${ORA_MAKE}
 
-SHLIBS = -L\$(ORACLE_HOME)/lib -L\$(ORACLE_HOME)/network/lib \$(STATICPROLDLIBS)
-STLIBS = -L\$(ORACLE_HOME)/lib -L\$(ORACLE_HOME)/network/lib \$(PROLDLIBS)
+SHLIBS = -L\$(ORACLE_HOME)/${ORA_LIB} -L\$(ORACLE_HOME)/network/${ORA_LIB} \$(STATICPROLDLIBS)
+STLIBS = -L\$(ORACLE_HOME)/${ORA_LIB} -L\$(ORACLE_HOME)/network/${ORA_LIB} \$(PROLDLIBS)
 
 shared:
 	@echo \$(SHLIBS)
