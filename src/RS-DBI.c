@@ -1,7 +1,8 @@
-/* $Id$ 
+/* 
+ * $Id: RS-DBI.c,v 1.5 2002/05/20 20:55:45 dj Exp dj $ 
  *
  *
- * Copyright (C) 1999,2000 The Omega Project for Statistical Computing
+ * Copyright (C) 1999-2002 The Omega Project for Statistical Computing
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -67,26 +68,23 @@ RS_DBI_allocManager(const char *drvName, Sint max_con,
     mgr = dbManager;
   }
  /* Ok, we're here to expand number of connections, etc.*/
-  if(!mgr){
-    char *errMsg = "could not malloc the dbManger";
-    RS_DBI_errorMessage(errMsg, RS_DBI_ERROR);
-  }
+  if(!mgr)
+    RS_DBI_errorMessage("could not malloc the dbManger", RS_DBI_ERROR);
   mgr->drvName = RS_DBI_copyString(drvName);
   mgr->drvData = (void *) NULL;
   mgr->managerId = mgr_id;
   mgr->connections =  (RS_DBI_connection **) 
     calloc((size_t) max_con, sizeof(RS_DBI_connection));
   if(!mgr->connections){
-    char *errMsg = "could not calloc RS_DBI_connections";
     free(mgr);
-    RS_DBI_errorMessage(errMsg, RS_DBI_ERROR);
+    RS_DBI_errorMessage("could not calloc RS_DBI_connections", RS_DBI_ERROR);
   }
   mgr->connectionIds = (Sint *) calloc((size_t)max_con, sizeof(Sint));
   if(!mgr->connectionIds){
-    char *errMsg = "could not calloc vector of connection Ids";
     free(mgr->connections);
     free(mgr);
-    RS_DBI_errorMessage(errMsg, RS_DBI_ERROR);
+    RS_DBI_errorMessage("could not calloc vector of connection Ids",
+          RS_DBI_ERROR);
   }
   mgr->counter = counter;
   mgr->length = max_con;
@@ -344,7 +342,7 @@ RS_DBI_freeResultSet(Res_Handle *rsHandle)
 }
 
 RS_DBI_fields *
-RS_DBI_allocFields(Sint num_fields)
+RS_DBI_allocFields(int num_fields)
 {
   RS_DBI_fields *flds;
   size_t n;
@@ -401,12 +399,14 @@ RS_DBI_makeDataFrame(s_object *data)
    Sint   i, n;
    char   buf[1024];
    
+#ifndef USING_R
    if(IS_LIST(data))
       data = AS_LIST(data);
-   else {
-      char *errMsg="internal error: could not corce named-list into data.frame";
-      RS_DBI_errorMessage(errMsg, RS_DBI_ERROR);
-   }
+   else
+      RS_DBI_errorMessage(
+            "internal error: could not corce named-list into data.frame",
+            RS_DBI_ERROR);
+#endif
 
    MEM_PROTECT(data);
    MEM_PROTECT(df_class_name = NEW_CHARACTER((Sint) 1));
@@ -444,22 +444,23 @@ RS_DBI_allocOutput(s_object *output, RS_DBI_fields *flds,
 		   Sint num_rec, Sint  expand)
 {
   s_object *names, *s_tmp;
-  Sint   j, num_fields;
+  Sint   j; 
+  int    num_fields;
   Stype  *fld_Sclass;
 
-  if(IS_LIST(output)){
+#ifndef USING_R
+  if(IS_LIST(output))
     output = AS_LIST(output);
-  }
-  else {
-    char *errMsg = "internal error: could not (re)allocate output list";
-    RS_DBI_errorMessage(errMsg, RS_DBI_ERROR);
-  }
+  else 
+    RS_DBI_errorMessage("internal error: could not (re)allocate output list",
+                        RS_DBI_ERROR);
+#endif
 
   MEM_PROTECT(output);
 
   num_fields = flds->num_fields;
   if(expand){
-    for(j = 0; j < num_fields; j++){
+    for(j = 0; j < (Sint) num_fields; j++){
       /* Note that in R-1.2.3 (at least) we need to protect SET_LENGTH */
       s_tmp = LST_EL(output,j);
       MEM_PROTECT(SET_LENGTH(s_tmp, num_rec));  
@@ -474,7 +475,7 @@ RS_DBI_allocOutput(s_object *output, RS_DBI_fields *flds,
   }
 
   fld_Sclass = flds->Sclass;
-  for(j = 0; j < num_fields; j++){
+  for(j = 0; j < (Sint) num_fields; j++){
     switch((int)fld_Sclass[j]){
     case LOGICAL_TYPE:    
       SET_ELEMENT(output, j, NEW_LOGICAL(num_rec));
@@ -501,8 +502,8 @@ RS_DBI_allocOutput(s_object *output, RS_DBI_fields *flds,
     }
   }
 
-  MEM_PROTECT(names = NEW_CHARACTER(num_fields));
-  for(j = 0; j<num_fields; j++){
+  MEM_PROTECT(names = NEW_CHARACTER((Sint) num_fields));
+  for(j = 0; j< (Sint) num_fields; j++){
     SET_CHR_EL(names,j, C_S_CPY(flds->name[j]));
   }
   SET_NAMES(output, names);
@@ -653,14 +654,15 @@ RS_DBI_copyfields(RS_DBI_fields *flds)
 
   num_fields = flds->num_fields;
   for(j = 0; j < n; j++) 
-    lengths[j] = num_fields;
+    lengths[j] = (Sint) num_fields;
   S_fields =  RS_DBI_createNamedList(desc, types, lengths, n);
+#ifndef USING_R
   if(IS_LIST(S_fields))
     S_fields = AS_LIST(S_fields);
-  else {
-    char *errMsg = "internal error: could not alloc named list";
-    RS_DBI_errorMessage(errMsg, RS_DBI_ERROR);
-  }
+  else
+    RS_DBI_errorMessage("internal error: could not alloc named list",
+                         RS_DBI_ERROR);
+#endif
   /* copy contentes from flds into an R/S list */
   for(i = 0; i < num_fields; i++){
     SET_LST_CHR_EL(S_fields,0,i, C_S_CPY(flds->name[i]));
@@ -726,14 +728,15 @@ RS_DBI_SclassNames(s_object *type)
   s_object *typeNames;
   Sint *typeCodes;
   Sint n;
-  int i;
+  int  i;
+  char *s;
   
   n = LENGTH(type);
   typeCodes = INTEGER_DATA(type);
   MEM_PROTECT(typeNames = NEW_CHARACTER(n));
   for(i = 0; i < n; i++) {
-    SET_CHR_EL(typeNames, i,
-      C_S_CPY(RS_DBI_getTypeName(typeCodes[i], RS_dataTypeTable)));
+    s = RS_DBI_getTypeName(typeCodes[i], RS_dataTypeTable);
+    SET_CHR_EL(typeNames, i, C_S_CPY(s));
   }
   MEM_UNPROTECT(1);
   return typeNames;
@@ -815,7 +818,6 @@ RS_DBI_getResultSet(Res_Handle *rsHandle)
 {
   RS_DBI_connection *con;
   Sint indx;
-  char buf[128];
   
   con = RS_DBI_getConnection(rsHandle);
   indx = RS_DBI_lookup(con->resultSetIds, con->length, RES_ID(rsHandle));
@@ -823,10 +825,9 @@ RS_DBI_getResultSet(Res_Handle *rsHandle)
     RS_DBI_errorMessage(
       "internal error: could not find resultSet in connection",
       RS_DBI_ERROR);
-  if(!con->resultSets[indx]){
-    (void) strcpy(buf, "internal error: missing resultSet");
-    RS_DBI_errorMessage(buf, RS_DBI_ERROR);
-  }
+  if(!con->resultSets[indx])
+    RS_DBI_errorMessage("internal error: missing resultSet",
+                        RS_DBI_ERROR);
   return con->resultSets[indx];
 }
 
@@ -958,11 +959,13 @@ RS_DBI_managerInfo(Mgr_Handle *mgrHandle)
   mgrLen[0] = num_con;
 
   output = RS_DBI_createNamedList(mgrDesc, mgrType, mgrLen, n);
+#ifndef USING_R
   if(IS_LIST(output))
     output = AS_LIST(output);
   else
     RS_DBI_errorMessage("internal error: could not alloc named list", 
 			RS_DBI_ERROR);
+#endif
   for(i = 0; i < num_con; i++)
     LST_INT_EL(output,0,i) = (Sint) mgr->connectionIds[i];
 
@@ -1001,11 +1004,13 @@ RS_DBI_connectionInfo(Con_Handle *conHandle)
   conLen[7] = con->num_res;   /* number of resultSets opened */
 
   output = RS_DBI_createNamedList(conDesc, conType, conLen, n);
+#ifndef USING_R
   if(IS_LIST(output))
     output = AS_LIST(output);
   else
     RS_DBI_errorMessage("internal error: could not alloc named list",
 			RS_DBI_ERROR);
+#endif
   /* dummy */
   SET_LST_CHR_EL(output,0,0,C_S_CPY("NA"));        /* host */
   SET_LST_CHR_EL(output,1,0,C_S_CPY("NA"));        /* dbname */
@@ -1043,11 +1048,13 @@ RS_DBI_resultSetInfo(Res_Handle *rsHandle)
     flds = S_NULL_ENTRY;
 
   output = RS_DBI_createNamedList(rsDesc, rsType, rsLen, n);
+#ifndef USING_R
   if(IS_LIST(output))
     output = AS_LIST(output);
   else
     RS_DBI_errorMessage("internal error: could not alloc named list",
 			RS_DBI_ERROR);
+#endif
   SET_LST_CHR_EL(output,0,0,C_S_CPY(result->statement));
   LST_INT_EL(output,1,0) = result->isSelect;
   LST_INT_EL(output,2,0) = result->rowsAffected;
@@ -1071,19 +1078,22 @@ RS_DBI_getFieldDescriptions(RS_DBI_fields *flds)
   Stype types[] = {CHARACTER_TYPE, INTEGER_TYPE, INTEGER_TYPE,
 		   INTEGER_TYPE, INTEGER_TYPE, INTEGER_TYPE,
 		   LOGICAL_TYPE};
-  Sint   i, j, num_fields;
+  Sint   i, j;
+  int    num_fields;
 
   num_fields = flds->num_fields;
   for(j = 0; j < n; j++) 
-    lengths[j] = num_fields;
+    lengths[j] = (Sint) num_fields;
   S_fields =  RS_DBI_createNamedList(desc, types, lengths, n);
+#ifndef USING_R
   if(IS_LIST(S_fields))
     S_fields = AS_LIST(S_fields);
   else
     RS_DBI_errorMessage("internal error: could not alloc named list",
 			RS_DBI_ERROR);
+#endif
   /* copy contentes from flds into an R/S list */
-  for(i = 0; i < num_fields; i++){
+  for(i = 0; i < (Sint) num_fields; i++){
     SET_LST_CHR_EL(S_fields,0,i,C_S_CPY(flds->name[i]));
     LST_INT_EL(S_fields,1,i) = (Sint) flds->Sclass[i];
     LST_INT_EL(S_fields,2,i) = (Sint) flds->type[i];
@@ -1099,7 +1109,7 @@ RS_DBI_getFieldDescriptions(RS_DBI_fields *flds)
 /* given a type id return its human-readable name.
  * We define an RS_DBI_dataTypeTable */
 char *
-RS_DBI_getTypeName(Sint t, struct data_types table[])
+RS_DBI_getTypeName(Sint t, const struct data_types table[])
 {
   int i;
   char buf[128];
@@ -1222,3 +1232,43 @@ RS_is_na(void *ptr, Stype type)
    return out;
 }
 #endif
+/* the codes come from from R/src/main/util.c */
+const struct data_types RS_dataTypeTable[] = {
+#ifdef USING_R
+    { "NULL",		NILSXP	   },  /* real types */
+    { "symbol",		SYMSXP	   },
+    { "pairlist",	LISTSXP	   },
+    { "closure",	CLOSXP	   },
+    { "environment",	ENVSXP	   },
+    { "promise",	PROMSXP	   },
+    { "language",	LANGSXP	   },
+    { "special",	SPECIALSXP },
+    { "builtin",	BUILTINSXP },
+    { "char",		CHARSXP	   },
+    { "logical",	LGLSXP	   },
+    { "integer",	INTSXP	   },
+    { "double",		REALSXP	   }, /*-  "real", for R <= 0.61.x */
+    { "complex",	CPLXSXP	   },
+    { "character",	STRSXP	   },
+    { "...",		DOTSXP	   },
+    { "any",		ANYSXP	   },
+    { "expression",	EXPRSXP	   },
+    { "list",		VECSXP	   },
+    /* aliases : */
+    { "numeric",	REALSXP	   },
+    { "name",		SYMSXP	   },
+    { (char *)0,	-1	   }
+#else
+    { "logical",	LGL	  },
+    { "integer",	INT	  },
+    { "single",		REAL	  },
+    { "numeric",	DOUBLE	  },
+    { "character",	CHAR	  },
+    { "list",		LIST	  },
+    { "complex",	COMPLEX	  },
+    { "raw",		RAW	  },
+    { "any",		ANY	  },
+    { "structure",	STRUCTURE },
+    { (char *)0,	-1	  }
+#endif
+};

@@ -1,10 +1,5 @@
-
-* Need to implement the assign/exists/remove methods to 
-  be able to attach() oracle connections.
-
-* Should we re-implement the guts using OCI instead of the ProC/C++?
- 
-* Testing -- needs a lot more testing.
+* The RS-DBI needs to be finalized.  Once the R-SIG-DB agrees on
+  a final API implement it.
 
 * Implement the "bind variables" idea -- useful for writing into
   databases, but not too critical(?) for select operations.
@@ -16,7 +11,7 @@
 * Security. Need to implement a better authentication mechanism,
   possibly similar to the MySQL or the ODBC?
  
-* Implement transaction control.
- 
 * Performance. We haven't done anything on this yet.
+
+* Long term. Should we reimplement the guts using OCI instead of the ProC/C++?
  

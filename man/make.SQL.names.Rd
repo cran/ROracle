@@ -7,11 +7,16 @@
 Produce legal SQL identifiers from an R/S chacter vector.
 }
 \usage{
-make.SQL.names(snames, unique=T, allow.keywords=T)
+make.SQL.names(snames, keywords = .SQL92keywords, unique=T, allow.keywords=T)
 }
 \arguments{
 \item{snames}{
 a character vector of R/S identifiers (syntactic names).
+}
+\item{keywords}{
+a character vector of SQL keywords.  Typically, DBMS engines
+have slightly different sets of keywords, and each driver will
+have its own list, e.g., \code{.OraSQLKeywords}, \code{.MySQLKeywords}.
 }
 \item{unique}{
 logical describing whether the resulting set of SQL names should be unique.

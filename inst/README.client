@@ -1,0 +1,110 @@
+
+These are the steps I followed to run ROracle on a linux system
+that has no Oracle software.  These notes detail how to get
+a statically-linked ROracle client to run on a system w.o. the
+Oracle software.
+
+1. I built ROracle on a linux machine that has the Oracle client
+   software.  By default the ROracle package is compiled using
+   static linking to the Oracle libraries (this produces a bigger
+   ROracle.so in the package "libs" directory).
+
+2. I copied ROracle to the Oracle-less linux system.
+
+3. I then created an "oracle" subdirectory where I added the Oracle
+   client configuration files:
+
+      mkdir -p $HOME/oracle/network/admin
+      cd $HOME/oracle/network/admin
+
+   I then created the two files "sqlnet.ora" and "tnsnames.ora"
+   in there. The contents of "sqlnet.ora" are:
+
+      $ cat sqlnet.ora
+      # sqlnet.ora
+      NAMES.DEFAULT_DOMAIN = research.bell-labs.com
+      NAMES.DIRECTORY_PATH= (TNSNAMES, ONAMES, HOSTNAME)
+
+   The fist line defines a default domain, which is used with an
+   unqualified data source: e.g., "oras" is automatically mapped to
+   "oras.research.bell-labs.com" by the Oracle client libraries.
+   The second line instructs Oracle to resolve data source names
+   using any of those 3 protocol.
+
+   The contents of "tnsnames.ora" are:
+
+      $ cat tnsnames.ora
+      # tnsnames.ora
+      # Define the data source "ORAS" as the database oras in host "apollo"
+      ORAS.RESEARCH.BELL-LABS.COM =
+        (DESCRIPTION =
+          (ADDRESS_LIST = (ADDRESS=(PROTOCOL=TCP)(HOST=apollo)(PORT=1521)))
+          (CONNECT_DATA = (SID = oras))
+        )
+
+   With this the Oracle client maps a data source name (or system
+   id, SID) into a tcp, hostname, port, and database instance set of
+   values that uniquely identify the source name in the network.
+   In my example, the data source "oras" (oras.research.bell-labs.com
+   to be precise) is mapped to the triplet (apollo, 1521, oras).
+
+4. Prior to invoking R I defined the variables ORACLE_HOME and ORACLE_SID
+
+       $ export ORACLE_HOME=$HOME/oracle
+       $ export ORACLE_SID="oras"
+
+       $ R
+       > library(ROracle)
+
+       > ora <- Oracle()
+
+       > # The following connects me to the $ORACLE_SID database
+       > con <- dbConnect(ora, "user", "password")
+       
+       > # or explicitly
+       > con2 <- dbConnect(ora, "user", "password", "oras")
+
+There's one problem, though.  The function assignTable (which
+copies a data.frame into an Oracle table) uses the Oracle utility
+SQL*Loader that does bulk, fast data loading.  This is a program in
+$ORACLE_HOME/bin/sqlldr, thus even if you are able to statically link
+ROracle you may not have sqlldr if you don't have the Oracle software
+on your local machine.  For this case, we have extended assignTable()
+to look for the argument "rhost" as part of "...".  E.g.,
+
+        > data(quakes)
+        > assignTable(con, "QUAKES", quakes, rhost = "apollo")
+        
+This will use scp (by default) to copy the data.frame quakes to 
+a tmporary file in the remote host apollo, then attempt to run the 
+SQL*Loader there.  For this to succeed, the variable ORACLE_HOME
+has to be set *on the remote host*.  We do this following the following
+heuristic:
+
+  (1) use the arg "ora.home" (if part of ...)
+      
+      > assignTable(con, "QUAKES", quakes, rhost="apollo",
+                    ora.home = "/opt/oracle") 
+
+      (you may need this as a measure of last resource, when case (2)
+       below cannot guess correctly the value of ORACLE_HOME).
+
+  (2) if the above fails, then set it to `dbhome`, which is an 
+      Oracle utility in rhost:/usr/local/bin that attempts to guess
+      the right ORACLE_HOME value (I haven't found this too reliable).
+
+The full details for assignTable() are:
+      
+  > assignTable(con, "name", value, overwrite = F, append = F, 
+                rhost, ora.home = Sys.getenv("ORACLE_HOME"), 
+                rcp = "scp", rsh = "ssh", ...)
+
+NOTE: 
+
+   It is possible to connect to the **default** Oracle database
+   in a known host without having to create the sqlnet.ora and
+   tnsnames.ora files. E.g.,
+
+      ora <- Oracle()
+      con <- dbConnect(ora, "user", "password", "apollo")
+

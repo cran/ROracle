@@ -25,7 +25,7 @@
 extern "C" {
 #endif
  
-#define  RS_ORA_VERSION "0.3-1"   /* R/S to Oracle client version */
+#define  RS_ORA_VERSION "0.3-3"   /* R/S to Oracle client version */
 #include "RS-DBI.h"
 
 /* connections parameters that oracle understand. */
@@ -64,8 +64,9 @@ typedef struct st_sdbi_oraDesc {
   SQLDA  *selectFlds;   /* SQL Desc Area for selecte'd fields */
 } RS_Ora_desArea;
 
+/* TODO: I can't believe this could be thread-safe */
 EXEC SQL BEGIN DECLARE SECTION;
-  VARCHAR db_alias[128];
+  VARCHAR db_alias[1024];
 EXEC SQL END DECLARE SECTION;
 
 #define ALIAS_PATTERN "RSORA_%02d" /* fake dbname for ea resultSet/Cursor */
@@ -118,10 +119,11 @@ s_object *RS_Ora_typeNames(s_object *types);
 #define ORA_IN_BLOB    113  /* binary large object */
 #define ORA_IN_BFILE   114  /* binary file locator */
 
-/* Oracle external (EX) data types  with C equivalents (See Ch 14, p14
- * and Table 3-2). We use these "external" types during fetching to 
- * specify how the Oracle automatic conversion should export to our C
- *  host variables the server internal types.
+/* Oracle external (EX) data types with C equivalents (See Ch 14, p14
+ * and Table 3-2), "external" to Oracle, e.g., C types.
+ * We use these "external" types during fetching to specify how the 
+ * Oracle automatic conversion should export to our C host variables 
+ * the server internal types.
  */
 #define ORA_EX_VARCHAR2  1  /* char[n] (n<=65530) */
 #define ORA_EX_NUMBER    2  /* char[n] n=22 */
@@ -159,19 +161,19 @@ static struct data_types RS_Ora_dataTypes[] = {
    {"DATE",	ORA_EX_DATE	},
    {"LONG",	ORA_EX_LONG	},
    {"LONGRAW",	ORA_EX_LONGRAW	},
-   {"LONG_VARCHAR",	ORA_EX_LONG_VARCHAR	},
+   {"LONG_VARCHAR", ORA_EX_LONG_VARCHAR	},
    {"VARNUM",	ORA_EX_VARNUM	},
    {"CHARF",	ORA_EX_CHARF	},
    {"CHARZ",	ORA_EX_CHARZ	},
-   {"CLOB",	ORA_IN_CLOB	},
-   {"BLOB",	ORA_IN_BLOB	},
    {"DISPLAY",	ORA_EX_DISPLAY	},
    {"MLSLABEL",	ORA_EX_MLSLABEL	},
    {"RAW",	ORA_EX_RAW	},
    {"ROWID",	ORA_EX_ROWID	},
    {"UNSIGNED",	ORA_EX_UNSIGNED	},
    {"VARRAW",	ORA_EX_VARRAW	},
-   {"BFILE",	ORA_IN_BFILE	},
+   {"CLOB",	ORA_IN_CLOB	},    /* TODO: Not yet implemented */
+   {"BLOB",	ORA_IN_BLOB	},    /* TODO: Not yet implemented */
+   {"BFILE",	ORA_IN_BFILE	},    /* TODO: Not yet implemented */
    {(char *)NULL,  -1 }
 };
 

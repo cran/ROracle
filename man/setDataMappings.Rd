@@ -16,9 +16,6 @@ setDataMappings(res, ...)
 \item{res}{
 a \code{dbResultSet} object as returned by \code{dbExecStatement}.
 }
-\item{flds}{
-a field description object as returned by \code{getFields}.
-}
 \item{\dots }{
 any additional arguments are passed to the implementing method.
 }

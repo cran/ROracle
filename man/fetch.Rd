@@ -11,7 +11,7 @@ fetch(res, n, ...)
 }
 \arguments{
 
-\item{resultSet}{
+\item{res}{
   a \code{resultSet} object.
   This object needs to be the result of a \code{SELECT}
   or \code{SELECT}-like statement, as produced

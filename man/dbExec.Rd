@@ -1,7 +1,7 @@
 \name{dbExec}
 \alias{dbExec}
 \title{
-  Execute an SQL script on a given database connection
+  Execute an SQL statement on a given database connection
 }
 \description{
 Submits and executes an arbitrary SQL script (one or more
@@ -15,7 +15,7 @@ dbExec(con, statement, ...)
 a connection object (i.e., an object that extends 
 \code{dbConnection}).
 }
-\item{script}{
+\item{statement}{
 a character vector with one or more SQL statements.
 }
 \item{\dots }{
@@ -33,7 +33,7 @@ The statements are submitted to the server connected through
 the connection \code{con.}
 }
 \details{
-This function submits and executes SQL scripts, i.e., one or 
+This function submits and executes SQL statement, i.e., one or 
 more SQL statements, to the database engine.  To fetch records you need to 
 use the function \code{fetch}.
 Currently it is undefined how multiple result sets are to be

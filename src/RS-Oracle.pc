@@ -1,9 +1,11 @@
 /* R and S DataBase Interface to Oracle */
-/* $Id$ */
+/* 
+ * $Id$ 
+ *
+ * vim:syntax=c 
+ */
 
-/* vim:syntax=c */
-
-/* Copyright (C) 1999,2000 The Omega Project for Statistical Computing.
+/* Copyright (C) 1999-2001 The Omega Project for Statistical Computing.
  *
  * http://www.omegahat.org
  *
@@ -52,7 +54,7 @@
  *   method introduces yet-another scoping space where cursor names
  *   and dynamic statements are defined -- e.g., cursor names must
  *   be unique within this file but also on the SQLLIB underlying 
- *   API's private stucts.  Moreover, we cannot dynamically 
+ *   API's private structs.  Moreover, we cannot dynamically 
  *   store/restore cursor names in C structs, thus we're limited to 
  *   pre-allocating (at pre-compilation) a pool of cursors that we 
  *   manage very clumsily thru switches (Grrr!).  This has forced us
@@ -145,8 +147,9 @@ Con_Handle *
 RS_Ora_newConnection(Mgr_Handle *mgrHandle, s_object *conn_params, 
 		     s_object *max_res)
 {
-  /* We implement the following ways of connecting to an Oracle
-   * database:
+  /* From R/S (not in this C file) we implement the following ways of 
+   * connecting to an Oracle database. (This routine *must* get the 3 
+   * parameters username, password, dbname.)
    *   (1) "/"                    (ie., automatic connect)
    *   (2) user, password         (on $ORACLE_SID default connection)
    *   (3) user, password, dbname (using Net8 service names)
@@ -160,26 +163,42 @@ RS_Ora_newConnection(Mgr_Handle *mgrHandle, s_object *conn_params,
   char   alias[128];
   int    cursorNum;
 
+#define ORA_BUF_LEN  1024
+
   EXEC SQL BEGIN DECLARE SECTION;
-    VARCHAR  username[32];
-    VARCHAR  password[32];
-    VARCHAR  usr_passwd[128];   /* e.g., scott/tiger@oras */
-    VARCHAR  dbname[32];        /* this is an SQL*Net8 TNSNAME */
+    VARCHAR  username[ORA_BUF_LEN];
+    VARCHAR  password[ORA_BUF_LEN];
+    VARCHAR  dbname[ORA_BUF_LEN];/* this is an SQL*Net8 TNSNAME (but Oracle */
+                                 /* gurus/Perl Hackers seem to overload this*/
+                                 /* to include the full tnsname.ora string) */
   EXEC SQL END DECLARE SECTION;
 
   /* create a connection and assign it to the dbManager 
    * TODO: currently we can only have 1 open resultSet 
    */
-  conHandle = RS_DBI_allocConnection(mgrHandle, INT_EL(max_res,0));
-  con = RS_DBI_getConnection(conHandle);
-  cursorNum = RS_Ora_getCursorNum(conHandle);
 
   conParams = RS_Ora_allocConParams();
-  conParams->user = RS_DBI_copyString(CHR_EL(conn_params,0));
-  conParams->passwd = RS_DBI_copyString(CHR_EL(conn_params,1));
-  conParams->dbname = RS_DBI_copyString(CHR_EL(conn_params,2));
+  conParams->user = RS_DBI_nCopyString(CHR_EL(conn_params,0), ORA_BUF_LEN,0);
+#define IS_EMPTY(s1)   !strcmp((s1), "")
+  if(IS_EMPTY(conParams->user)){
+     RS_Ora_freeConParams(conParams);
+     RS_DBI_errorMessage("username must be non-empyt", RS_DBI_ERROR);
+  }
+  conParams->passwd = RS_DBI_nCopyString(CHR_EL(conn_params,1), ORA_BUF_LEN,0);
+  if(IS_EMPTY(conParams->passwd)){
+     RS_Ora_freeConParams(conParams);
+     RS_DBI_errorMessage("password must be non-empyt", RS_DBI_ERROR);
+  }
+  conParams->dbname = RS_DBI_nCopyString(CHR_EL(conn_params,2), ORA_BUF_LEN,0);
+  if(IS_EMPTY(conParams->dbname)){
+     RS_Ora_freeConParams(conParams);
+     RS_DBI_errorMessage("dbname must be non-empyt", RS_DBI_ERROR);
+  }
   
+  conHandle = RS_DBI_allocConnection(mgrHandle, INT_EL(max_res,0));
+  con = RS_DBI_getConnection(conHandle);
   con->conParams = (void *) conParams;
+  cursorNum = RS_Ora_getCursorNum(conHandle);
 
   RS_Ora_varCharCpy(&username, conParams->user);
   RS_Ora_varCharCpy(&password, conParams->passwd);
@@ -187,28 +206,11 @@ RS_Ora_newConnection(Mgr_Handle *mgrHandle, s_object *conn_params,
 
   EXEC SQL WHENEVER SQLERROR GOTO connect_error;
 
-#define IS_EMPTY(s1)   !strcmp((s1), "")
-
   /* We always use :db_alias to name connections. */
   (void) sprintf(alias, ALIAS_PATTERN, cursorNum);
   RS_Ora_varCharCpy(&db_alias, alias);
 
-  /* The "automatic" connect (i.e., "OPS$<login>") */
-  if(IS_EMPTY(conParams->user) && IS_EMPTY(conParams->passwd)){
-    (void) strcpy( (char*) usr_passwd.arr, "/");
-    usr_passwd.len = (unsigned short) strlen((char*) "/");
-
-    EXEC SQL CONNECT :usr_passwd AT :db_alias;
-  }
-  else if( IS_EMPTY(conParams->dbname) ){
-
-    EXEC SQL CONNECT :username IDENTIFIED BY :password AT :db_alias;
-  } 
-  else {
-
-    EXEC SQL CONNECT :username IDENTIFIED BY :password 
-      AT :db_alias USING :dbname;
-  }
+  EXEC SQL CONNECT :username IDENTIFIED BY :password AT :db_alias USING :dbname;
 
   return conHandle;
     
@@ -232,6 +234,8 @@ RS_Ora_cloneConnection(Con_Handle *conHandle)
   s_object    *con_params, *max_res;
 
   /* use existing connection's parameters to create a new connection */
+  if(LENGTH(conHandle)<2)
+     RS_DBI_errorMessage("corrupt connection handle?", RS_DBI_ERROR);
   con = RS_DBI_getConnection(conHandle);
   conParams = con->conParams;
   mgrHandle = RS_DBI_asMgrHandle(MGR_ID(conHandle));
@@ -342,7 +346,7 @@ RS_Ora_exec(Con_Handle *conHandle, s_object *statement)
   result = RS_DBI_getResultSet(rsHandle);
 
   /* Oracle needs dyn_statement */
-  (void) strcpy(dyn_statement, CHR_EL(statement,0));
+  (void) strncpy(dyn_statement, CHR_EL(statement,0), RS_ORA_STATEMENT_LEN);
   desArea = RS_Ora_allocDescriptors(RS_ORA_MAX_ITEMS, 
 			   RS_ORA_MAX_VNAME_LEN, 
 			   RS_ORA_MAX_VNAME_LEN);
@@ -472,22 +476,22 @@ RS_Ora_exec(Con_Handle *conHandle, s_object *statement)
     goto exec_error;
     break;
   }
-  /* If F is negative, there were more select-list items than
-   * originally allocated by sqlald(). 
-   */
-  num_fields = select_dp->F;
-  if(num_fields < 0) {
-    char errMsg[128];
-    (void) sprintf(errMsg, 
-		   "too many select-list items (%d), maximum is %d",
-		   (int) -(select_dp->F), (int) RS_ORA_MAX_ITEMS);
-    RS_DBI_errorMessage(errMsg, RS_DBI_WARNING);
-    goto exec_error;
-  }
 
   result->statement = RS_DBI_copyString(CHR_EL(statement,0));
 
   if(sqlFunCode == ORA_SELECT_CODE ){
+    /* If F is negative, there were more select-list items than
+     * originally allocated by sqlald(). 
+     */
+    num_fields = (int) select_dp->F;
+    if(num_fields < 0) {
+      char errMsg[128];
+      (void) sprintf(errMsg, 
+	   "too many select-list items (%d), maximum is %d",
+	   (int) -(select_dp->F), (int) RS_ORA_MAX_ITEMS);
+      RS_DBI_errorMessage(errMsg, RS_DBI_WARNING);
+      goto exec_error;
+    }
     result->fields = RS_Ora_setOraToSMappings(desArea);
     result->rowsAffected = (Sint) -1;    /* not set w. SELECT statements */
     result->completed = (Sint) 0;
@@ -533,13 +537,13 @@ RS_Ora_setOraToSMappings(RS_Ora_desArea *desArea)
 
   SQLDA *select_dp = NULL;
   RS_DBI_fields *flds;
-  Sint  num_fields;
+  int  num_fields;
   Sint  j, null_ok, precision, scale;
   char  errMsg[128];
   short ORACLE_internal_type;
   select_dp = desArea->selectFlds;
   select_dp->N = select_dp->F;   /* sets actual num of selected columns*/
-  num_fields = (Sint) select_dp->F;
+  num_fields = (int) select_dp->F;
   flds = RS_DBI_allocFields(num_fields);
 
   for (j = 0; j < num_fields; j++){
@@ -679,13 +683,17 @@ RS_Ora_fetch(Res_Handle *rsHandle, s_object *max_rec)
   EXEC SQL END DECLARE SECTION;
 
   S_EVALUATOR
-  s_object         *output, *raw_obj, *raw_container;
+  s_object         *output;
+#ifndef USING_R
+  s_object          *raw_obj, *raw_container;
+#endif
   RS_DBI_manager   *mgr;
   RS_DBI_resultSet *result;
   RS_DBI_fields    *flds;
   RS_Ora_desArea   *desArea;
   SQLDA *select_dp = NULL;
-  Sint   i, j, num_rec, num_fields, null_item, expand;
+  Sint   i, j, num_rec, null_item, expand;
+  int    num_fields;
   Sint   isVarLength;
   int    cursorNum;
   char   *out, alias[128];
@@ -704,12 +712,13 @@ RS_Ora_fetch(Res_Handle *rsHandle, s_object *max_rec)
   num_fields = flds->num_fields;
   MEM_PROTECT(output = NEW_LIST((Sint) num_fields));
   RS_DBI_allocOutput(output, flds, num_rec, 0);
+#ifndef USING_R
   if(IS_LIST(output))
     output = AS_LIST(output);
   else
     RS_DBI_errorMessage("internal error: could not alloc output list",
 			RS_DBI_ERROR);
-
+#endif
   /* Now we loop over at most num_rec and fetch them from the cursor */
 
   cursorNum = RS_Ora_getCursorNum(rsHandle);
@@ -727,11 +736,13 @@ RS_Ora_fetch(Res_Handle *rsHandle, s_object *max_rec)
       if(expand){
 	num_rec = 2 * num_rec;
 	RS_DBI_allocOutput(output, flds, num_rec, expand);
+#ifndef USING_R
 	if(IS_LIST(output))
 	  output = AS_LIST(output);
 	else
 	  RS_DBI_errorMessage("input fetch error: could not alloc output list",
 			      RS_DBI_ERROR);
+#endif
       }
       else
 	goto done;
@@ -832,10 +843,16 @@ RS_Ora_fetch(Res_Handle *rsHandle, s_object *max_rec)
   
  done:  /* actual number of records fetched */
   if(i < num_rec){
+    s_object *s_tmp;
+
     num_rec = i;
     /* adjust the length of each of the members in the output_list */
-    for(j = 0; j<num_fields; j++)
-      SET_LENGTH(LST_EL(output,j), num_rec);
+    for(j = 0; j<num_fields; j++){
+      s_tmp = LST_EL(output, j);
+      MEM_PROTECT(SET_LENGTH(s_tmp, num_rec));
+      SET_ELEMENT(output, j, s_tmp);
+      MEM_UNPROTECT(1);
+    }
   }
 
   if(sqlca.sqlcode == ORA_END_OF_DATA)
@@ -1156,11 +1173,13 @@ RS_Ora_getException(s_object *conHandle)
   if(!RS_DBI_validHandle(conHandle))
     RS_DBI_errorMessage("invalid handle", RS_DBI_ERROR);
   output = RS_DBI_createNamedList(exDesc, exType, exLen, n);
+#ifndef USING_R
   if(IS_LIST(output))
     output = AS_LIST(output);
   else
     RS_DBI_errorMessage("internal error: could not allocate named list",
 			RS_DBI_ERROR);
+#endif
   ora_code = sqlca.sqlcode;
   /* make sure we don't extract last (instead of current) message */
   if(ora_code != 0){ 
@@ -1179,7 +1198,7 @@ s_object *
 RS_Ora_typeNames(s_object *oraTypes)
 {
   S_EVALUATOR
-  Sint n, i, j;
+  Sint n, i;
   Sint  this_type;
   char  *tname;
   char  *unknown = "<unknown>";
@@ -1244,12 +1263,13 @@ RS_Ora_managerInfo(Mgr_Handle *mgrHandle)
   mgrLen[1] = num_con;
 
   output = RS_DBI_createNamedList(mgrDesc, mgrType, mgrLen, n);
+#ifndef USING_R
   if(IS_LIST(output))
     output = AS_LIST(output);
   else
     RS_DBI_errorMessage("internal error: could not alloc named list", 
 			RS_DBI_ERROR);
-
+#endif
   SET_LST_CHR_EL(output,0,0,C_S_CPY(mgr->drvName));
   for(i = 0; i < num_con; i++)
     LST_INT_EL(output,1,i) = (Sint) mgr->connectionIds[i];
@@ -1271,34 +1291,37 @@ RS_Ora_connectionInfo(Con_Handle *conHandle)
   RS_Ora_conParams   *conParams;
   s_object *output;
   Sint     i;
-  Sint  n = (Sint) 7;
-  char *conDesc[] = {"dbname", "user", "conType",
+  Sint  n = (Sint) 8;
+  char *conDesc[] = {"dbname", "user", "passwd", "conType",
 		     "serverVersion", "protocolVersion",
 		     "threadId", "resultSetIds"};
   Stype conType[] = {CHARACTER_TYPE, CHARACTER_TYPE, CHARACTER_TYPE,
-		      CHARACTER_TYPE, CHARACTER_TYPE, 
-		      INTEGER_TYPE, INTEGER_TYPE};
-  Sint  conLen[]  = {1, 1, 1, 1, 1, 1, -1};
+                     CHARACTER_TYPE, CHARACTER_TYPE, CHARACTER_TYPE, 
+		     INTEGER_TYPE, INTEGER_TYPE};
+  Sint  conLen[]  = {1, 1, 1, 1, 1, 1, 1, -1};
 
   con = RS_DBI_getConnection(conHandle);
-  conLen[6] = con->num_res;   /* number of resultSets opened */
+  conLen[n-1] = con->num_res;   /* number of resultSets opened */
   conParams = (RS_Ora_conParams *) con->conParams;
 
   output = RS_DBI_createNamedList(conDesc, conType, conLen, n);
+#ifndef USING_R
   if(IS_LIST(output))
     output = AS_LIST(output);
   else
     RS_DBI_errorMessage("internal error: could not alloc named list",
 			RS_DBI_ERROR);
+#endif
   SET_LST_CHR_EL(output,0,0, C_S_CPY(conParams->dbname));
   SET_LST_CHR_EL(output,1,0, C_S_CPY(conParams->user));
-  SET_LST_CHR_EL(output,2,0, C_S_CPY("NA"));        /* conType */
-  SET_LST_CHR_EL(output,3,0, C_S_CPY("NA"));        /* serverVersion */
-  SET_LST_CHR_EL(output,4,0, C_S_CPY("NA"));        /* protocol version*/
-  LST_INT_EL(output,5,0) = (Sint) -1;               /* threadId */
+  SET_LST_CHR_EL(output,2,0, C_S_CPY(conParams->passwd));
+  SET_LST_CHR_EL(output,3,0, NA_STRING);      /* conType */
+  SET_LST_CHR_EL(output,4,0, NA_STRING);      /* serverVersion */
+  SET_LST_CHR_EL(output,5,0, NA_STRING);      /* protocol version*/
+  LST_INT_EL(output,6,0) = (Sint) -1;                 /* threadId */
 
   for(i=0; i < con->num_res; i++)
-    LST_INT_EL(output,6,(Sint) i) = con->resultSetIds[i];
+    LST_INT_EL(output,7,(Sint) i) = con->resultSetIds[i];
 
   return output;
 }
@@ -1325,11 +1348,13 @@ RS_Ora_resultSetInfo(Res_Handle *rsHandle)
     flds = S_NULL_ENTRY;
 
   output = RS_DBI_createNamedList(rsDesc, rsType, rsLen, n);
+#ifndef USING_R
   if(IS_LIST(output))
     output = AS_LIST(output);
   else
     RS_DBI_errorMessage("internal error: could not alloc named list",
 			RS_DBI_ERROR);
+#endif
   SET_LST_CHR_EL(output,0,0, C_S_CPY(result->statement));
   LST_INT_EL(output,1,0) = result->isSelect;
   LST_INT_EL(output,2,0) = result->rowsAffected;

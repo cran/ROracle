@@ -5,7 +5,8 @@
   Instantiate an Oracle client from the current R or S session
 }
 \description{
-This function creates and initializes an Oracle client.
+This function creates and initializes an Oracle client from
+the current R/S session.
 It returns an object that allows you to connect
 to one or several Oracle servers.
 }
@@ -32,7 +33,8 @@ Oracle(max.con = 10, fetch.default.rec = 500, force.reload = F)
 An object \code{OraManager} that extends 
 \code{dbManager} and 
 \code{dbObjectId}.
-This object is required to create connections
+This object is used to create connections, using the
+function \code{dbConnect},
 to one or several Oracle database engines.
 }
 \section{Side Effects}{
@@ -48,13 +50,21 @@ This implementation allows you to connect
 to multiple host servers and run multiple connections on each server
 simultaneously.
 }
-\section{User authentication}{
-The usual methods to pass authentication parameters to the
-server (e.g., user, password, database name) is either through the the 
-arguments \code{user}, \code{password}, and \code{dbname} to
-\code{\link{dbConnect}}, or the Oracle's environemnt variable
+\section{Oracle user authentication}{
+In order to establish a connection to an Oracle server
+users need to provide a user name, a password, and possibly
+an ``Oracle SID'' (i.e., a database name);
+by default the Oracle SID is taken from the environment variable 
 \code{\$ORACLE\_SID}.
-
+The function \code{dbConnect} allows authentication strings 
+similar to the Oracle monitor \code{SQL*Plus}, namely, a 
+string of any of the following forms:
+\enumerate{
+\item \code{"user/passsword"} 
+\item \code{"user/password@dbname"}
+\item \code{"/"} (provided the Oracle server is set up to use the
+   underlying operating system users and passwords);
+}
 }
 \section{References}{
 See the Omega Project for Statistical Computing
@@ -102,28 +112,33 @@ On meta-data:
 \code{\link{getInfo}}
 }
 \examples{\dontrun{
-# create a Oracle instance and create one connection.
+## create a Oracle instance and create one connection.
 m <- dbManager("Oracle")
 con <- dbConnect(m, user = "opto", password="pure-light", db="oras")
 
-# you can also use Oracle's user/password@dbname convention
+## you can also use Oracle's user/password@dbname convention
 con2 <- dbConnect(m, user = "opto/pure-light@oras")
 
-# or if you have defined the ORACLE_SID shell variable
+## or if you have defined the ORACLE_SID shell variable
 con3 <- dbConnect(m, user = "opto", password = "pure-light")
 
-# clone an existing connection
+## clone an existing connection
 w <- dbConnect(con)
 
-# execute a statement and fetch its output chunks at a time
+## execute a statement and fetch its output in chunks of no more
+## than 5000 rows at a time
+
 rs <- dbExec(con, "select * from HTTP_ACCESS where IP_ADDRESS = '127.0.0.1'")
-df <- fetch(rs, n = 50)
-hasCompleted(rs)
-df2 <- fetch(rs, n = -1)
+
+while(!hasCompleted(rs)){
+   df <- fetch(rs, n = 5000)
+   process(df)
+}
+
 hasCompleted(rs)
 [1] TRUE
-close(rs)
-getTables(con)    
+close(rs)      ## done with this query
+close(con)     ## done with this connection
 }
 }
 \keyword{interface}

@@ -11,7 +11,7 @@ with an object
 describe(obj, verbose, ...)
 }
 \arguments{
-\item{object}{
+\item{obj}{
 any object that implements some functionality under the R/S interface 
 to databases, e.g.,
 \code{dbManager},
