@@ -1,0 +1,67 @@
+The ROracle was tested with R 1.3.1 and with Oracle 8.0.4 Enterprise
+as a server on a Solaris system. Also, it was tested  on a Linux
+8.1.7 client-only installation.  (A previous version was successfully
+run with Oracle 7).
+
+Oracle Requirements:
+--------------------
+
+  For compiling, the R-Oracle interface needs the client part of
+  the Oracle distribution (in particular the "programmer" and
+  "application user" packages), you don't need the Oracle server.
+
+  Make sure you have the Oracle ProC/C++ properly configure (e.g.,
+  $ORACLE_HOME/proc/admin/pcscfg.cfg in Oracle8), otherwise you
+  will run into problems either during pre-compilation and/or linking.
+
+Using library(ROracle):
+-----------------------
+
+  If you see an error like the one below when you issue the
+  library(ROracle) command, you may need to define or update you
+  LD_LIBRARY_PATH.  For instance,
+
+  > library(ROracle)
+  Error in dyn.load(x, as.logical(local), as.logical(now)) : 
+     unable to load shared library "/usr/dj/linux/R/ROracle/libs/ROracle.so":
+  /usr/dj/linux/R/ROracle/libs/ROracle.so: undefined symbol: sqlclu
+  Error in library(ROracle) : .First.lib failed
+ 
+  Solution 1:  Update $LD_LIBRARY_PATH *before* invoking R, e.g.,
+
+  $ export LD_LIBRARY_PATH=$ORACLE_HOME/lib:$LD_LIBRARY_PATH
+  $ R
+  > library(ROracle)
+  >
+  
+  Solution 2: Create a static library (see below).
+ 
+Installation:
+-------------
+
+Shell variables:
+
+  1. ORACLE_HOME should be set and exported (sh/bash/ksh) 
+
+  2. PATH must include the path to Oracle's pre-compiler "proc", e.g.,
+     PATH=$PATH:$ORACLE_HOME/bin
+
+Simple Installation (should work for Oracle8 and Oracle9):
+
+  R CMD [options] ROracle_<version>.tar.gz
+
+Creating a static library:
+
+  You may statically link ROracle to the Oracle libs (this creates
+  a much bigger executable file) with
+
+  R CMD INSTALL --configure-args='--enable-static'  ROracle_<version>.tar.gz
+
+Specifying the Oracle versions (7/8/9, version 8 is the default):
+
+  R CMD INSTALL --configure-args='--with-oracle=7'  ROracle_<version>.tar.gz
+
+Note: You may override the Oracle libraries and/or library directories 
+using the PKG_LIBS variable (see "Writing R Extensions").
+
+

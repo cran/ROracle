@@ -1,0 +1,33 @@
+Oracle                   Instantiate an Oracle client from the current R
+                         or S session
+S4R                      R compatibility with S version 4/Splus5+ support
+                         functions
+SQLDataType              Determine the SQL Data Type of an R/S object
+callProc                 Call an SQL stored procedure
+commit                   RDBMS Transaction Management
+dbConnect                Create a connection to a RDBMS
+dbExec                   Execute an SQL script on a given database
+                         connection
+dbExecStatement          Execute an SQL statement on a given database
+                         connection
+dbManager                Instantiate a database manager
+describe                 Describe an object through its meta-data
+fetch                    Fetch records from a previously executed SELECT
+                         statement
+getManager               Get a database manager object from a derived
+                         handle
+getNumRows               Get number of rows/columns of an SQL table
+getTable                 Convenience functions for Importing/Exporting
+                         DBMS tables into R/S. (Note: not all yet
+                         implmented by the Oracle driver.)
+isIdCurrent              Check whether a database handle object is valid
+                         or not
+isSQLKeyword             Is a name an SQL keyword?
+load                     Load/unload the client part of a database
+                         interface
+make.SQL.names           Make R/S identifiers into legal SQL identifiers.
+metaData                 R/S database interface meta-data
+methods.Oracle           Support Ora methods
+quickSQL                 Quick SQL Execution
+setDataMappings          Set data mappings between an RDBMS and R/S
+supportObjects           Support objects for RS-DBI

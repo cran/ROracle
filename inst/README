@@ -1,0 +1,37 @@
+R/S Database Interface to Oracle. 
+
+This library implements an R/S-Oracle interface according to the
+R/S-Database Interface specification 0.2 (see www.omegahat.org or
+the RS-DBI.pdf document in the "doc" directory)
+
+This driver is based on the Oracle embedded proC/C++, and is
+somewhat(?) compliant with the SQL92 as defined by the X/Open
+Specification 1992, 1994 (see ISBN: 1-872630-58-8). Another
+alternative is to implement this same driver using the Oracle's
+OCI API.  We decided to use the embedded dynamic SQL hoping that it
+would be very easy to port to Informix, Sybase, DB2, Ingres, etc.
+We'll see if this is the case.
+
+Example:
+-------
+
+help(Oracle)
+
+ora <- dbManager("Oracle")  
+con <- dbConnect(ora, user = "opto", password = oraPass, dbname = "ORAS")
+rs <- dbExecStatement(con, "select * from USER_TABLES")
+rel <- fetch(rs, n = 10)
+
+# create a concurrent second connection
+
+fms <- dbConnect(ora, user = "fraud", password = fms.pass, dbname = "FMS)
+quickSQL(fms, "select SCORE from HOT_SCORED_EVENTS")
+
+pix <- dbConnect(ora, user = "genuse", password = pix.pass, dbname = "ALPIX")
+quickSQL(pix, "select * from WAFER_PRO where LOT_ID = 12345")
+
+# creata a list with all the currently open connections
+
+getConnections(ora)
+
+close(pix)

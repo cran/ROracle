@@ -1,0 +1,25 @@
+
+   NOTE: Next version will probably comply with the emerging common
+         database interface being drafted by the R-SIG-DB.  This will
+         probably change slightly the function names, but not the
+         basic functionality.
+
+Version 0.3.1
+
+* Ported to R, added a configure script.  
+
+* Implemented a work­around to the very nasty bug in the linux
+  implementation of the ProC/C++ (as of 8.1.[567]) (see the function
+  filter_buggy_error() in RS-Oracle.pc) The sign was that Oracle
+  would give a "fetch out of order" error when there was no fetching
+  going on.
+
+* Modified the documentation to pass R CMD check. Unfortunately we now
+  have two slightly separate versions of the help (one for Splus, another
+  for R).
+
+Splus-specific
+
+* It nows does the  #include "S.h" conditionally, for the sake of 
+  Splus 6.0 (you need to define the macro SPLUS6 in the makefile).
+
