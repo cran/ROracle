@@ -4,16 +4,16 @@ dbConnect-methods       Create a connection object to an Oracle DBMS
 dbDataType-methods      Determine the SQL Data Type of an S object
 dbDriver-methods        Oracle implementation of the Database
                         Interface (DBI) classes and drivers
-dbGetInfo-methods       Database interface meta-data
+dbGetInfo               Database interface meta-data
 DBIPreparedStatement-class
                         Class DBIPreparedStatement
 dbListTables-methods    List items from an Oracle DBMS and from
                         objects
 dbObjectId-class        Class dbObjectId
+dbPrepareStatement      Create a prepared SQL statement for repeated
+                        execution
 dbPrepareStatement-methods
                         Create a prepared SQL statement for repeated
-                        execution
-dbPrepareStatement      Create a prepared SQL statement for repeated
                         execution
 dbReadTable-methods     Convenience functions for Importing/Exporting
                         DBMS tables
@@ -24,16 +24,16 @@ dbSetDataMappings-methods
 fetch-methods           Fetch records from a previously executed query
 isIdCurrent             Check whether an dbObjectId handle object is
                         valid or not
-make.db.names-methods   Make R/S-Plus identifiers into legal SQL
-                        identifiers
 Oracle                  Instantiate an Oracle client from the current
                         R/S-Plus session
 OraConnection-class     Class OraConnection
 OraDriver-class         Class OraDriver
+oraInitDriver           Support Functions
 OraObject-class         Class OraObject
 oraParseConParams       Parse an Oracle connection string
 OraPreparedStatement-class
                         Oracle Prepared Statement
 OraResult-class         Class OraResult
-oraSupport              Support Functions
+SQLKeywords-methods     Make R/S-Plus identifiers into legal SQL
+                        identifiers
 summary-methods         Summarize an Oracle object
