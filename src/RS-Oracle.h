@@ -1,6 +1,6 @@
 #ifndef _RS_Oracle_H
 #define _RS_Oracle_H 1
-/*  $Id$
+/*  $Id: RS-Oracle.h,v 1.1 2002/08/24 02:16:13 dj Exp dj $
  *
  * Copyright (C) 1999 The Omega Project for Statistical Computing.
  *

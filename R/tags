@@ -1,0 +1,77 @@
+!_TAG_FILE_FORMAT	1	original (simple) ctag(1) format
+!_TAG_FILE_SORTED	1	yes, file is sorted
+!_TAG_PROGRAM_NAME	rtags.py	python implementation
+!_TAG_PROGRAM_VERSION	$Id: rtags.py,v 1.3 2001/11/19 16:40:23 dj Exp dj $	
+.First.lib	zzz.R	/.First.lib <- function/
+OraCharType	OraSupport.q	/"OraCharType" <- function/
+OraConnection	Oracle.R	/setClass("OraConnection"/
+OraDriver	Oracle.R	/setClass("OraDriver"/
+OraObject	Oracle.R	/setClass("OraObject"/
+OraResult	Oracle.R	/setClass("OraResult"/
+Oracle	Oracle.R	/"Oracle" <- /
+SQLKeywords	Oracle.R	/setMethod("SQLKeywords"/
+dbCallProc	Oracle.R	/setMethod("dbCallProc"/
+dbClearResult	Oracle.R	/setMethod("dbClearResult"/
+dbColumnInfo	Oracle.R	/setMethod("dbColumnInfo"/
+dbCommit	Oracle.R	/setMethod("dbCommit"/
+dbConnect	Oracle.R	/setMethod("dbConnect"/
+dbConnect	Oracle.R	/setMethod("dbConnect"/
+dbConnect	Oracle.R	/setMethod("dbConnect"/
+dbDataType	Oracle.R	/setMethod("dbDataType"/
+dbDisconnect	Oracle.R	/setMethod("dbDisconnect"/
+dbExistsTable	Oracle.R	/setMethod("dbExistsTable"/
+dbGetException	Oracle.R	/setMethod("dbGetException"/
+dbGetException	Oracle.R	/setMethod("dbGetException"/
+dbGetInfo	Oracle.R	/setMethod("dbGetInfo"/
+dbGetInfo	Oracle.R	/setMethod("dbGetInfo"/
+dbGetInfo	Oracle.R	/setMethod("dbGetInfo"/
+dbGetQuery	Oracle.R	/setMethod("dbGetQuery"/
+dbGetRowCount	Oracle.R	/setMethod("dbGetRowCount"/
+dbGetRowsAffected	Oracle.R	/setMethod("dbGetRowsAffected"/
+dbGetStatement	Oracle.R	/setMethod("dbGetStatement"/
+dbHasCompleted	Oracle.R	/setMethod("dbHasCompleted"/
+dbListConnections	Oracle.R	/setMethod("dbListConnections"/
+dbListFields	Oracle.R	/setMethod("dbListFields"/
+dbListFields	Oracle.R	/setMethod("dbListFields"/
+dbListResults	Oracle.R	/setMethod("dbListResults"/
+dbListTables	Oracle.R	/setMethod("dbListTables"/
+dbObjectId	dbObjectId.R	/setClass("dbObjectId"/
+dbReadTable	Oracle.R	/setMethod("dbReadTable"/
+dbRemoveTable	Oracle.R	/setMethod("dbRemoveTable"/
+dbRollback	Oracle.R	/setMethod("dbRollback"/
+dbSendQuery	Oracle.R	/setMethod("dbSendQuery"/
+dbUnloadDriver	Oracle.R	/setMethod("dbUnloadDriver"/
+dbWriteTable	Oracle.R	/setMethod("dbWriteTable"/
+fetch	Oracle.R	/setMethod("fetch"/
+fetch	Oracle.R	/setMethod("fetch"/
+format	dbObjectId.R	/setMethod("format"/
+getTableIndices.OraConnection	Oracle.R	/getTableIndices.OraConnection <- function/
+isIdCurrent	dbObjectId.R	/"isIdCurrent" <- /
+isSQLKeyword	Oracle.R	/setMethod("isSQLKeyword"/
+make.db.names	Oracle.R	/setMethod("make.db.names"/
+oraCloneConnection	OraSupport.q	/"oraCloneConnection" <- /
+oraCloseConnection	OraSupport.q	/"oraCloseConnection" <- /
+oraCloseDriver	OraSupport.q	/"oraCloseDriver" <- /
+oraCloseResult	OraSupport.q	/"oraCloseResult" <- /
+oraConnectionInfo	OraSupport.q	/"oraConnectionInfo" <-/
+oraDataType	OraSupport.q	/"oraDataType" <-/
+oraDescribeConnection	OraSupport.q	/"oraDescribeConnection" <- /
+oraDescribeDriver	OraSupport.q	/"oraDescribeDriver" <-/
+oraDescribeResult	OraSupport.q	/"oraDescribeResult" <- /
+oraDriverInfo	OraSupport.q	/"oraDriverInfo" <- /
+oraExecStatement	OraSupport.q	/"oraExecStatement" <- /
+oraFetch	OraSupport.q	/"oraFetch" <- /
+oraInitDriver	OraSupport.q	/"oraInitDriver" <- /
+oraNewConnection	OraSupport.q	/"oraNewConnection"<- /
+oraParseConParams	OraSupport.q	/"oraParseConParams" <-/
+oraQuickSQL	OraSupport.q	/"oraQuickSQL" <- /
+oraReadTable	OraSupport.q	/"oraReadTable" <-/
+oraResultInfo	OraSupport.q	/"oraResultInfo" <- /
+oraTableFields	OraSupport.q	/"oraTableFields" <-/
+oraWriteTable	OraSupport.q	/"oraWriteTable" <-/
+print	dbObjectId.R	/setMethod("print"/
+safe.write	OraSupport.q	/"safe.write" <- function/
+show	dbObjectId.R	/setMethod("show"/
+summary	Oracle.R	/setMethod("summary"/
+summary	Oracle.R	/setMethod("summary"/
+summary	Oracle.R	/setMethod("summary"/

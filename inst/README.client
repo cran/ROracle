@@ -64,16 +64,17 @@ Oracle software.
        > # or explicitly
        > con2 <- dbConnect(ora, "user", "password", "oras")
 
-There's one problem, though.  The function assignTable (which
+There's one problem, though.  The function oraWriteTable (which
 copies a data.frame into an Oracle table) uses the Oracle utility
 SQL*Loader that does bulk, fast data loading.  This is a program in
 $ORACLE_HOME/bin/sqlldr, thus even if you are able to statically link
 ROracle you may not have sqlldr if you don't have the Oracle software
-on your local machine.  For this case, we have extended assignTable()
+on your local machine.  For this case, we have extended oraWriteTable()
 to look for the argument "rhost" as part of "...".  E.g.,
 
         > data(quakes)
-        > assignTable(con, "QUAKES", quakes, rhost = "apollo")
+        # dbWriteTable invokes oraWriteTable
+        > dbWriteTable(con, "QUAKES", quakes, rhost = "apollo")
         
 This will use scp (by default) to copy the data.frame quakes to 
 a tmporary file in the remote host apollo, then attempt to run the 
@@ -95,7 +96,7 @@ heuristic:
 
 The full details for assignTable() are:
       
-  > assignTable(con, "name", value, overwrite = F, append = F, 
+  > oraWriteTable(con, "name", value, overwrite = F, append = F, 
                 rhost, ora.home = Sys.getenv("ORACLE_HOME"), 
                 rcp = "scp", rsh = "ssh", ...)
 

@@ -1,6 +1,6 @@
 /* R and S DataBase Interface to Oracle */
 /* 
- * $Id$ 
+ * $Id: RS-Oracle.pc,v 1.1 2002/08/24 02:16:04 dj Exp dj $ 
  *
  * vim:syntax=c 
  */
@@ -495,6 +495,7 @@ RS_Ora_exec(Con_Handle *conHandle, s_object *statement)
     result->fields = RS_Ora_setOraToSMappings(desArea);
     result->rowsAffected = (Sint) -1;    /* not set w. SELECT statements */
     result->completed = (Sint) 0;
+    result->isSelect  = (Sint) 1;
     result->drvData = (void *) desArea;
   }
   else {

@@ -1,12 +1,12 @@
 \name{Oracle}
 \alias{Oracle}
-\alias{OraManager}
+\alias{OraDriver}    % but this is a class!!!
 \title{
   Instantiate an Oracle client from the current R or S session
 }
 \description{
 This function creates and initializes an Oracle client from
-the current R/S session.
+the current R/Splus session.
 It returns an object that allows you to connect
 to one or several Oracle servers.
 }
@@ -30,17 +30,17 @@ Oracle(max.con = 10, fetch.default.rec = 500, force.reload = F)
   }
 }
 \value{
-An object \code{OraManager} that extends 
-\code{dbManager} and 
+An object \code{OraDriver} whose class extends 
+\code{DBIDriver} and 
 \code{dbObjectId}.
 This object is used to create connections, using the
 function \code{dbConnect},
 to one or several Oracle database engines.
 }
 \section{Side Effects}{
-The R/S client part of the database communication is initialized,
+The R/Splus client part of the database communication is initialized,
 but note that connecting to the database engine needs to be done through
-calls to \code{\link{dbConnect}}.
+calls to \code{\link[DBI]{dbConnect}}.
 }
 \details{
 This object is a singleton, that is, on subsequent invocations
@@ -69,58 +69,59 @@ string of any of the following forms:
 \section{References}{
 See the Omega Project for Statistical Computing
 at \url{http://www.omegahat.org}
-for more details on the R/S database interface.
+for more details on the R/Splus database interface.
 
 See the documentation at the Oracle Web site
-\url{http://www.mysql.com} for details.
+\url{http://www.oracle.com} for details.
 }
 \seealso{
 On database managers:
 
-\code{\link{dbManager}}
+\code{\link[DBI]{dbDriver}}
 \code{\link{Oracle}}
-\code{\link{load}}
-\code{\link{unload}}
+\code{\link[DBI]{dbUnloadDriver}}
 
-On connections, SQL statements and resultSets:
+On connections:
 
-\code{\link{dbExecStatement}}
-\code{\link{dbExec}}
-\code{\link{fetch}}
-\code{\link{quickSQL}}
+\code{\link[DBI]{dbConnect}}
+\code{\link[DBI]{dbDisconnect}}
+
+On queries and result objects:
+
+\code{\link[DBI]{dbSendQuery}}
+\code{\link[DBI]{fetch}}
+\code{\link[DBI]{dbGetQuery}}
+\code{\link[DBI]{dbClearResult}}
 
 On transaction management:
 
-\code{\link{commit}}
-\code{\link{rollback}}
+\code{\link[DBI]{dbCommit}}
+\code{\link[DBI]{dbRollback}}
 
 On meta-data:
 
-\code{\link{describe}}
-\code{\link{getVersion}}
-\code{\link{getDatabases}}
-\code{\link{getTables}}
-\code{\link{getFields}}
-\code{\link{getCurrentDatabase}}
-\code{\link{getTableIndices}}
-\code{\link{getException}}
-\code{\link{getStatement}}
-\code{\link{hasCompleted}}
-\code{\link{getRowCount}}
-\code{\link{getAffectedRows}}
-\code{\link{getNullOk}}
-\code{\link{getInfo}}
+\code{\link[DBI]{dbGetInfo}}
+\code{\link[base]{summary}}
+\code{\link[DBI]{dbListTables}}
+\code{\link[DBI]{dbListFields}}
+\code{\link[DBI]{dbListConnections}}
+\code{\link[DBI]{dbListResults}}
+\code{\link[DBI]{dbGetException}}
+\code{\link[DBI]{dbGetStatement}}
+\code{\link[DBI]{dbHasCompleted}}
+\code{\link[DBI]{dbGetRowCount}}
+\code{\link[DBI]{dbGetAffectedRows}}
 }
 \examples{\dontrun{
 ## create a Oracle instance and create one connection.
-m <- dbManager("Oracle")
-con <- dbConnect(m, user = "opto", password="pure-light", db="oras")
+ora <- Oracle()     ## or dbDriver("Oracle")
+con <- dbConnect(ora, user = "opto", password="pure-light", db="oras")
 
 ## you can also use Oracle's user/password@dbname convention
-con2 <- dbConnect(m, user = "opto/pure-light@oras")
+con2 <- dbConnect(ora, user = "opto/pure-light@oras")
 
 ## or if you have defined the ORACLE_SID shell variable
-con3 <- dbConnect(m, user = "opto", password = "pure-light")
+con3 <- dbConnect(ora, user = "opto", password = "pure-light")
 
 ## clone an existing connection
 w <- dbConnect(con)
@@ -128,17 +129,42 @@ w <- dbConnect(con)
 ## execute a statement and fetch its output in chunks of no more
 ## than 5000 rows at a time
 
-rs <- dbExec(con, "select * from HTTP_ACCESS where IP_ADDRESS = '127.0.0.1'")
+rs <- dbSendQuery(con, "select * from HTTP_ACCESS where IP_ADDRESS='127.0.0.1'")
 
-while(!hasCompleted(rs)){
+while(!dbHasCompleted(rs)){
    df <- fetch(rs, n = 5000)
    process(df)
 }
 
-hasCompleted(rs)
+## a concise description of the driver 
+summary(ora)
+
+<OraDriver:(24694)> 
+  Driver name:  Oracle (ProC/C++) 
+  Max  connections: 10 
+  Conn. processed: 9 
+  Default records per fetch: 500 
+  Open connections: 2 
+
+## a full description of the ora connection
+summary(con, verbose = T)
+
+<OraConnection:(25272,0)> 
+  User: opto 
+  Dbname: oras 
+  Oracle Server version: 
+    Oracle8 Enterprise Edition Release 8.0.4.0.0 - Production 
+    PL/SQL Release 8.0.4.0.0 - Production 
+    CORE Version 4.0.4.0.0 - Production 
+    TNS for Solaris: Version 8.0.4.0.0 - Production 
+    NLSRTL Version 3.3.1.0.0 - Production 
+
+dbHasCompleted(rs)
 [1] TRUE
-close(rs)      ## done with this query
-close(con)     ## done with this connection
+dbClearResult(rs)      ## done with this query
+[1] TRUE
+dbDisconnect(con)     ## done with this connection
+[1] TRUE
 }
 }
 \keyword{interface}

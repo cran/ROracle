@@ -1,10 +1,23 @@
+Version 0.4-0
+
+* The package is now compliant with the R/S Database interface (DBI), 
+  see package DBI 0.1-4.  This means that almost all functions have
+  new names, but the functionality is exactly the same as the last version.
+
+* Simplified the underlying (support) functions by deleting more than a few,
+  and changing their names to start with "ora" (the previous function and
+  their names where a vestige of S3 stype methods, which we no longer need).
+
+* No changes to the C code (except for minor changes to RS_DBI.c to
+  generate more helpful error messages in case of internal errors).
+
+Version 0.3-3
 
    NOTE: Next major version will comply with the emerging common
          database interface DBI, if agreed by the R-SIG-DB.  This 
          will probably change the function names, but not the basic 
          functionality.
 
-Version 0.3-3
 
 * Some minor clean up of the RS-DBI C code.
 

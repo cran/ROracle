@@ -1,5 +1,5 @@
-\name{parse.OraConParams}
-\alias{parse.OraConParams}
+\name{oraParseConParams}
+\alias{oraParseConParams}
 \title{Parse an Oracle connection string}
 \description{
    Parse an oracle connections string of the form
@@ -8,7 +8,7 @@
    and "dbname".
 }
 \usage{
-parse.OraConParams(username="", password="", dbname=ifelse(usingR(), Sys.getenv("ORACLE_SID"), getenv("ORACLE_SID")))
+oraParseConParams(username="", password="", dbname=ifelse(usingR(), Sys.getenv("ORACLE_SID"), getenv("ORACLE_SID")))
 }
 \arguments{
   \item{username}{a character string of the form "username/passwd@dbname".
@@ -32,11 +32,11 @@ parse.OraConParams(username="", password="", dbname=ifelse(usingR(), Sys.getenv(
   and \code{dbname} suitable for a call to \code{dbConnect}.
 }
 \references{http://developer.r-project.org/db}
-\seealso{\code{\link{dbConnect}}, \code{\link{Oracle}}}
+\seealso{\code{\link[DBI]{dbConnect}}, \code{\link{Oracle}}}
 \examples{\dontrun{
    conParams <- parse.OraConParams("user/pwd@dbname")
 }
 }
-\keyword{internal}
 \keyword{database}
+\keywords{interface}
 % vim:syntax=tex

@@ -15,9 +15,14 @@ We'll see if this is the case.
 Example:
 -------
 
+$ R CMD INSTALL DBI_<version>.tar.gz
+$ R CMD INSTALL ROracle_<version>.tar.gz
+
+$ R
+library(ROracle)
 help(Oracle)
 
-ora <- dbManager("Oracle")  
+ora <- dbDriver("Oracle")  
 con <- dbConnect(ora, user = "opto", password = oraPass, dbname = "ORAS")
 rs <- dbExecStatement(con, "select * from USER_TABLES")
 rel <- fetch(rs, n = 10)
@@ -25,13 +30,13 @@ rel <- fetch(rs, n = 10)
 # create a concurrent second connection
 
 fms <- dbConnect(ora, user = "fraud", password = fms.pass, dbname = "FMS)
-quickSQL(fms, "select SCORE from HOT_SCORED_EVENTS")
+dbGetQuery(fms, "select SCORE from HOT_SCORED_EVENTS")
 
-pix <- dbConnect(ora, user = "genuse", password = pix.pass, dbname = "ALPIX")
-quickSQL(pix, "select * from WAFER_PRO where LOT_ID = 12345")
+pix <- dbConnect(ora, "genuse/pix.pass@ALPIX")
+dbGetQuery(pix, "select * from WAFER_PRO where LOT_ID = 12345")
 
 # creata a list with all the currently open connections
 
-getConnections(ora)
+dbListConnections(ora)
 
-close(pix)
+dbDisconnect(pix)
