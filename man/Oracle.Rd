@@ -1,13 +1,12 @@
 \name{Oracle}
 \alias{Oracle}
-\alias{OraDriver}    % but this is a class!!!
 \title{
-  Instantiate an Oracle client from the current R or S session
+  Instantiate an Oracle client from the current R/S-Plus session
 }
 \description{
 This function creates and initializes an Oracle client from
-the current R/Splus session.
-It returns an object that allows you to connect
+the current R/S-Plus session.
+It returns an object that allows you to connect 
 to one or several Oracle servers.
 }
 \usage{
@@ -38,7 +37,7 @@ function \code{dbConnect},
 to one or several Oracle database engines.
 }
 \section{Side Effects}{
-The R/Splus client part of the database communication is initialized,
+The R/S-Plus client part of the database communication is initialized,
 but note that connecting to the database engine needs to be done through
 calls to \code{\link[DBI]{dbConnect}}.
 }
@@ -66,14 +65,58 @@ string of any of the following forms:
    underlying operating system users and passwords);
 }
 }
+
+\section{Prepared statements and data.frame bindings}{
+
+As of version 0.5-0, \code{ROracle} implements R/S-Plus data binding
+to prepared SQL statements.  This is done in two stages with the functions
+\code{\link{dbPrepareStatement}} and \code{\link{dbExecStatement}}.
+
+In the first stage of preparing a statement column numbers are embedded 
+inside the SQL statement, e.g., 
+\code{"insert into my\_table (id, name, val) VALUES (:1, :3, :2)"} 
+and the S class of those columns are specified in the \code{bind=} argument
+to \code{\link{dbPrepareStatement}} 
+
+In the second stage \code{\link{dbExecStatement}}
+binds the pre-specified columns from a supplied  \code{data=} data frame 
+to the SQL statement and the SQL statement is executed once for each
+row in the input data frame.  This step can be repeated with new data
+as many times as needed.
+
+\emph{It is very important} to note that typically a prepared statement
+implicitly will define a new transaction which needs to be
+explicitly committed with \code{\link[DBI]{dbCommit}} or
+rolled back with \code{\link[DBI]{dbRollback}}.
+
+The current implementation allows only primitive types
+\code{c("numeric", "integer", "logical", "character")} for binding.
+}
+
+\section{Transactions}{ 
+The current implementation directly supports transaction
+commits and rollbacks on a connection-wide basis through calls
+to \code{\link[DBI]{dbCommit}} and \code{\link[DBI]{dbRollback}}.
+Save points are not yet directly implemented, but you may be able
+to define them and rollback to them through calls to dynamic SQL
+with \code{\link[DBI]{dbGetQuery}}.
+
+Notice that Oracle (and ANSI/ISO compliant DBMS) transactions are 
+implicitly started when data definition SQL are executed (create
+table, etc.), which helper functions like \code{\link[DBI]{dbWriteTable}}
+may execute behind the scenes.   You may want or need to commit
+or roll back your work before issuing any of these helper functions.
+}
+
 \section{References}{
 See the Omega Project for Statistical Computing
 at \url{http://www.omegahat.org}
-for more details on the R/Splus database interface.
+for more details on the R/S-Plus database interface.
 
 See the documentation at the Oracle Web site
 \url{http://www.oracle.com} for details.
 }
+\author{David A. James}
 \seealso{
 On database managers:
 
@@ -86,12 +129,14 @@ On connections:
 \code{\link[DBI]{dbConnect}}
 \code{\link[DBI]{dbDisconnect}}
 
-On queries and result objects:
+On queries, prepared statements, and result objects:
 
 \code{\link[DBI]{dbSendQuery}}
 \code{\link[DBI]{fetch}}
 \code{\link[DBI]{dbGetQuery}}
 \code{\link[DBI]{dbClearResult}}
+\code{\link{dbPrepareStatement}}   % should be moved to DBI
+\code{\link{dbExecStatement}}       % should be moved to DBI
 
 On transaction management:
 
@@ -135,6 +180,22 @@ while(!dbHasCompleted(rs)){
    df <- fetch(rs, n = 5000)
    process(df)
 }
+dbHasCompleted(rs)
+[1] TRUE
+dbClearResult(rs)      ## done with this query
+[1] TRUE
+
+## prepare and bind columns 2, 3, and 7 to the Oracle table 
+## fields "cell", "erlangs", "blocking"
+ps <- dbPrepareStatement(con, 
+         "INSERT into my_table (cell, erlangs, blocking) VALUE (:2,:3,:7)",
+         bind = my.data.frame)
+
+## execute one sql INSERT per row using columns 2, 3 and 7 
+ps <- dbExecStatement(ps, my.data.frame)
+ps <- dbExecStatement(ps, more.data)
+
+dbCommit(con)  ## ok, everything looks fine
 
 ## a concise description of the driver 
 summary(ora)
@@ -159,10 +220,6 @@ summary(con, verbose = T)
     TNS for Solaris: Version 8.0.4.0.0 - Production 
     NLSRTL Version 3.3.1.0.0 - Production 
 
-dbHasCompleted(rs)
-[1] TRUE
-dbClearResult(rs)      ## done with this query
-[1] TRUE
 dbDisconnect(con)     ## done with this connection
 [1] TRUE
 }

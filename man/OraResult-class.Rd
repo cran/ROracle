@@ -37,7 +37,6 @@ Class \code{"dbObjectId"}, by class "OraObject".
   \code{DBI.pdf} in the base directory of this package
   or \url{http://developer.r-project.org/db}.
 }
-\author{R-SIG-DB}
 
 \seealso{
  DBI classes:

@@ -1,15 +1,15 @@
+dbObjectId-class        Class dbObjectId
+dbPrepareStatement      Create a prepared SQL statement for repeated
+                        execution
+isIdCurrent             Check whether an dbObjectId handle object is
+                        valid or not
+Oracle                  Instantiate an Oracle client from the current
+                        R/S-Plus session
 OraConnection-class     Class OraConnection
 OraDriver-class         Class OraDriver
 OraObject-class         Class OraObject
-OraResult-class         Class OraResult
-Oracle                  Instantiate an Oracle client from the current R
-                        or S session 
-S4R                     R compatibility with S version 4/Splus5+
-                        support functions
-dbObjectId-class        Class dbObjectId
-isIdCurrent             Check whether an OraObject handle object is
-                        valid or not 
 oraParseConParams       Parse an Oracle connection string
+OraPreparedStatement-class
+                        Oracle Prepared Statement
+OraResult-class         Class OraResult
 oraSupport              Support Functions
-safe.write              Write a data.frame avoiding exceeding memory
-                        limits

@@ -64,6 +64,10 @@ Oracle software.
        > # or explicitly
        > con2 <- dbConnect(ora, "user", "password", "oras")
 
+[ The following restriction does not apply to ROracle version 0.5-0.
+  oraWriteTable() no longer requires SQL*Loader.
+]
+
 There's one problem, though.  The function oraWriteTable (which
 copies a data.frame into an Oracle table) uses the Oracle utility
 SQL*Loader that does bulk, fast data loading.  This is a program in

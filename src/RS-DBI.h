@@ -1,7 +1,7 @@
 #ifndef _RS_DBI_H
 #define _RS_DBI_H 1
 /*  
- *  $Id: RS-DBI.h,v 1.5 2002/05/20 20:55:45 dj Exp dj $
+ *  $Id: RS-DBI.h,v 1.1 2003/04/18 14:58:38 dj Exp $
  *
  * Copyright (C) 1999-2002 The Omega Project for Statistical Computing.
  *
@@ -249,6 +249,7 @@ s_object *RS_DBI_createNamedList(char  **names,
 s_object *RS_DBI_copyFields(RS_DBI_fields *flds);
 
 void RS_na_set(void *ptr, Stype type);
+int  RS_is_na(void *ptr, Stype type);
 extern const struct data_types RS_dataTypeTable[];
 
 #ifdef __cplusplus 

@@ -1,11 +1,11 @@
-/* R and S DataBase Interface to Oracle */
+/* R and S-Plus Database Interface to Oracle */
 /* 
- * $Id: RS-Oracle.pc,v 1.1 2002/08/24 02:16:04 dj Exp dj $ 
+ * $Id: RS-Oracle.pc,v 1.5 2003/04/18 21:09:34 dj Exp dj $ 
  *
  * vim:syntax=c 
  */
 
-/* Copyright (C) 1999-2001 The Omega Project for Statistical Computing.
+/* Copyright (C) 1999-2003 The Omega Project for Statistical Computing.
  *
  * http://www.omegahat.org
  *
@@ -24,17 +24,32 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
+
+/* 
+ * Limitations/TODO:
+ *
+ *  - Only handle up to 255 bytes per field.
+ *  - Max num of 10 simultaneous connections.
+ *  - One open results set per connection.
+ *  - No asychronous operations.
+ *  - Haven't implemented any of the Oracle RAW types. 
+ *  - Make sure we don't leave any variables/structs that may make this
+ *    code thread unsafe.
+ *  - Move the transaction control to their own functions so that
+ *    they can be invoked by the dbConnection methods explicitly.
+ */
+
 /*
- * This driver connects S or R and Oracle and implements the proposed
- * RS-DBI generic R/S-database interface 0.3.  This driver is implemented
- * using Embeded C/C++ (i.e., a pre-compiler) which restrict the code
+ * This driver connects S-Plus or R to Oracle and implements the 
+ * DBI generic R/S-database interface 0.1-4.  This driver is implemented
+ * using Embedded C/C++ (i.e., a pre-compiler) which restricts the code
  * somewhat, but it may (?) allow us to re-use it for other DBMS, e.g.,
- * Informix, Sybase, Ingres.
+ * Informix, Sybase, Ingres. [But see comments further down.]
  *
  * The Oracle dynamic SQL is based on the Oracle's ProC  sample10.pc 
  * program in $ORACLE_HOME/proc/demo/sample10.pc. 
  * For more details see:
- *  On S, Appendix A in "Programming with Data" by John M. Chambers
+ *  On S4, Appendix A in "Programming with Data" by John M. Chambers
  *     Springer, 1998.
  *  On R, "The .Call and .External Interfaces"  Manual by the R Core
  *     Team, http://cran.r-project.org
@@ -50,40 +65,31 @@
  *   introduced.  In particular their scope is **positional** not
  *   only logical, thus you should be careful not to place them out of
  *   order physically in the file (the order is dictated at
- *   pre-compile time, not execution time).  Moreover, the embeded
+ *   pre-compile time, not execution time).  Moreover, the embedded
  *   method introduces yet-another scoping space where cursor names
  *   and dynamic statements are defined -- e.g., cursor names must
  *   be unique within this file but also on the SQLLIB underlying 
- *   API's private structs.  Moreover, we cannot dynamically 
+ *   API's private structs.  Moreover, as of 8.1.7 we cannot dynamically 
  *   store/restore cursor names in C structs, thus we're limited to 
  *   pre-allocating (at pre-compilation) a pool of cursors that we 
  *   manage very clumsily thru switches (Grrr!).  This has forced us
  *   to allow only 1 open select statement (cursor) per connection.
  *   [Informix does provide a "dynamic cursor" facility since, at
  *   least, version 7.2]
- *   See Chapters 4, 11, 14 in the ProC/C++ manual for the gory details.
+ *   See Chapters 4, 11, 12, 14 in the ProC/C++ manual for the gory details.
  *
  *   Notice also, that one of the S-Plus header files (cdef.h in 5.1+) 
  *   causes the oracle precompiler to fail, thus we need to invoke with
  *   PARSE = PARTIAL flag, although it still generates some warnings
- *   (see the makefile).
+ *   (see the makefile).  Don MacQueen has reported similar problems with 
+ *   R 1.6.2 on Mac OS/X (10.2, Jaguar).
  * 
- *   The original thought was to implement this Oracle driver using embded
+ *   The original thought was to implement this Oracle driver using embedded
  *   SQL to make the code easy to port to Informix, Ingres, DB2, etc.
- *   But I'm beginning to feel that it's just not worth the aggravation.
- *   Should we be thinking of using OCI directly and forget about 
- *   portability?
+ *   But I now feel that it was not worth the aggravation.  Using OCI 
+ *   directly would have been easier and we could better exploit 
+ *   Oracle's performance.  
  *
- * TODO:
- *    1. make sure we don't leave any variables/structs that may make this
- *       code thread unsafe.
- *    2. Move the transaction control to their own functions so that
- *       they can be invoked by the dbConnection methods explicitly.
- *    3. We haven't implemented any of the Oracle RAW types. Currently
- *       we simply generate strings of up to 255 characters -- obviously
- *       this needs plenty of work!
- *    4. Use "host arrays" during fetching (I suspect this will have a
- *       big impact on improving performance.)
  */
 
 EXEC SQL INCLUDE RS-Oracle.h;
@@ -166,9 +172,9 @@ RS_Ora_newConnection(Mgr_Handle *mgrHandle, s_object *conn_params,
 #define ORA_BUF_LEN  1024
 
   EXEC SQL BEGIN DECLARE SECTION;
-    VARCHAR  username[ORA_BUF_LEN];
-    VARCHAR  password[ORA_BUF_LEN];
-    VARCHAR  dbname[ORA_BUF_LEN];/* this is an SQL*Net8 TNSNAME (but Oracle */
+    VARCHAR  username[1024];
+    VARCHAR  password[1024];
+    VARCHAR  dbname[1024];/* this is an SQL*Net8 TNSNAME (but Oracle */
                                  /* gurus/Perl Hackers seem to overload this*/
                                  /* to include the full tnsname.ora string) */
   EXEC SQL END DECLARE SECTION;
@@ -182,17 +188,17 @@ RS_Ora_newConnection(Mgr_Handle *mgrHandle, s_object *conn_params,
 #define IS_EMPTY(s1)   !strcmp((s1), "")
   if(IS_EMPTY(conParams->user)){
      RS_Ora_freeConParams(conParams);
-     RS_DBI_errorMessage("username must be non-empyt", RS_DBI_ERROR);
+     RS_DBI_errorMessage("username must be non-empty", RS_DBI_ERROR);
   }
   conParams->passwd = RS_DBI_nCopyString(CHR_EL(conn_params,1), ORA_BUF_LEN,0);
   if(IS_EMPTY(conParams->passwd)){
      RS_Ora_freeConParams(conParams);
-     RS_DBI_errorMessage("password must be non-empyt", RS_DBI_ERROR);
+     RS_DBI_errorMessage("password must be non-empty", RS_DBI_ERROR);
   }
   conParams->dbname = RS_DBI_nCopyString(CHR_EL(conn_params,2), ORA_BUF_LEN,0);
   if(IS_EMPTY(conParams->dbname)){
      RS_Ora_freeConParams(conParams);
-     RS_DBI_errorMessage("dbname must be non-empyt", RS_DBI_ERROR);
+     RS_DBI_errorMessage("dbname must be non-empty", RS_DBI_ERROR);
   }
   
   conHandle = RS_DBI_allocConnection(mgrHandle, INT_EL(max_res,0));
@@ -304,15 +310,24 @@ buggy_ora_error()
        break;
    }
 }
-#define filter_error_bug()    { if(!buggy_ora_error()) goto exec_error;}
+#define filter_prepare_error_bug() { if(!buggy_ora_error()) goto prepare_error;}
+#define filter_exec_error_bug()   { if(!buggy_ora_error()) goto exec_error;}
 
 Res_Handle *
-RS_Ora_exec(Con_Handle *conHandle, s_object *statement)
+RS_Ora_prepareStatement(
+   Con_Handle *conHandle, 
+   s_object *statement, 
+   s_object *s_bind_classes)  /* classes of the binding S columns */
 {
-  /* Execute one sql statement (INSERT, DELETE, SELECT, etc.),
-   * set coercion type mappings between Oracle's internal data types and 
-   * R/S classes/types.
-   * Returns handle to a resultSet object. 
+  /* Prepare one dyn sql statement (INSERT, DELETE, SELECT, etc.),
+   * optionally bound R/S-Plus fields in a data.frame to Oracle buffers.
+   * Returns handle to a (half-formed) resultSet object.  This proto result
+   * set does not have yet the result of the sql statment -- that needs to
+   * be done in the RS_Ora_exec() function, where fields from an optional
+   * input data.frame are copied to Oracle's buffers for transfer to the
+   * server. Note that we're effectively creating an Oracle cursor.  We 
+   * could define RS_Ora_prepareStatement as a generator for a cursor.
+   *
    * Note that pre-compiling doesn't allow us to save/restore cursors
    * and other goodies, so it gets a bit dirty having to switch
    * among a pre-defined set of cursor managed by the cursor table.
@@ -326,36 +341,44 @@ RS_Ora_exec(Con_Handle *conHandle, s_object *statement)
   S_EVALUATOR
 
   RS_Ora_desArea *desArea = NULL; 
-  SQLDA *bind_dp = NULL;   /* SQL descriptor area for bind variables */
-  SQLDA *select_dp = NULL; /* SQL descriptor area for select'ed fields*/
+  SQLDA  *bind_dp;
   char alias[128];
 
   EXEC SQL BEGIN DECLARE SECTION;
-     char   dyn_statement[RS_ORA_STATEMENT_LEN];
-     EXEC SQL VAR dyn_statement IS STRING(RS_ORA_STATEMENT_LEN);
+     char   dyn_statement[4000];
+     EXEC SQL VAR dyn_statement IS STRING(4000);
   EXEC SQL END DECLARE SECTION;
 
   RS_DBI_resultSet  *result;
   Res_Handle  *rsHandle;
   size_t   stmt_len = RS_ORA_STATEMENT_LEN, sqlFunCode;
   char     deparsed_stmt[RS_ORA_STATEMENT_LEN];
-  int      num_fields;
-  int     cursorNum;
+  int      n_params;
+  int      cursorNum;
+  Sint     buf_size;                /* num of rows per Oracle fetch */
+
+  if(strlen(CHR_EL(statement,0))>=RS_ORA_STATEMENT_LEN){
+     char errMsg[128];
+     (void) sprintf(errMsg,
+                    "too long a statement -- it must has less than %ld chars",
+                    (long) RS_ORA_STATEMENT_LEN);
+     RS_DBI_errorMessage(errMsg, RS_DBI_ERROR);
+  }
 
   rsHandle = RS_DBI_allocResultSet(conHandle);
   result = RS_DBI_getResultSet(rsHandle);
 
   /* Oracle needs dyn_statement */
   (void) strncpy(dyn_statement, CHR_EL(statement,0), RS_ORA_STATEMENT_LEN);
+  buf_size = RS_ORA_DEFAULT_BUFFER_SIZE;
   desArea = RS_Ora_allocDescriptors(RS_ORA_MAX_ITEMS, 
 			   RS_ORA_MAX_VNAME_LEN, 
-			   RS_ORA_MAX_VNAME_LEN);
+			   RS_ORA_MAX_VNAME_LEN,
+                           buf_size);
   bind_dp = desArea->bindVars;
-  select_dp = desArea->selectFlds;
-  select_dp->N = RS_ORA_MAX_ITEMS;     /* max fields we can handle */
 
-  /* EXEC SQL WHENEVER SQLERROR GOTO exec_error; */
-  EXEC SQL WHENEVER SQLERROR DO filter_error_bug();
+  /* EXEC SQL WHENEVER SQLERROR GOTO prepare_error; */
+  EXEC SQL WHENEVER SQLERROR DO filter_prepare_error_bug();
   cursorNum = RS_Ora_getCursorNum(rsHandle);
   (void) sprintf(alias, ALIAS_PATTERN, cursorNum);
   RS_Ora_varCharCpy(&db_alias, alias);
@@ -364,157 +387,381 @@ RS_Ora_exec(Con_Handle *conHandle, s_object *statement)
     EXEC SQL AT :db_alias DECLARE S_00 STATEMENT;
     EXEC SQL PREPARE S_00 FROM :dyn_statement;
     EXEC SQL DECLARE C_00 CURSOR FOR S_00;
-    EXEC SQL OPEN C_00 USING DESCRIPTOR bind_dp;  
-    sqlgls(deparsed_stmt, &stmt_len, &sqlFunCode);
-    if(sqlFunCode == ORA_SELECT_CODE)
-      EXEC SQL DESCRIBE SELECT LIST FOR S_00 INTO select_dp;
-    else 
-      EXEC SQL CLOSE C_00;
+    EXEC SQL DESCRIBE BIND VARIABLES FOR S_00 INTO bind_dp;
     break;
   case 1:
     EXEC SQL AT :db_alias DECLARE S_01 STATEMENT;
     EXEC SQL PREPARE S_01 FROM :dyn_statement;
     EXEC SQL DECLARE C_01 CURSOR FOR S_01;
-    EXEC SQL OPEN C_01 USING DESCRIPTOR bind_dp;  
-    sqlgls(deparsed_stmt, &stmt_len, &sqlFunCode);
-    if(sqlFunCode == ORA_SELECT_CODE)
-      EXEC SQL DESCRIBE SELECT LIST FOR S_01 INTO select_dp;
-    else
-      EXEC SQL CLOSE C_01;
+    EXEC SQL DESCRIBE BIND VARIABLES FOR S_01 INTO bind_dp;
     break;
   case 2:
     EXEC SQL AT :db_alias DECLARE S_02 STATEMENT;
     EXEC SQL PREPARE S_02 FROM :dyn_statement;
     EXEC SQL DECLARE C_02 CURSOR FOR S_02;
-    EXEC SQL OPEN C_02 USING DESCRIPTOR bind_dp;  
-    sqlgls(deparsed_stmt, &stmt_len, &sqlFunCode);
-    if(sqlFunCode == ORA_SELECT_CODE)
-      EXEC SQL DESCRIBE SELECT LIST FOR S_02 INTO select_dp;
-    else
-      EXEC SQL CLOSE C_02;
+    EXEC SQL DESCRIBE BIND VARIABLES FOR S_02 INTO bind_dp;
     break;
   case 3:
     EXEC SQL AT :db_alias DECLARE S_03 STATEMENT;
     EXEC SQL PREPARE S_03 FROM :dyn_statement;
     EXEC SQL DECLARE C_03 CURSOR FOR S_03;
-    EXEC SQL OPEN C_03 USING DESCRIPTOR bind_dp;  
-    sqlgls(deparsed_stmt, &stmt_len, &sqlFunCode);
-    if(sqlFunCode != ORA_SELECT_CODE){
-      EXEC SQL CLOSE C_03;
-    } 
-    else
-      EXEC SQL DESCRIBE SELECT LIST FOR S_03 INTO select_dp;
+    EXEC SQL DESCRIBE BIND VARIABLES FOR S_03 INTO bind_dp;
     break;
   case 4:
     EXEC SQL AT :db_alias DECLARE S_04 STATEMENT;
     EXEC SQL PREPARE S_04 FROM :dyn_statement;
     EXEC SQL DECLARE C_04 CURSOR FOR S_04;
-    EXEC SQL OPEN C_04 USING DESCRIPTOR bind_dp;  
-    sqlgls(deparsed_stmt, &stmt_len, &sqlFunCode);
-    if(sqlFunCode == ORA_SELECT_CODE)
-      EXEC SQL DESCRIBE SELECT LIST FOR S_04 INTO select_dp;
-    else
-      EXEC SQL CLOSE C_04;
+    EXEC SQL DESCRIBE BIND VARIABLES FOR S_04 INTO bind_dp;
     break;
   case 5:
     EXEC SQL AT :db_alias DECLARE S_05 STATEMENT;
     EXEC SQL PREPARE S_05 FROM :dyn_statement;
     EXEC SQL DECLARE C_05 CURSOR FOR S_05;
-    EXEC SQL OPEN C_05 USING DESCRIPTOR bind_dp;  
-    sqlgls(deparsed_stmt, &stmt_len, &sqlFunCode);
-    if(sqlFunCode == ORA_SELECT_CODE)
-      EXEC SQL DESCRIBE SELECT LIST FOR S_05 INTO select_dp;
-    else
-      EXEC SQL CLOSE C_05;
+    EXEC SQL DESCRIBE BIND VARIABLES FOR S_05 INTO bind_dp;
     break;
   case 6:
     EXEC SQL AT :db_alias DECLARE S_06 STATEMENT;
     EXEC SQL PREPARE S_06 FROM :dyn_statement;
     EXEC SQL DECLARE C_06 CURSOR FOR S_06;
-    EXEC SQL OPEN C_06 USING DESCRIPTOR bind_dp;  
-    sqlgls(deparsed_stmt, &stmt_len, &sqlFunCode);
-    if(sqlFunCode == ORA_SELECT_CODE)
-      EXEC SQL DESCRIBE SELECT LIST FOR S_06 INTO select_dp;
-    else
-      EXEC SQL CLOSE C_06;
+    EXEC SQL DESCRIBE BIND VARIABLES FOR S_06 INTO bind_dp;
     break;
   case 7:
     EXEC SQL AT :db_alias DECLARE S_07 STATEMENT;
     EXEC SQL PREPARE S_07 FROM :dyn_statement;
     EXEC SQL DECLARE C_07 CURSOR FOR S_07;
-    EXEC SQL OPEN C_07 USING DESCRIPTOR bind_dp;  
-    sqlgls(deparsed_stmt, &stmt_len, &sqlFunCode);
-    if(sqlFunCode != ORA_SELECT_CODE){
-      EXEC SQL CLOSE C_07;
-    } 
-    else
-      EXEC SQL DESCRIBE SELECT LIST FOR S_07 INTO select_dp;
+    EXEC SQL DESCRIBE BIND VARIABLES FOR S_07 INTO bind_dp;
     break;
   case 8:
     EXEC SQL AT :db_alias DECLARE S_08 STATEMENT;
     EXEC SQL PREPARE S_08 FROM :dyn_statement;
     EXEC SQL DECLARE C_08 CURSOR FOR S_08;
-    EXEC SQL OPEN C_08 USING DESCRIPTOR bind_dp;  
-    sqlgls(deparsed_stmt, &stmt_len, &sqlFunCode);
-    if(sqlFunCode == ORA_SELECT_CODE)
-      EXEC SQL DESCRIBE SELECT LIST FOR S_08 INTO select_dp;
-    else
-      EXEC SQL CLOSE C_08;
+    EXEC SQL DESCRIBE BIND VARIABLES FOR S_08 INTO bind_dp;
     break;
   case 9:
     EXEC SQL AT :db_alias DECLARE S_09 STATEMENT;
     EXEC SQL PREPARE S_09 FROM :dyn_statement;
     EXEC SQL DECLARE C_09 CURSOR FOR S_09;
-    EXEC SQL OPEN C_09 USING DESCRIPTOR bind_dp;  
-    sqlgls(deparsed_stmt, &stmt_len, &sqlFunCode);
-    if(sqlFunCode == ORA_SELECT_CODE)
-      EXEC SQL DESCRIBE SELECT LIST FOR S_09 INTO select_dp;
-    else
-      EXEC SQL CLOSE C_09;
+    EXEC SQL DESCRIBE BIND VARIABLES FOR S_09 INTO bind_dp;
     break;
   default:
-    goto exec_error;
+    goto prepare_error;
     break;
   }
 
   result->statement = RS_DBI_copyString(CHR_EL(statement,0));
+  result->rowsAffected = (Sint) -1;  /* to be determined */
+  result->rowCount = (Sint) -1;      /* to be determined */
+  result->completed = (Sint) -1;     /* to be determined */
 
-  if(sqlFunCode == ORA_SELECT_CODE ){
-    /* If F is negative, there were more select-list items than
-     * originally allocated by sqlald(). 
-     */
-    num_fields = (int) select_dp->F;
-    if(num_fields < 0) {
-      char errMsg[128];
-      (void) sprintf(errMsg, 
-	   "too many select-list items (%d), maximum is %d",
-	   (int) -(select_dp->F), (int) RS_ORA_MAX_ITEMS);
-      RS_DBI_errorMessage(errMsg, RS_DBI_WARNING);
-      goto exec_error;
-    }
-    result->fields = RS_Ora_setOraToSMappings(desArea);
-    result->rowsAffected = (Sint) -1;    /* not set w. SELECT statements */
-    result->completed = (Sint) 0;
-    result->isSelect  = (Sint) 1;
-    result->drvData = (void *) desArea;
-  }
-  else {
-    result->rowsAffected = sqlca.sqlerrd[2];
-    result->rowCount = (Sint) 0;
-    result->completed = (Sint) 1;
-    result->isSelect  = (Sint) 0;
-    /* TODO: should we also free the DBI resultSet? Hmm. */
-  }
+  /* set the S -> Oracle mapping through bound parametes in desArea.
+   * TODO: Note that the result set object itself does not record whether 
+   * there are bound params or not -- this is (currently) recorded in 
+   * the *desArea structure (that's fine, but probably we want to 
+   * formalize this as a slot, ie., struct member, in the resultSet).
+   */
+  n_params = RS_Ora_setSToOraMappings(desArea, s_bind_classes);
+  if(n_params<0) goto prepare_error;
+  result->drvData = (void *) desArea;
+
+  /* sqlgls() describes the parsed SQL statements (insert, select, etc.) */
+  sqlgls(deparsed_stmt, &stmt_len, &sqlFunCode);
+  result->isSelect  = (Sint) (sqlFunCode == ORA_SQL_CODE_SELECT);
 
   return rsHandle; 
 
- exec_error:
+prepare_error:
   if(desArea)
     RS_Ora_freeDescriptors(desArea);
   RS_DBI_freeResultSet(rsHandle);
   EXEC SQL WHENEVER SQLERROR CONTINUE;
   RS_Ora_error();
   return (Res_Handle *) NULL;
+}
+
+Res_Handle *
+RS_Ora_exec(Res_Handle *resHandle, 
+   s_object *s_dataFrame,
+   s_object *s_data_classes,
+   s_object *ora_buf_size)
+{
+   /* Limitation:  We don't fully implemented sql statements that are select
+    * AND that have input parameters larger than one bufferSize rows.  The
+    * reason is somewhat complicated and due to the fact that each time
+    * we need to refill the buffers we need to re-OPEN cursors -- this in turn
+    * clears the active set.  With these limitations we should cache both
+    * the input (bound) data.frame *AND* the output of the select statement,
+    * which we don't currently do.  [Or re-implement using Oracle's OCI API.)
+    */
+
+   S_EVALUATOR 
+
+   RS_DBI_resultSet *res;
+   RS_Ora_desArea  *desArea;
+   SQLDA  *bind_dp;          /* SQL descriptor area for bind variables */
+   SQLDA  *select_dp;        /* SQL descriptor area for select'ed fields*/
+   int    cursorNum, isSelect, batchNum;
+   char   alias[128]; 
+   Sint   numParams, bufferSize, nr, i;
+   
+   EXEC SQL BEGIN DECLARE SECTION;
+   int n ;
+   EXEC SQL END DECLARE SECTION;
+   
+   res = RS_DBI_getResultSet(resHandle);
+   desArea = (RS_Ora_desArea *) res->drvData;
+   batchNum  = desArea->batchNum;
+   numParams = desArea->numParams;
+
+   /* Special case: statement already executed once w. no bound params */
+   if(batchNum>0 && numParams==0)
+      return resHandle;
+
+   select_dp = desArea->selectFlds;
+   bind_dp = desArea->bindVars;
+   isSelect = (int) res->isSelect;
+
+   bufferSize = INT_EL(ora_buf_size, 0);
+   if(bufferSize<=0)
+      bufferSize = desArea->bufferSize;
+
+   /* Limitation: select statement with input too big for one buffer trip */
+   nr = GET_LENGTH(LST_EL(s_dataFrame, 0));
+   if(isSelect && nr > bufferSize){
+      char err_msg[1024];
+      (void) sprintf(err_msg, 
+                     "exceeded limit on input data.frame, must have <=%ld rows", 
+                     (long) bufferSize);
+      RS_DBI_errorMessage(err_msg, RS_DBI_ERROR);
+   }
+
+   cursorNum = RS_Ora_getCursorNum(resHandle);
+   (void) sprintf(alias, ALIAS_PATTERN, cursorNum);
+   RS_Ora_varCharCpy(&db_alias, alias);
+   EXEC SQL WHENEVER SQLERROR DO filter_exec_error_bug();
+   switch(cursorNum){
+         /* Yet one more precompiling shortcoming.  The OPEN embedded statement
+          * executes the SQL, but in cases when we needed to fill the buffers
+          * multiple times, we need to re-open the cursor to change the input
+          * variables.  Closing and opening cursors can be relatively
+          * expensive, so Oracle allows us to re-open a cursor w.o. closing it,
+          * but this behaviour depends on having the proc option MODE=Oracle,
+          * which it's the default value.  See the Pro C/C++ manual p. 5-13
+          * and Appendix F-59 for details
+          *
+          * WARNING: re-opening a cursor resets the number of rows processed in
+          *          sqlca.sqlerrd[2] and the active (output) set.
+          * WARNING: Appendix F in the ProC/C++ manual did not list the "FOR :n"
+          *          predicate to the OPEN cursor statement.  An oversight?
+          */
+      case 0: 
+         if(numParams==0){                        /* no bound variables   */
+            EXEC SQL OPEN C_00;                   /* no need of bind info */
+            if(!isSelect) EXEC SQL CLOSE C_00;    /* no output, thus done */
+         }
+         else{
+            if(desArea->batchNum==0) 
+               res->rowsAffected=0;
+            for(i = 0; i<nr; i += n){
+               n = RS_Ora_cpyDataFrameToOra(s_dataFrame, s_data_classes,
+                                            i, bufferSize, desArea);
+               EXEC SQL FOR :n OPEN C_00 USING DESCRIPTOR bind_dp;  
+               desArea->batchNum += 1;            /* one more Oracle batch */
+               /* sqlerrd[2] stores cum num of affected rows per OPEN */
+               res->rowsAffected += sqlca.sqlerrd[2]; 
+            }
+         }
+         if(isSelect)
+            EXEC SQL DESCRIBE SELECT LIST FOR S_00 INTO select_dp;
+         break;
+      case 1: 
+         if(numParams==0){                        /* no bound variables   */
+            EXEC SQL OPEN C_01;                   /* no need of bind info */
+            if(!isSelect) EXEC SQL CLOSE C_01;    /* no output, thus done */
+         }
+         else{
+            if(desArea->batchNum==0) 
+               res->rowsAffected=0;
+            for(i = 0; i<nr; i += n){
+               n = RS_Ora_cpyDataFrameToOra(s_dataFrame, s_data_classes,
+                                            i, bufferSize, desArea);
+               EXEC SQL FOR :n OPEN C_01 USING DESCRIPTOR bind_dp;  
+               desArea->batchNum += 1;            /* one more Oracle batch */
+               res->rowsAffected += sqlca.sqlerrd[2]; 
+            }
+         }
+         if(isSelect)
+            EXEC SQL DESCRIBE SELECT LIST FOR S_01 INTO select_dp;
+         break;
+      case 2: 
+         if(numParams==0){                        /* no bound variables   */
+            EXEC SQL OPEN C_02;                   /* no need of bind info */
+            if(!isSelect) EXEC SQL CLOSE C_02;    /* no output, thus done */
+         }
+         else{
+            if(desArea->batchNum==0) 
+               res->rowsAffected=0;
+            for(i = 0; i<nr; i += n){
+               n = RS_Ora_cpyDataFrameToOra(s_dataFrame, s_data_classes,
+                                            i, bufferSize, desArea);
+               EXEC SQL FOR :n OPEN C_02 USING DESCRIPTOR bind_dp;  
+               desArea->batchNum += 1;            /* one more Oracle batch */
+               res->rowsAffected += sqlca.sqlerrd[2]; 
+            }
+         }
+         if(isSelect)
+            EXEC SQL DESCRIBE SELECT LIST FOR S_02 INTO select_dp;
+         break;
+      case 3: 
+         if(numParams==0){                        /* no bound variables   */
+            EXEC SQL OPEN C_03;                   /* no need of bind info */
+            if(!isSelect) EXEC SQL CLOSE C_03;    /* no output, thus done */
+         }
+         else{
+            if(desArea->batchNum==0) 
+               res->rowsAffected=0;
+            for(i = 0; i<nr; i += n){
+               n = RS_Ora_cpyDataFrameToOra(s_dataFrame, s_data_classes,
+                                            i, bufferSize, desArea);
+               EXEC SQL FOR :n OPEN C_03 USING DESCRIPTOR bind_dp;  
+               desArea->batchNum += 1;            /* one more Oracle batch */
+               res->rowsAffected += sqlca.sqlerrd[2]; 
+            }
+         }
+         if(isSelect)
+            EXEC SQL DESCRIBE SELECT LIST FOR S_03 INTO select_dp;
+         break;
+      case 4: 
+         if(numParams==0){                        /* no bound variables   */
+            EXEC SQL OPEN C_04;                   /* no need of bind info */
+            if(!isSelect) EXEC SQL CLOSE C_04;    /* no output, thus done */
+         }
+         else{
+            if(desArea->batchNum==0) 
+               res->rowsAffected=0;
+            for(i = 0; i<nr; i += n){
+               n = RS_Ora_cpyDataFrameToOra(s_dataFrame, s_data_classes,
+                                            i, bufferSize, desArea);
+               EXEC SQL FOR :n OPEN C_04 USING DESCRIPTOR bind_dp;  
+               desArea->batchNum += 1;            /* one more Oracle batch */
+               res->rowsAffected += sqlca.sqlerrd[2]; 
+            }
+         }
+         if(isSelect)
+            EXEC SQL DESCRIBE SELECT LIST FOR S_04 INTO select_dp;
+         break;
+      case 5: 
+         if(numParams==0){                        /* no bound variables   */
+            EXEC SQL OPEN C_05;                   /* no need of bind info */
+            if(!isSelect) EXEC SQL CLOSE C_05;    /* no output, thus done */
+         }
+         else{
+            if(desArea->batchNum==0) 
+               res->rowsAffected=0;
+            for(i = 0; i<nr; i += n){
+               n = RS_Ora_cpyDataFrameToOra(s_dataFrame, s_data_classes,
+                                            i, bufferSize, desArea);
+               EXEC SQL FOR :n OPEN C_05 USING DESCRIPTOR bind_dp;  
+               desArea->batchNum += 1;            /* one more Oracle batch */
+               res->rowsAffected += sqlca.sqlerrd[2]; 
+            }
+         }
+         if(isSelect)
+            EXEC SQL DESCRIBE SELECT LIST FOR S_05 INTO select_dp;
+         break;
+      case 6: 
+         if(numParams==0){                        /* no bound variables   */
+            EXEC SQL OPEN C_06;                   /* no need of bind info */
+            if(!isSelect) EXEC SQL CLOSE C_06;    /* no output, thus done */
+         }
+         else{
+            if(desArea->batchNum==0) 
+               res->rowsAffected=0;
+            for(i = 0; i<nr; i += n){
+               n = RS_Ora_cpyDataFrameToOra(s_dataFrame, s_data_classes,
+                                            i, bufferSize, desArea);
+               EXEC SQL FOR :n OPEN C_06 USING DESCRIPTOR bind_dp;  
+               desArea->batchNum += 1;            /* one more Oracle batch */
+               res->rowsAffected += sqlca.sqlerrd[2]; 
+            }
+         }
+         if(isSelect)
+            EXEC SQL DESCRIBE SELECT LIST FOR S_06 INTO select_dp;
+         break;
+      case 7: 
+         if(numParams==0){                        /* no bound variables   */
+            EXEC SQL OPEN C_07;                   /* no need of bind info */
+            if(!isSelect) EXEC SQL CLOSE C_07;    /* no output, thus done */
+         }
+         else{
+            if(desArea->batchNum==0) 
+               res->rowsAffected=0;
+            for(i = 0; i<nr; i += n){
+               n = RS_Ora_cpyDataFrameToOra(s_dataFrame, s_data_classes,
+                                            i, bufferSize, desArea);
+               EXEC SQL FOR :n OPEN C_07 USING DESCRIPTOR bind_dp;  
+               desArea->batchNum += 1;            /* one more Oracle batch */
+               res->rowsAffected += sqlca.sqlerrd[2]; 
+            }
+         }
+         if(isSelect)
+            EXEC SQL DESCRIBE SELECT LIST FOR S_07 INTO select_dp;
+         break;
+      case 8: 
+         if(numParams==0){                        /* no bound variables   */
+            EXEC SQL OPEN C_08;                   /* no need of bind info */
+            if(!isSelect) EXEC SQL CLOSE C_08;    /* no output, thus done */
+         }
+         else{
+            if(desArea->batchNum==0) 
+               res->rowsAffected=0;
+            for(i = 0; i<nr; i += n){
+               n = RS_Ora_cpyDataFrameToOra(s_dataFrame, s_data_classes,
+                                            i, bufferSize, desArea);
+               EXEC SQL FOR :n OPEN C_08 USING DESCRIPTOR bind_dp;  
+               desArea->batchNum += 1;            /* one more Oracle batch */
+               res->rowsAffected += sqlca.sqlerrd[2]; 
+            }
+         }
+         if(isSelect)
+            EXEC SQL DESCRIBE SELECT LIST FOR S_08 INTO select_dp;
+         break;
+      case 9: 
+         if(numParams==0){                        /* no bound variables   */
+            EXEC SQL OPEN C_09;                   /* no need of bind info */
+            if(!isSelect) EXEC SQL CLOSE C_09;    /* no output, thus done */
+         }
+         else{
+            if(desArea->batchNum==0) 
+               res->rowsAffected=0;
+            for(i = 0; i<nr; i += n){
+               n = RS_Ora_cpyDataFrameToOra(s_dataFrame, s_data_classes,
+                                            i, bufferSize, desArea);
+               EXEC SQL FOR :n OPEN C_09 USING DESCRIPTOR bind_dp;  
+               desArea->batchNum += 1;            /* one more Oracle batch */
+               res->rowsAffected += sqlca.sqlerrd[2]; 
+            }
+         }
+         if(isSelect)
+            EXEC SQL DESCRIBE SELECT LIST FOR S_09 INTO select_dp;
+         break;
+   }
+
+   res->drvData = (void *) desArea;
+   res->isSelect = (Sint) isSelect;
+   if(isSelect){
+      res->fields = RS_Ora_setOraToSMappings(desArea);
+      res->rowsAffected = (Sint) 0;         /* not set w. SELECTs */
+      res->completed = (Sint) 0;            /* there are rows to fetch */
+   }
+   else 
+      res->completed = (numParams==0);
+
+  return resHandle;
+
+exec_error:
+  EXEC SQL WHENEVER SQLERROR CONTINUE;
+  RS_Ora_error();
+  return resHandle;     /* unreachable, but for gcc -Wall's sake */
 }
 
 RS_DBI_fields *
@@ -531,10 +778,15 @@ RS_Ora_setOraToSMappings(RS_Ora_desArea *desArea)
    * in the comments below.  Please let us know if you have better
    * alternatives.  BTW, this is the part that other drivers need
    * to hard code as well (e.g., Informix, m[y]SQL, Sysbase, ....)
-   * TODO: To implement NROWS>1.
    */
 
-  int NROWS = 1; /* records to bring per fetch (not yet implemented) */
+  /* records to bring into C (not R/S-Plus) per fetch.  
+   *
+   * NOTE: The use of host arrays with the ProC/C++ has size limitations, 
+   * in particular, each host array has to have less than 32767/sizeof(type) 
+   * elements (ProC/C++ Manula, p. 12-2).
+   */
+  int bufferSize = desArea->bufferSize; 
 
   SQLDA *select_dp = NULL;
   RS_DBI_fields *flds;
@@ -659,172 +911,97 @@ RS_Ora_setOraToSMappings(RS_Ora_desArea *desArea)
       RS_DBI_errorMessage(errMsg, RS_DBI_WARNING);
       break;
     }
-    /* we now allocate space for the receiving buffer -- better not lie!
-     * TODO: here we should incorporate the host array concept
-     * by allocating NROWS * select_dp->L[j] for each field. Currently
-     * only works with NROWS = 1!
-     */
-    select_dp->V[j] = (char *) 
-      realloc(select_dp->V[j], NROWS * select_dp->L[j]);
-    select_dp->I[j] = (short *)
-      realloc(select_dp->I[j], NROWS * sizeof(short));
+
+    /* we now allocate space for the receiving buffer -- better not lie! */
+
+    if(select_dp->V[j] != (char *) 0)
+       free(select_dp->V[j]);
+    select_dp->V[j] = (char *) calloc((size_t) bufferSize, select_dp->L[j]);
+
+    if(select_dp->I[j] != (short *) 0)
+       free(select_dp->I[j]);
+    select_dp->I[j] = (short *)calloc((size_t) bufferSize, sizeof(short));
   }  
   return flds;
 }
 
-s_object *   /* return a names list */
-RS_Ora_fetch(Res_Handle *rsHandle, s_object *max_rec)
+
+/* copy "n_rows" from the Oracle's SQL Description Area buffers into
+ * the data.frame "output" starting at row "from".
+ * Recall that Oracle NULL indicater can be -1 (NULL), 0 (non-null), or
+ * 1 (value truncated).
+ */
+void
+RS_Ora_cpyOraToDataFrame(SQLDA *select_dp, int n_rows, 
+   s_object *output, int from, RS_DBI_fields *flds)
 {
-  /* We return a list of num_fields, with at most num_rec in each fields
-   * (field descriptions are coming from result->flds).
-   */
+   int    num_fields = flds->num_fields;
+   int    r, j, len; 
+   Sint   isVarLength;
+   short  *null_item;
+   char   *V, *out;
 
-  EXEC SQL BEGIN DECLARE SECTION;
-    int  NROWS = 1;
-  EXEC SQL END DECLARE SECTION;
+   for(j = 0; j < num_fields; j++){
 
-  S_EVALUATOR
-  s_object         *output;
-#ifndef USING_R
-  s_object          *raw_obj, *raw_container;
-#endif
-  RS_DBI_manager   *mgr;
-  RS_DBI_resultSet *result;
-  RS_DBI_fields    *flds;
-  RS_Ora_desArea   *desArea;
-  SQLDA *select_dp = NULL;
-  Sint   i, j, num_rec, null_item, expand;
-  int    num_fields;
-  Sint   isVarLength;
-  int    cursorNum;
-  char   *out, alias[128];
-
-  mgr = RS_DBI_getManager(rsHandle);
-  result = RS_DBI_getResultSet(rsHandle);
-  flds = result->fields;
-  if(!flds)
-    RS_DBI_errorMessage("internal error: corrupt dbResult object", 
-			RS_DBI_ERROR);
-  num_rec = INT_EL(max_rec,0);
-  expand = (Sint) (num_rec<0);
-  if(expand || num_rec==((Sint) 0))
-    num_rec = mgr->fetch_default_rec;
-
-  num_fields = flds->num_fields;
-  MEM_PROTECT(output = NEW_LIST((Sint) num_fields));
-  RS_DBI_allocOutput(output, flds, num_rec, 0);
-#ifndef USING_R
-  if(IS_LIST(output))
-    output = AS_LIST(output);
-  else
-    RS_DBI_errorMessage("internal error: could not alloc output list",
-			RS_DBI_ERROR);
-#endif
-  /* Now we loop over at most num_rec and fetch them from the cursor */
-
-  cursorNum = RS_Ora_getCursorNum(rsHandle);
-  (void) sprintf(alias, ALIAS_PATTERN, cursorNum);
-  RS_Ora_varCharCpy(&db_alias, alias);
-
-  desArea = (RS_Ora_desArea *) result->drvData;
-  select_dp = desArea->selectFlds;
-
-  EXEC SQL WHENEVER SQLERROR  GOTO fetch_error;
-  EXEC SQL WHENEVER NOT FOUND GOTO done;
-  for(i = 0; ; i += NROWS){
-    /* do we need to expand (re-alloc) row-wise the output list? */
-    if(i>=num_rec){
-      if(expand){
-	num_rec = 2 * num_rec;
-	RS_DBI_allocOutput(output, flds, num_rec, expand);
-#ifndef USING_R
-	if(IS_LIST(output))
-	  output = AS_LIST(output);
-	else
-	  RS_DBI_errorMessage("input fetch error: could not alloc output list",
-			      RS_DBI_ERROR);
-#endif
-      }
-      else
-	goto done;
-    }
-    /* get next record from the proper cursor */
-    switch(cursorNum) { 
-    case 0:
-      EXEC SQL FOR :NROWS FETCH C_00 USING DESCRIPTOR select_dp;
-      break;
-    case 1:
-      EXEC SQL FOR :NROWS FETCH C_01 USING DESCRIPTOR select_dp;
-      break;
-    case 2:
-      EXEC SQL FOR :NROWS FETCH C_02 USING DESCRIPTOR select_dp;
-      break;
-    case 3:
-      EXEC SQL FOR :NROWS FETCH C_03 USING DESCRIPTOR select_dp;
-      break;
-    case 4:
-      EXEC SQL FOR :NROWS FETCH C_04 USING DESCRIPTOR select_dp;
-      break;
-    case 5:
-      EXEC SQL FOR :NROWS FETCH C_05 USING DESCRIPTOR select_dp;
-      break;
-    case 6:
-      EXEC SQL FOR :NROWS FETCH C_06 USING DESCRIPTOR select_dp;
-      break;
-    case 7:
-      EXEC SQL FOR :NROWS FETCH C_07 USING DESCRIPTOR select_dp;
-      break;
-    case 8:
-      EXEC SQL FOR :NROWS FETCH C_08 USING DESCRIPTOR select_dp;
-      break;
-    case 9:
-      EXEC SQL FOR :NROWS FETCH C_09 USING DESCRIPTOR select_dp;
-      break;
-    default:
-      goto fetch_error;
-      break;
-    }
-    /* move each field to the output list */
-    for(j = 0; j < num_fields; j++){ 
-
-      null_item = ((*(select_dp->I[j]))<0); /* null in Oracle, that is */
       isVarLength = (int) flds->isVarLength[j];
 
+      null_item = select_dp->I[j];      /* array of indicator for each row */
+      len = select_dp->L[j];            /* all field elements have same len*/
+      V = select_dp->V[j];              /* actual j'th buffer */
+      
       switch((int)flds->Sclass[j]){
       case CHARACTER_TYPE:
-	/* Note: We delete trailing blanks only in the case of 
-         * variable-length  character types (varchar2, varchar, 
-         * string, etc.)
-	 */
-	if(null_item)
-	  SET_LST_CHR_EL(output,j,i,NA_STRING);
-	else {
-          out = RS_DBI_nCopyString(select_dp->V[j], 
-				   (size_t) select_dp->L[j], 
-				   isVarLength);
-	  SET_LST_CHR_EL(output,j,i, C_S_CPY(out));
-	}
-	break;
+         /* Note: We delete trailing blanks only in the case of 
+          * variable-length  character types (varchar2, varchar, 
+          * string, etc.)
+          */
+         for(r = 0; r < n_rows; r++){
+            if(null_item[r]>=0){
+               out = RS_DBI_nCopyString(&V[r*len], (size_t) len, isVarLength);
+               SET_LST_CHR_EL(output,j,from+r, C_S_CPY(out));
+               if(null_item[r]>0)
+                  RS_DBI_errorMessage("truncated value", RS_DBI_WARNING);
+            }
+            else 
+               SET_LST_CHR_EL(output,j,from+r,NA_STRING);
+         }
+         break;
       case INTEGER_TYPE:
-	if(null_item)
-	  NA_SET(&(LST_INT_EL(output,j,i)), INTEGER_TYPE);
-	else
-	  LST_INT_EL(output,j,i) = *((long *)select_dp->V[j]);
-	break;
+         for(r = 0; r < n_rows; r++){
+            if(null_item[r]>=0){
+               LST_INT_EL(output,j,from+r) = ((long *) V)[r];
+               if(null_item[r]>0)
+                  RS_DBI_errorMessage("truncated value", RS_DBI_WARNING);
+            }
+            else
+               NA_SET(&(LST_INT_EL(output,j,from+r)), INTEGER_TYPE);
+         }
+         break;
       case NUMERIC_TYPE:
-	if(null_item)
-	  NA_SET(&(LST_NUM_EL(output,j,i)), NUMERIC_TYPE);
-	else
-	  LST_NUM_EL(output,j,i) = *((double *) select_dp->V[j]);
-	break;
+         for(r = 0; r < n_rows; r++){
+            if(null_item[r]>=0){
+               LST_NUM_EL(output,j,from+r) = ((double *) V)[r];
+               if(null_item[r]>0)
+                  RS_DBI_errorMessage("truncated value", RS_DBI_WARNING);
+            }
+            else
+               NA_SET(&(LST_NUM_EL(output,j,from+r)), NUMERIC_TYPE);
+         }
+         break;
 #ifndef USING_R
       case SINGLE_TYPE:
-	if(null_item)
-	  NA_SET(&(LST_FLT_EL(output,j,i)), SINGLE_TYPE);
-	else
-	  LST_FLT_EL(output,j,i) = *((float *) select_dp->V[j]);
+         for(r = 0; r < n_rows; r++){
+            if(null_item[r]>=0){
+               LST_FLT_EL(output,j,from+r) = ((float *) V)[r];
+               if(null_item[r]>0)
+                   RS_DBI_errorMessage("truncated value", RS_DBI_WARNING);
+            }
+            else
+               NA_SET(&(LST_FLT_EL(output,j,from+r)), SINGLE_TYPE);
+        }
+        break;
       case RAW_TYPE:
-	/************************************************************
+        /************************************************************
          *          BUG: Totally untested code!                     *
          *                                                          *
          * Note that as of version 0.3 we should not be here -- the *
@@ -832,29 +1009,487 @@ RS_Ora_fetch(Res_Handle *rsHandle, s_object *max_rec)
          * any of the RAW types.                                    *
          ************************************************************
          */
-	raw_obj = NEW_RAW((Sint) flds->length[i]);
-	raw_container = LST_EL(output, j);
-	SET_ELEMENT(raw_container, (Sint) i, raw_obj);
-	SET_ELEMENT(output, (Sint)j, raw_container);
-	break;
+        for(r = 0; r < n_rows; r++){
+           raw_obj = NEW_RAW((Sint) flds->length[i]);
+           raw_container = LST_EL(output, j);
+           SET_ELEMENT(raw_container, (Sint) from+r, raw_obj);
+           SET_ELEMENT(output, (Sint)j, raw_container);
+        }
+        break;
 #endif
-      }
-    }
-  }
-  
- done:  /* actual number of records fetched */
-  if(i < num_rec){
-    s_object *s_tmp;
+      }   /* switch */
+   }      /* for j'th field */
+   return;
+}
 
-    num_rec = i;
-    /* adjust the length of each of the members in the output_list */
-    for(j = 0; j<num_fields; j++){
-      s_tmp = LST_EL(output, j);
-      MEM_PROTECT(SET_LENGTH(s_tmp, num_rec));
-      SET_ELEMENT(output, j, s_tmp);
-      MEM_UNPROTECT(1);
-    }
-  }
+/* set data mappings from R/S to Oracle.
+ * These mappings are used in the processing of bound parameters.
+ * We return the number of bound parameters.
+ */
+int
+RS_Ora_setSToOraMappings(
+   RS_Ora_desArea *desArea,
+   s_object  *s_bind_classes
+   )
+{
+
+   SQLDA  *bind_dp;
+   size_t bufferSize;
+   int    i,j; 
+   long   n_params;
+   Sint   nc, *which, nfld;
+   short  *T, valid_fieldNum;
+   long   *L;
+   char   *c;
+
+   Stype *Sclass; 
+
+   bind_dp = desArea->bindVars;
+   bufferSize = (size_t) desArea->bufferSize;
+
+   n_params = bind_dp->F;
+   if(n_params<0){
+      RS_DBI_errorMessage(
+         "could not bind input parameters in the sql statement",
+         RS_DBI_WARNING);
+      return -1;
+   }
+   nc = GET_LENGTH(s_bind_classes);
+   if(n_params>nc){
+      RS_DBI_errorMessage("number of parameters must equal ncol(data)",
+         RS_DBI_ERROR);
+      return -1;
+   }
+   desArea->numParams = n_params;
+   bind_dp->N = n_params;
+
+   if(n_params==0 || nc==0){
+      return n_params;
+   }
+
+   T = (short *) bind_dp->T;
+   L = (long *) bind_dp->L;
+
+   Sclass = RS_SclassNames_To_StypeIds(s_bind_classes);
+   desArea->Sclass = Sclass;
+   which = (Sint *) calloc((size_t) n_params, sizeof(Sint));
+   if(!which)
+      RS_DBI_errorMessage("could not allocate desArea->which", RS_DBI_ERROR);
+   desArea->which = which;
+
+   for(j=0; j<n_params; j++){
+
+      /* get col number being bound and make sure that it is valid 
+       * (unfortunately S field names may not be valid binding parameter
+       * names, e.g., "lat.1" is a valid S name but invalid SQL name).
+       *
+       * bind_dp->S[j] is the jth bind parameter names/string 
+       * bind_dp->C[j] is the num of chararacter in the name
+       */ 
+      valid_fieldNum = 1;
+      for(i=0, c = bind_dp->S[j]; i<bind_dp->C[j]; i++){
+         if(!isdigit(c[i])){
+            valid_fieldNum = 0;
+            break;
+         }
+      }
+      nfld = atol(bind_dp->S[j]);
+      if(valid_fieldNum && nfld<1)
+         valid_fieldNum = 0;
+      if(!valid_fieldNum){
+         char errMsg[128];
+         (void) sprintf(errMsg,"invalid column number (%s) into data.frame",c);
+         RS_DBI_errorMessage(errMsg, RS_DBI_WARNING);
+         return -1;
+      }
+
+      which[j] = nfld;
+
+      switch(Sclass[j]){
+         case CHARACTER_TYPE:
+            T[j] = ORA_EX_CHARZ; /* null-terminated string w. <= 255 chars */
+            L[j] = (long) -1;    /* un-allocated buffer */
+            bind_dp->V[j] = (char *) 0; /* cannot allocate space until I see the data*/
+            break;
+         case NUMERIC_TYPE:
+            T[j] = ORA_EX_FLOAT;
+            L[j] = (long) sizeof(double);
+            bind_dp->V[j] = (char *) calloc(bufferSize, L[j]);
+            break;
+         case INTEGER_TYPE:
+         case LOGICAL_TYPE:
+            T[j] = ORA_EX_INTEGER;
+            L[j] = (long) sizeof(Sint);
+            bind_dp->V[j] = (char *) calloc(bufferSize, L[j]);
+            break;
+#ifndef USING_R
+         case SINGLE_TYPE:
+            T[j] = ORA_EX_FLOAT;
+            L[j] = (long) sizeof(double);
+            bind_dp->V[j] = (char *) calloc(bufferSize, L[j]);
+            break;
+
+         case RAW_TYPE:
+            RS_DBI_errorMessage("raw type not yet implemented", RS_DBI_ERROR);
+            break;
+#endif
+         default:
+            RS_DBI_errorMessage("unrecognized type", RS_DBI_ERROR);
+            break;
+      }
+
+      /* we now unconditionally set aside an indicator variable for each
+       * bound parameter. Note that we don't need the X, Y, Z entries in
+       * bind_dp that deal with indicator variables, since we handle
+       * those explicitly.
+       */
+      bind_dp->I[j] = (short *) calloc(bufferSize, sizeof(short));
+   }
+
+   desArea->batchNum = 0;
+
+   return n_params;
+}
+
+/* copy data from a data.frame into Oracle descriptor buffers.
+ * Return the number of rows actually copied.
+ */
+int
+RS_Ora_cpyDataFrameToOra(
+   s_object *input,         /* input data.frame */
+   s_object *s_data_class,  /* sapply(input,class) -- may be computed here */
+   int      from,           /* starting row on input */
+   int      n_rows,         /* how many rows to copy (must be <= bufferSize)*/
+   RS_Ora_desArea *desArea  /* Oracle's description area and buffers */
+   )
+{
+   SQLDA  *bind_dp;
+   size_t bufferSize;
+   int    n, nc, i, j, k, *fld_len;
+   Sint   nr, d, max_col, *which, df_field;
+   Stype  *Sclass, *dfclass;
+   double x;
+#ifndef USING_R
+   float  f;
+#endif
+   char   *V, *schars, *here;
+   short  *I, validClasses;
+   long   L, L1, n_params;
+
+   bind_dp = desArea->bindVars;
+   n_params = bind_dp->F;
+   bufferSize = (size_t) desArea->bufferSize;
+   Sclass = desArea->Sclass;
+   which  = desArea->which;
+
+   dfclass = RS_SclassNames_To_StypeIds(s_data_class); /* this df's classes */
+
+   nr = (Sint) GET_LENGTH(LST_EL(input, 0)); /* input's dimension */
+   max_col = GET_LENGTH(input)-1;            /* for checking col nums */
+   n_rows = (int) RS_Ora_Min(n_rows, bufferSize);
+   n_rows = (int) RS_Ora_Min(n_rows, nr - from); /* actual num rows to copy */
+   if(n_rows<1)
+      return 0;
+
+   /* We need to determine the (common) length for each character field
+    * (recall that this info is unavailble when the bind_dp is initialized)
+    *
+    * Also very important, we need to verify that the new data.frame
+    * and its fields have the same classes as the "prepared" bound fields.
+    */
+
+   fld_len = (int *) calloc((size_t) n_params, sizeof(int));
+   if(!fld_len)
+      RS_DBI_errorMessage(
+         "could not allocate mem during R/S -> oracle copy", RS_DBI_ERROR);
+   
+   validClasses = 1;
+   for(j=0; j<n_params; j++){
+
+      df_field = which[j]-1;             /* "which" indexes are 1-based */
+   
+      /* bound column number must be in 1:nrow(input) ? */
+      if(df_field<0 || df_field>max_col){
+         char errMsg[128];
+         (void) sprintf(errMsg, 
+                "bound column %d must be in 1:ncol(data)=%d",
+                (int) df_field+1, (int) max_col+1);
+         RS_DBI_errorMessage(errMsg, RS_DBI_WARNING);
+         validClasses = 0;
+         continue;
+      }
+
+      /* data and bound column classes must agree*/
+      if(Sclass[j]!=dfclass[df_field]){  
+         char errMsg[128];
+         (void) sprintf(errMsg, 
+                "incompatible classes for bound parameter %d and data field %d",
+                (int) j+1, (int) df_field+1);
+         RS_DBI_errorMessage(errMsg, RS_DBI_WARNING);
+         validClasses = 0;
+         continue;
+      }
+
+      if(Sclass[j]==CHARACTER_TYPE){
+         n = 0;
+         for(i=0; i<n_rows; i++){
+            nc = strlen(LST_CHR_EL(input, df_field, from+i));
+            n = RS_Ora_Max(n, nc);
+         }
+         bind_dp->V[j] = (char *) calloc(bufferSize, n+1);  /* plus '\0' */
+         bind_dp->L[j] = fld_len[j] = n+1;
+      }
+      else 
+         fld_len[j] = bind_dp->L[j];
+   }
+
+   if(!validClasses){
+      if(fld_len) free(fld_len);
+      if(dfclass) free(dfclass);
+      RS_DBI_errorMessage(
+         "could not bind data to prepared statement", RS_DBI_ERROR);
+   }
+
+   /* we now do the actual copying */
+   
+   for(j=0; j<n_params; j++){
+
+      V = bind_dp->V[j];   /* pointer to buffer of values */
+      I = bind_dp->I[j];   /* pointer to buffer of NA/NULL indicators */
+      L = bind_dp->L[j];   /* length of the field (all elems in V buffer) */
+      L1 = L-1;
+      df_field = which[j]-1; /* index into the input data.frame */
+
+      switch(Sclass[j]){
+
+         case CHARACTER_TYPE:
+            for(i=0; i<n_rows; i++){
+               schars = LST_CHR_EL(input, df_field, from+i);
+#ifdef USING_R
+               if(STRING_ELT(LST_EL(input,df_field),from+i)==NA_STRING)
+#else
+               if(IS_NA(schars, CHARACTER_TYPE))   /* S-Plus specific */
+#endif
+                  I[i] = (short) -1;               /* must be -1, not 1 */
+               else {
+                  here = &V[i*L];
+                  (void) strncpy(here, schars, L1);      /* leave space for eos */
+                  for(k=(int) strlen(schars); k<L1; k++)  /* needs padding w. spaces */
+                     here[k] = ' ';
+                  here[L1] = '\0';
+               }
+            }
+            break;
+
+         case NUMERIC_TYPE:
+            for(i=0; i<n_rows; i++){
+               x = LST_NUM_EL(input, df_field, from+i);
+               if(IS_NA(&x, NUMERIC_TYPE))
+                  I[i] = (short) -1;
+               else
+                  ((double *)V)[i] = (double) x;
+            }
+            break;
+
+         case INTEGER_TYPE:    /* we use the fact that logical *are* int */
+         case LOGICAL_TYPE:
+            for(i=0; i<n_rows; i++){
+               d = LST_INT_EL(input, df_field, from+i);
+               if(IS_NA(&d, INTEGER_TYPE))
+                  I[i] = (short) -1;
+               else
+                  ((Sint *)V)[i] = (Sint) d;
+            }
+            break;
+#ifndef USING_R
+         /* S-Plus also needs to RAW_TYPE */
+         case SINGLE_TYPE:
+            for(i=0; i<n_rows; i++){
+               f = LST_NUM_EL(input, df_field, from+i);
+               if(IS_NA(&f, SINGLE_TYPE))
+                  I[i] = -1;
+               else
+                  ((float *)V)[i] = (float) f;
+            }
+            break;
+#endif
+         default:
+            RS_DBI_errorMessage("unrecognized R/S type", RS_DBI_ERROR);
+            break;
+      }
+   }
+   return n_rows;
+}
+
+s_object *   /* return a data.frame */
+RS_Ora_fetch(Res_Handle *rsHandle, s_object *max_rec, s_object *ora_buf_size)
+{
+   /* We return a data.frame of num_fields, with at most num_rec in each fields
+    * (field descriptions are coming from result->flds).
+    */
+
+   S_EVALUATOR
+
+   EXEC SQL BEGIN DECLARE SECTION;
+      int  bufferSize;
+   EXEC SQL END DECLARE SECTION;
+
+   s_object         *output;
+#ifndef USING_R
+   s_object          *raw_obj, *raw_container;
+#endif
+   RS_DBI_manager   *mgr;
+   RS_DBI_resultSet *result;
+   RS_DBI_fields    *flds;
+   RS_Ora_desArea   *desArea;
+   SQLDA            *select_dp;
+   Sint   i, num_rec, expand, buf_size;
+   long   n_rows, cum_rows, prev_rows; /* rows buffered */
+   int    num_fields, cursorNum;
+   char   alias[128]; 
+ 
+   mgr = RS_DBI_getManager(rsHandle);
+   result = RS_DBI_getResultSet(rsHandle);
+   if(!result->isSelect)
+      RS_DBI_errorMessage(
+         "non-select statement -- no output to fetch", RS_DBI_ERROR);
+   flds = result->fields;
+   if(!flds)
+      RS_DBI_errorMessage("internal error: corrupt dbResult object", 
+			RS_DBI_ERROR);
+   desArea = (RS_Ora_desArea *) result->drvData;
+   num_rec = INT_EL(max_rec,0);
+   expand = (Sint) (num_rec<0);
+   if(expand || num_rec==((Sint) 0))
+      num_rec = mgr->fetch_default_rec;
+
+   buf_size = INT_EL(ora_buf_size, 0);
+   if(buf_size<=0)
+      bufferSize = RS_Ora_Min(desArea->bufferSize, num_rec);
+   else
+      bufferSize = buf_size;
+   num_fields = flds->num_fields;
+   MEM_PROTECT(output = NEW_LIST((Sint) num_fields));
+   RS_DBI_allocOutput(output, flds, num_rec, 0);
+#ifndef USING_R
+   if(IS_LIST(output))
+      output = AS_LIST(output);
+   else
+      RS_DBI_errorMessage("internal error: could not alloc output list",
+			 RS_DBI_ERROR);
+#endif
+   /* Now we loop over at most num_rec and fetch them from the cursor */
+
+   cursorNum = RS_Ora_getCursorNum(rsHandle);
+   (void) sprintf(alias, ALIAS_PATTERN, cursorNum);
+   RS_Ora_varCharCpy(&db_alias, alias);
+
+   select_dp = desArea->selectFlds;
+ 
+   EXEC SQL WHENEVER SQLERROR  GOTO fetch_error;
+   EXEC SQL WHENEVER NOT FOUND GOTO done;
+
+   prev_rows = sqlca.sqlerrd[2];  /* rows fetched during prev RS_Ora_fetch */
+   n_rows = bufferSize;
+
+   for(i = 0; ; i += n_rows){
+      /* do we need to expand (re-alloc) row-wise the output list? */
+      if(i+bufferSize > num_rec){
+         if(expand){
+            num_rec = 2 * num_rec;
+            RS_DBI_allocOutput(output, flds, num_rec, expand);
+#ifndef USING_R
+            if(IS_LIST(output))
+               output = AS_LIST(output);
+            else
+               RS_DBI_errorMessage("input fetch error: could not alloc output list",
+                                 RS_DBI_ERROR);
+#endif
+         }
+         else {
+            bufferSize = num_rec - i; /* last trip to db w. fewer rows */
+            if(bufferSize==0)
+               goto done;
+         }
+      }
+
+      /* get next record from the proper cursor */
+      switch(cursorNum) {
+      case 0:
+          EXEC SQL FOR :bufferSize FETCH C_00 USING DESCRIPTOR select_dp;
+          break;
+      case 1:
+         EXEC SQL FOR :bufferSize FETCH C_01 USING DESCRIPTOR select_dp;
+         break;
+      case 2:
+         EXEC SQL FOR :bufferSize FETCH C_02 USING DESCRIPTOR select_dp;
+         break;
+      case 3:
+         EXEC SQL FOR :bufferSize FETCH C_03 USING DESCRIPTOR select_dp;
+         break;
+      case 4:
+         EXEC SQL FOR :bufferSize FETCH C_04 USING DESCRIPTOR select_dp;
+         break;
+      case 5:
+         EXEC SQL FOR :bufferSize FETCH C_05 USING DESCRIPTOR select_dp;
+         break;
+      case 6:
+         EXEC SQL FOR :bufferSize FETCH C_06 USING DESCRIPTOR select_dp;
+         break;
+      case 7:
+         EXEC SQL FOR :bufferSize FETCH C_07 USING DESCRIPTOR select_dp;
+         break;
+      case 8:
+         EXEC SQL FOR :bufferSize FETCH C_08 USING DESCRIPTOR select_dp;
+         break;
+      case 9:
+         EXEC SQL FOR :bufferSize FETCH C_09 USING DESCRIPTOR select_dp;
+         break;
+      default:
+         goto fetch_error;
+         break;
+      }
+
+      /* how many rows were actually transfered (we requested bufferSize) 
+       * Note that we need to track of 
+       *   (1) total num of rows fetched from the result set (this
+       *       includes across invocations of RS_Ora_fetch)
+       *   (2) rows fetched this one iteration (at most bufferSize, 
+       *       possibly fewer)
+       *   (3) rows fetch during this RS_Ora_fetch invocation (need to
+       *       fetch num_rec)
+       */
+
+      cum_rows = sqlca.sqlerrd[2];   /* total rows fetched so far */
+      n_rows = cum_rows - prev_rows;  /* rows fetched in this iteration */
+      prev_rows = cum_rows;                 
+
+      /* move data in SQL descriptor area buffers into the output data.frame */
+      RS_Ora_cpyOraToDataFrame(select_dp, n_rows, output, i, flds);
+
+   }
+ 
+done:  
+   /* actual number of records fetched */
+   cum_rows = sqlca.sqlerrd[2];
+   n_rows = cum_rows - prev_rows;
+   prev_rows = cum_rows;
+   if(n_rows>0){      /* any remaining rows in the oracle buffers? */
+      RS_Ora_cpyOraToDataFrame(select_dp, n_rows, output, i, flds);
+      i += n_rows;
+   }
+
+   if(i < num_rec){  /* do we neet to trim output data.frame? */
+      s_object *s_tmp; int  j;
+
+      num_rec = i;
+      for(j = 0; j<num_fields; j++){
+         s_tmp = LST_EL(output, j);
+         MEM_PROTECT(SET_LENGTH(s_tmp, num_rec));
+         SET_ELEMENT(output, j, s_tmp);
+         MEM_UNPROTECT(1);
+      }
+   }
 
   if(sqlca.sqlcode == ORA_END_OF_DATA)
     result->completed = 1;
@@ -867,9 +1502,9 @@ RS_Ora_fetch(Res_Handle *rsHandle, s_object *max_rec)
 
   return output;
 
- fetch_error:  /* abort */
-  RS_Ora_error();
-  return (s_object *) NULL;
+fetch_error:  /* abort */
+   RS_Ora_error();
+   return (s_object *) NULL;
 }
 
 s_object *   /* boolean */
@@ -904,12 +1539,13 @@ RS_Ora_closeResultSet(Res_Handle *rsHandle)
  * with the mapping between the DBI (C) and S.
  */
 RS_Ora_desArea *
-RS_Ora_allocDescriptors(int size, int max_vname_len, int max_iname_len)
+RS_Ora_allocDescriptors(int size, int max_vname_len, int max_iname_len, 
+   Sint buf_size)
 {
   int i;
-  RS_Ora_desArea  *desArea = NULL;
-  SQLDA *bind_dp = NULL;
-  SQLDA *select_dp = NULL;
+  RS_Ora_desArea  *desArea;
+  SQLDA           *bind_dp;     /* R/S-Plus bound data.frame fields */
+  SQLDA           *select_dp;   /* select item list */
   /*  (The following is verbatim from the Oracle's demo10.pc file)
    * 
    *  Allocate the BIND and SELECT descriptors using sqlald().
@@ -919,6 +1555,7 @@ RS_Ora_allocDescriptors(int size, int max_vname_len, int max_iname_len)
    *  the set_bind_variables() or process_select_list()
    *  routines.  This routine allocates 1 byte for select_dp->V[i]
    *  and bind_dp->V[i], so the realloc will work correctly.
+   *  [I've got rid of this in order to implement host arrays -- dj]
    *
    * The first sqlald parameter determines the maximum number
    * of array elements in each variable in the descriptor. In
@@ -955,17 +1592,33 @@ RS_Ora_allocDescriptors(int size, int max_vname_len, int max_iname_len)
   for (i = 0; i < RS_ORA_MAX_ITEMS; i++) {
     /* TODO: instead of allocating only 1 entry per fields, we could
      * set aside N rows to be fetched all at once, saving network bandwidth
-     * and cutting substantially the number of time we invoke FETCH.
+     * and cutting substantially the number of times we invoke FETCH.
      */
-    bind_dp->V[i] = (char *) malloc(1);
-    bind_dp->I[i] = (short *) malloc(sizeof (short));
-    select_dp->V[i] = (char *) malloc(1);
-    select_dp->I[i] = (short *) malloc(1);
+    bind_dp->V[i] = (char *) 0;           /* to be determined */
+    bind_dp->I[i] = (short *)0;           /* to be determined */
+    select_dp->V[i] = (char *) 0;         /* to be determined */
+    select_dp->I[i] = (short *)0;         /* to be determined */
   }
+
   desArea = (RS_Ora_desArea *) malloc(sizeof(RS_Ora_desArea));
   desArea->bindVars = bind_dp;
   desArea->selectFlds = select_dp;
-
+  desArea->batchNum  = -1;                /* to be determined */
+  desArea->numParams = -1;                /* to be determined */
+  desArea->Sclass = (Stype *) 0;          /* to be determined */
+  desArea->which =  (Sint *) 0;           /* to be determined */
+  /* buffer sizes (all equal, of course) */
+  if(buf_size<1)
+     buf_size = RS_ORA_DEFAULT_BUFFER_SIZE;
+  if(buf_size > RS_ORA_MAX_BUFFER_SIZE){
+     char err_msg[1024];
+     buf_size = RS_ORA_MAX_BUFFER_SIZE;
+     (void) sprintf(err_msg,
+                    "potentially to big an Oracle buffer, reset to %ld",
+                    (long) buf_size);
+     RS_DBI_errorMessage(err_msg, RS_DBI_WARNING);
+  }
+  desArea->bufferSize = buf_size;
   return desArea;
 }
 
@@ -981,23 +1634,31 @@ RS_Ora_freeDescriptors(RS_Ora_desArea *desArea)
   bind_dp = desArea->bindVars;
   if(bind_dp != (SQLDA *)0){
     for (i = 0; i < RS_ORA_MAX_ITEMS; i++){    
-      if (bind_dp->V[i] != (char *) 0)
+      if(bind_dp->V[i] != (char *) 0)
 	free(bind_dp->V[i]);
-      free(bind_dp->I[i]);   /* RS_ORA_MAX_ITEMS were allocated. */
+      if(bind_dp->I[i] != (short *)0)
+        free(bind_dp->I[i]);   /* RS_ORA_MAX_ITEMS were allocated. */
     }
   } 
   select_dp = desArea->selectFlds;
   if(select_dp != (SQLDA *) 0){
     for(i = 0; i < RS_ORA_MAX_ITEMS; i++){
-      if (select_dp->V[i] != (char *) 0)
+      if(select_dp->V[i] != (char *) 0)
 	free(select_dp->V[i]);
-      free(select_dp->I[i]); /* RS_ORA_MAX_ITEMS were allocated. */
+      if(select_dp->I[i] != (short *) 0)
+        free(select_dp->I[i]); /* RS_ORA_MAX_ITEMS were allocated. */
     }
   }
 
   /* Free space used by the descriptors themselves. */
-  sqlclu(bind_dp);
-  sqlclu(select_dp);
+  (void) sqlclu(bind_dp);
+  (void) sqlclu(select_dp);
+
+  /* free the R/S-Plus type info */
+  if(desArea->Sclass)
+     free(desArea->Sclass);
+  if(desArea->which)
+     free(desArea->which);
 
   free(desArea);
   desArea = (RS_Ora_desArea *) NULL;
@@ -1005,90 +1666,15 @@ RS_Ora_freeDescriptors(RS_Ora_desArea *desArea)
   return;
 }
 
-void 
-RS_Ora_set_bind_variables(RS_Ora_desArea *desArea)
-{
-  int i, n;
-  SQLDA *bind_dp;
-  char bind_var[64], errMsg[128];
-  /*****************************************************************
-   *                                                               *
-   *  BUG:  This code is not yet used by the S interface proper!   *
-   *                                                               *
-   *****************************************************************
-   */
-
-  /* Describe any bind variables (input host variables) */
-  EXEC SQL WHENEVER SQLERROR DO RS_Ora_error();
-
-  bind_dp = desArea->bindVars;
-  bind_dp->N = RS_ORA_MAX_ITEMS;  /* Init. count of array elements. */
-  EXEC SQL DESCRIBE BIND VARIABLES FOR S INTO bind_dp;
-
-  /* If F is negative, there were more bind variables
-       than originally allocated by sqlald(). */
-  if (bind_dp->F < 0){
-    sprintf(errMsg, "too many bind variables (%d), maximum is %d",
-	   (int) -bind_dp->F, (int) RS_ORA_MAX_ITEMS);
-    RS_DBI_errorMessage(errMsg, RS_DBI_ERROR);
-    return;
-  }
-
-  /* Set the maximum number of array elements in the
-       descriptor to the number found. */
-  bind_dp->N = bind_dp->F;
- 
-  /* Get the value of each bind variable as a
-     * character string.
-     * C[i] contains the length of the bind variable
-     *      name used in the SQL statement.
-     * S[i] contains the actual name of the bind variable
-     *      used in the SQL statement.
-     * L[i] will contain the length of the data value
-     *      entered.
-     * V[i] will contain the address of the data value
-     *      entered.
-     * T[i] is always set to 1 because in this sample program
-     *      data values for all bind variables are entered
-     *      as character strings.
-     *      ORACLE converts to the table value from CHAR.
-     * I[i] will point to the indicator value, which is
-     *      set to -1 when the bind variable value is "null".
-     */
-  for (i = 0; i < bind_dp->F; i++){
-    sprintf (errMsg,"Enter value for bind variable %.*s:  ",
-	     (int)bind_dp->C[i], bind_dp->S[i]);
-    fgets(bind_var, sizeof bind_var, stdin);
-    /* Get length and remove the new line character. */
-    n = strlen(bind_var) - 1;
-    /* Set it in the descriptor. */
-    bind_dp->L[i] = n;
-    /* (re-)allocate the buffer for the value.
-	 sqlald() reserves a pointer location for
-	 V[i] but does not allocate the full space for
-	 the pointer. */
-    bind_dp->V[i] = (char *) realloc(bind_dp->V[i], (bind_dp->L[i] + 1)); 
-    /* And copy it in. */
-    strncpy(bind_dp->V[i], bind_var, n);
-
-    /* Set the indicator variable's value. */
-    if ((strncmp(bind_dp->V[i], "NULL", 4) == 0) ||
-	(strncmp(bind_dp->V[i], "null", 4) == 0))
-      *bind_dp->I[i] = -1;
-    else
-      *bind_dp->I[i] = 0;
-    
-    /* Set the bind datatype to 1 for CHAR. */
-    bind_dp->T[i] = 1;
-  }
-}
-
 void  
 RS_Ora_closeCursor(Res_Handle *rsHandle)
 {
   int  cursorNum;
+  char   alias[128];
 
   cursorNum = RS_Ora_getCursorNum(rsHandle);
+  (void) sprintf(alias, ALIAS_PATTERN, cursorNum);
+  RS_Ora_varCharCpy(&db_alias, alias);
   EXEC SQL WHENEVER SQLERROR CONTINUE;
   switch(cursorNum){
   case 0:
@@ -1131,14 +1717,65 @@ RS_Ora_closeCursor(Res_Handle *rsHandle)
   return;
 }
     
-void
-RS_Ora_commit()
+/* commit work, return TRUE/FALSE */
+s_object * 
+RS_Ora_commit(s_object *conHandle)
 {
-  RS_Ora_closeCursor((Res_Handle *) NULL);
-  EXEC SQL WHENEVER SQLERROR CONTINUE;
-  EXEC SQL COMMIT WORK RELEASE;
-  EXEC SQL WHENEVER SQLERROR DO RS_Ora_error();
-  return;
+   S_EVALUATOR
+
+   s_object *status;
+   int  cursorNum;
+   char   alias[128];
+
+   cursorNum = RS_Ora_getCursorNum(conHandle);
+   (void) sprintf(alias, ALIAS_PATTERN, cursorNum);
+   RS_Ora_varCharCpy(&db_alias, alias);
+
+   MEM_PROTECT(status = NEW_LOGICAL((Sint) 1));
+   INT_EL(status,0) = TRUE;
+
+   EXEC SQL WHENEVER SQLERROR CONTINUE;
+   EXEC SQL AT :db_alias COMMIT WORK;
+   EXEC SQL WHENEVER SQLERROR DO RS_Ora_error();
+
+   MEM_UNPROTECT(1);
+   return status;
+}
+
+/* apparently we cannot code the name of savepoints into a host variable,
+ * i.e., the following does not work w. ProC/C++
+ * 
+ *    char my_savepoint = "dummy1";
+ *    EXEC SQL AT :db_alias SAVEPOINT :my_savepoint
+ *    ...
+ *    EXEC SQL AT :db_alias ROLLBACK WORK TO :my_savepoint
+ */
+
+s_object *
+RS_Ora_rollback(s_object *conHandle)
+{
+   /* we must close all the result sets in the connection.  The current
+    * implementation does this in the S function oraRollabck()
+    */
+   S_EVALUATOR
+
+   s_object *status;
+   int  cursorNum;
+   char   alias[128];
+
+   cursorNum = RS_Ora_getCursorNum(conHandle);
+   (void) sprintf(alias, ALIAS_PATTERN, cursorNum);
+   RS_Ora_varCharCpy(&db_alias, alias);
+
+   MEM_PROTECT(status = NEW_LOGICAL((Sint) 1));
+   INT_EL(status,0) = TRUE;
+
+   EXEC SQL WHENEVER SQLERROR CONTINUE;
+   EXEC SQL AT :db_alias ROLLBACK WORK;
+   EXEC SQL WHENEVER SQLERROR DO RS_Ora_error();
+
+   MEM_UNPROTECT(1);
+   return status;
 }
 
 void
@@ -1237,7 +1874,7 @@ void
 RS_Ora_varCharCpy(void *vchar, const char *from)
 {
   VARCHAR *to;
-  to = (varchar *) vchar;
+  to = (VARCHAR *) vchar;
   to->len = (unsigned short) strlen(from);
   (void) strcpy(to->arr, from);
   return;
@@ -1366,3 +2003,82 @@ RS_Ora_resultSetInfo(Res_Handle *rsHandle)
   return output;
 }
 
+s_object *       /* return a named list */
+RS_Ora_boundParamsInfo(Res_Handle *psHandle)
+{
+  S_EVALUATOR
+
+  RS_DBI_resultSet   *result;
+  RS_Ora_desArea     *desArea;
+  s_object  *output;
+  Sint  n = (Sint) 3, numParams;
+  Sint   j;
+  char  *bpDesc[] = {"parameter", "columnNum", "Sclass"};
+  Stype bpType[]  = {INTEGER_TYPE, INTEGER_TYPE, INTEGER_TYPE};
+  Sint  bpLen[]   = {-1, -1, -1};
+
+  result = RS_DBI_getResultSet(psHandle);
+  desArea = (RS_Ora_desArea *) result->drvData;
+  numParams = desArea->numParams;
+  if(numParams<0)
+     return S_NULL_ENTRY;
+  bpLen[0] = bpLen[1] = bpLen[2] = numParams;
+  output = RS_DBI_createNamedList(bpDesc, bpType, bpLen, n);
+#ifndef USING_R
+  if(IS_LIST(output))
+    output = AS_LIST(output);
+  else
+    RS_DBI_errorMessage("internal error: could not alloc named list",
+			RS_DBI_ERROR);
+#endif
+  for(j = 0; j<numParams; j++){
+     LST_INT_EL(output, 0, j) = j+1;                 /* param num */
+     LST_INT_EL(output, 1, j) = desArea->which[j];   /* col num */
+     LST_INT_EL(output, 2, j) = desArea->Sclass[j];  /* col class */ 
+  }
+  return output;
+}
+
+/* Given an S character vector of basic (primitive types) class names,
+ * it returns a C array of the corresponding basic types.
+ * This is a bit of a hack: why can't we just use RS_DBI_getTypeName()?
+ */
+Stype *
+RS_SclassNames_To_StypeIds(s_object *s_col_classes)  
+{
+
+   Stype *S_dataClasses = NULL;
+   Sint  ncols;
+   int   j;
+   char  *buff;
+
+   ncols = GET_LENGTH(s_col_classes);
+   S_dataClasses = (Stype *) calloc((size_t) ncols, sizeof(Stype));
+   if(!S_dataClasses)
+      RS_DBI_errorMessage(
+         "could not calloc array for Stype", RS_DBI_ERROR); 
+   for(j=0; j<ncols; j++){
+      buff = CHR_EL(s_col_classes, (Sint) j);
+      if(strcmp(buff, "character")==0)
+         S_dataClasses[j] = CHARACTER_TYPE;
+      else if(strcmp(buff, "numeric")==0)
+         S_dataClasses[j] = NUMERIC_TYPE;
+      else if(strcmp(buff, "logical")==0)
+         S_dataClasses[j] = LOGICAL_TYPE;
+      else if(strcmp(buff, "integer")==0)
+         S_dataClasses[j] = INTEGER_TYPE;
+#ifndef USING_R
+      else if(strcmp(buff, "single")==0)      /* only on Splus */
+         S_dataClasses[j] = SINGLE_TYPE;
+      else if(strcmp(buff, "raw")==0)
+         S_dataClasses[j] = RAW_TYPE;
+#endif
+      else {
+         char errMsg[128];
+         (void) sprintf(errMsg, "unrecognized S class %s ", buff);
+         RS_DBI_errorMessage(errMsg, RS_DBI_ERROR);
+         S_dataClasses[j] = (Stype) -1;
+      }
+  }
+  return S_dataClasses;
+}

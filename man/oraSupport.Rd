@@ -14,6 +14,14 @@
 \alias{oraResultInfo}
 \alias{oraDescribeResult}
 \alias{oraCloseResult}
+\alias{oraPrepareStatement}      % prepared statemens
+\alias{oraExecStatement}
+\alias{oraExecDirect}
+\alias{oraPreparedStatementInfo}
+\alias{oraDescribePreparedStatement}
+\alias{oraBoundParamsInfo}
+\alias{oraCommit}                % transactions
+\alias{oraRollback}
 \alias{oraReadTable}
 \alias{oraWriteTable}            % convenience functions
 \alias{oraTableFields}
@@ -24,6 +32,7 @@
 \alias{.Oracle.NA.string}
 \alias{.OraSQLKeywords}
 \alias{.conflicts.OK}
+\alias{last.warning}
 %\non_function{}
 \title{Support Functions}
 \description{
@@ -47,17 +56,29 @@
    oraCloseConnection(con, ..., force = FALSE)
 
    ## OraResult-related
-   oraExecStatement(con, statement)
-   oraFetch(res, n=0, ...)
+   oraExecStatement(con, statement, ora.buf.size = 1)
+   oraFetch(res, n=0, ..., ora.buf.size)
    oraQuickSQL(con, statement, ...)
+   oraExecDirect(con, statement, ora.buf.size = 500)
    oraResultInfo(obj, what)
    oraDescribeResult(obj, verbose = FALSE, ...)
    oraCloseResult(res, ...)
 
+   ## OraPreparedStatement-related
+   oraPrepareStatement(con, statement, bind)
+   oraExecStatement(ps, data, ora.buf.size)
+   oraDescribePreparedStatement(obj, verbose, ...)
+   oraPreparedStatementInfo(obj, what, ...)
+   oraBoundParamsInfo(obj)
+
+   ## transactions
+   oraCommit(conn, ...)
+   oraRollback(conn, ...)
+
    ## data mappings and convenience functions
    oraDataType(obj, ...)
    oraReadTable(con, name, row.names = "row.names", check.names = TRUE, ...)
-   oraWriteTable(con, name, value, field.types, row.names = TRUE, 
+   oraWriteTable(con, name, value, field.oraTypes, row.names = TRUE, 
       overwrite=FALSE, append=FALSE, ...)
    oraTableFields(con, name, ...)
 }
@@ -67,7 +88,7 @@
    The current default of 10 is hardcoded in the C code.
 }
 \item{fetch.default.rec}{
-   default number of rows to fetch (move to R/Splus).  This default is
+   default number of rows to fetch (move to R/S-Plus).  This default is
    used in \code{oraFetch}. 
    The default is 500.
 }
@@ -96,8 +117,31 @@
    an \code{OraConnection} object as produced by \code{oraNewConnection}
    and \code{oraCloneConnection}.
 }
+\item{conn}{
+   an \code{OraConnection} object as produced by \code{oraNewConnection}
+   and \code{oraCloneConnection}.
+}
 \item{res}{
-   an \code{OraResult} object as produced by by \code{oraExecStatement}.
+   an \code{OraResult}, for instance as produced by \code{oraExecDirect}.
+}
+\item{ps}{
+   an \code{OraPreparedStatement} object as produce by
+   \code{oraPrepareStatement}.
+}
+\item{data}{
+   a \code{data.frame} whose columns are to be bound to a prepared
+   statement.
+}
+\item{bind}{
+   a characte vector with the classes of the bound \code{data.frame} columns.
+}
+\item{ora.buf.size}{
+   an integer less than or equal to \code{RS\_ORA\_MAX\_BUFFER\_SIZE}
+   (initially set to 4096)
+   specifying how many rows per fetch should Oracle move at a time.
+   The ProC/C++ Oracle implementation limits the size of these buffers
+   to \code{65767/sizeof(field)} per column, thus the somewhat low
+   maximum of 4096 rows.
 }
 \item{username}{
    a character string with the Oracle's user name.  It can also be any of 
@@ -134,8 +178,8 @@
 \item{value}{
    a data.frame.
 }
-\item{field.types}{
-   a list specifying the mapping from R/Splus fields in the data.frame
+\item{field.oraTypes}{
+   a list specifying the mapping from R/S-Plus fields in the data.frame
    \code{value} to SQL data types.  The default is
    \code{sapply(value,SQLDataType)}, see \code{OraSQLType}.
 }
@@ -195,7 +239,22 @@
    
    \code{oraCloseResult} returns a logical indicating whether the 
    operation succeeded or not.
-   
+
+   \code{oraPrepareStatement} returns a prepared statement.
+
+   \code{oraExecStatement}  executes (and optionally binds new data) a prepared
+   statement.
+
+   \code{oraExecDirect}  executes a simple (no binding) SQL statement.
+
+   \code{oraPreparedStatementInfo}  list of prepared statement metadata.
+
+   \code{oraDescribePreparedStatement} a simple print out of the prepared
+   statement status
+
+   \code{oraBoundParamsInfo} data frame with as many rows as bound parameters
+   with the columns number and class for the \code{data.frame} bindings.
+
    \code{oraReadTable}  returns a data.frame with the contents of the
    DBMS table.
    
@@ -208,6 +267,11 @@
    \code{oraDataType} retuns a character string with the closest
    
    \code{oraResultInfo} returns a list of name-value metadata pairs.
+
+   \code{oraCommit} commits the current transaction in the connection.
+
+   \code{oraRollback} roll backs the current transaction in the connection.
+
 }
 \section{Constants}{
 \code{.OraPkgName} (currently \code{"ROracle"}),
@@ -217,7 +281,6 @@
 denote \code{NULL} on input),
 \code{.OraSQLKeywords} (a lot!)
 \code{.conflicts.OK}.
-%\non_function{}
 }
 \keyword{datasets}
 \keyword{interface}
