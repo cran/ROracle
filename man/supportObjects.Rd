@@ -1,6 +1,7 @@
 \name{supportObjects}
-%\alias{.MySQL.NA.string}
-\alias{.SQLKeywords}
+\alias{.Oracle.NA.string}
+\alias{.SQL92Keywords}
+\alias{.OraSQLKeywords}
 \alias{.conflicts.OK}
 \non_function{}
 \title{Support objects for RS-DBI}

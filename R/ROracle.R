@@ -1,3 +1,6 @@
+##
+## $Id: S4R.R,v 1.1 2002/05/20 21:04:23 dj Exp dj $
+##
 ## This file defines some functions that mimic S4 functionality,
 ## namely:  new, as, show.
 
@@ -16,49 +19,33 @@ if(usingR()){
   ErrorClass <- "Error"  
 }
 
-as <- function(object, classname)
+## When we move to version 4 style classes, we should replace 
+## the calls to the following by their lower-case counerpart, 
+## as defined in library(methods)
+AS <- function(object, classname)
 {
   get(paste("as", as.character(classname), sep = "."))(object)
 }
 
-new <- function(classname, ...)
+NEW <- function(classname, ...)
 {
   if(!is.character(classname))
     stop("classname must be a character string")
-  #class(classname) <- classname
-  #UseMethod("new")
-  do.call(paste("new", classname[1], sep="."), list(...))
+  do.call(paste("NEW", classname[1], sep="."), list(...))
 }
 
-new.default <- function(classname, ...)
+NEW.default <- function(classname, ...)
 {
   structure(list(...), class = unclass(classname))
 }
 
-show <- function(object, ...)
-{
-  UseMethod("show")
-}
-
-show.default <- function(object)
-{
-   print(object)
-   invisible(NULL)
-}
-
-oldClass <- class
-
-"oldClass<-" <- function(x, value)
-{
-  class(x) <- value
-  x
-}
-##$
 ##
-## DBI.S  Database Interface Definition
+## $Id: DBI.R,v 1.1 2002/05/20 21:04:23 dj Exp dj $
+##
+## DBI.R  Database Interface Definition
 ## For full details see http://www.omegahat.org
 ##
-## Copyright (C) 1999,2000 The Omega Project for Statistical Computing.
+## Copyright (C) 1999-2002 The Omega Project for Statistical Computing.
 ##
 ## This library is free software; you can redistribute it and/or
 ## modify it under the terms of the GNU Lesser General Public
@@ -277,7 +264,7 @@ getDatabases <- function(obj, ...)
 {
   UseMethod("getDatabases")
 }
-getTables <- function(obj, dbname, row.names, ...) 
+getTables <- function(obj, dbname, ...) 
 {
   UseMethod("getTables")
 }
@@ -305,7 +292,7 @@ getTableIndices <- function(res, table, dbname, ...)
 
 new.dbObjectId <- function(Id, ...)
 {
-  new("dbObjectId", Id = Id)
+  NEW("dbObjectId", Id = Id)
 }
 ## Coercion: the trick as(dbObject, "integer") is very useful
 ## (in R this needs to be define for each of the "mixin" classes -- Grr!)
@@ -319,24 +306,24 @@ function(object)
 function(obj)
 ## verify that obj refers to a currently open/loaded database
 { 
-  obj <- as(obj, "integer")
+  obj <- AS(obj, "integer")
   .Call("RS_DBI_validHandle", obj)
 }
 
 "format.dbObjectId" <- 
 function(x, ...)
 {
-  id <- as(x, "integer")
+  id <- AS(x, "integer")
   paste("(", paste(id, collapse=","), ")", sep="")
 }
 "print.dbObjectId" <- 
 function(x, ...)
 {
-  str <- paste(class(x)[1], " id = ", format(x), sep="")
   if(isIdCurrent(x))
-    cat(str, "\n")
+    str <- paste("<",class(x)[1], ":", format(x), ">", sep="")
   else
-    cat("Expired", str, "\n")
+    str <- paste("<Expired ",class(x)[1], ":", format(x), ">", sep="")
+  cat(str, "\n")
   invisible(NULL)
 }
 
@@ -387,7 +374,7 @@ function(con, name, row.names = "row.names", check.names = T, ...)
 "existsTable.dbConnection" <- function(con, name, ...)
 {
     ## name is an SQL (not an R/S!) identifier.
-    match(name, getTables(con), nomatch = 0) > 0
+    match(tolower(name), tolower(getTables(con)), nomatch = 0) > 0
 }
 "removeTable" <- function(con, name, ...)
 {
@@ -423,7 +410,7 @@ SQLDataType.default <- function(mgr, obj, ...)
    stop("must be implemented by a specific driver")
 }
 "make.SQL.names" <- 
-function(snames, unique = T, allow.keywords = T)
+function(snames, keywords = .SQL92Keywords, unique = T, allow.keywords = T)
 ## produce legal SQL identifiers from strings in a character vector
 ## unique, in this function, means unique regardless of lower/upper case
 {
@@ -439,8 +426,8 @@ function(snames, unique = T, allow.keywords = T)
    if(unique) 
      snames <- makeUnique(snames)
    if(!allow.keywords){
-     snames <- makeUnique(c(.SQLKeywords, snames))
-     snames <- snames[-seq(along = .SQLKeywords)]
+     snames <- makeUnique(c(keywords, snames))
+     snames <- snames[-seq(along = keywords)]
    } 
    .Call("RS_DBI_makeSQLNames", snames)
 }
@@ -461,7 +448,7 @@ function(x, keywords = .SQLKeywords, case = c("lower", "upper", "any")[3])
 }
 ## SQL ANSI 92 (plus ISO's) keywords --- all 220 of them!
 ## (See pp. 22 and 23 in X/Open SQL and RDA, 1994, isbn 1-872630-68-8)
-".SQLKeywords" <- 
+".SQL92Keywords" <- 
 c("ABSOLUTE", "ADD", "ALL", "ALLOCATE", "ALTER", "AND", "ANY", "ARE", "AS",
   "ASC", "ASSERTION", "AT", "AUTHORIZATION", "AVG", "BEGIN", "BETWEEN",
   "BIT", "BIT_LENGTH", "BY", "CASCADE", "CASCADED", "CASE", "CAST", 
@@ -497,10 +484,10 @@ c("ABSOLUTE", "ADD", "ALL", "ALLOCATE", "ALTER", "AND", "ANY", "ARE", "AS",
   "VIEW", "WHEN", "WHENEVER", "WHERE", "WITH", "WORK", "WRITE", "YEAR",
   "ZONE"
 )
-
-## $Id$
 ##
-## Copyright (C) 1999 The Omega Project for Statistical Computing.
+## $Id: Oracle.R,v 1.1 2002/05/20 21:04:23 dj Exp dj $
+##
+## Copyright (C) 1999-2002 The Omega Project for Statistical Computing.
 ##
 ## This library is free software; you can redistribute it and/or
 ## modify it under the terms of the GNU Lesser General Public
@@ -518,19 +505,21 @@ c("ABSOLUTE", "ADD", "ALL", "ALLOCATE", "ALTER", "AND", "ANY", "ARE", "AS",
 
 ## Class: dbManager
 
-new.OraObject <- function(Id)
+## The calls to NEW() and AS() should be replaced with new(), as()
+## when we move to version 4 style classes
+NEW.OraObject <- function(Id)
 {
    out <- list(Id = as.integer(Id))
    class(out) <- c("OraObject", "dbObjectId")
    out
 }
-new.OraManager <- function(Id)
+NEW.OraManager <- function(Id)
 {
    out <- list(Id = as.integer(Id))
    class(out) <- c("OraManager", "dbManger", "OraObject", "dbObjectId")
    out
 }
-new.OraConnection <- function(Id)
+NEW.OraConnection <- function(Id)
 {
    out <- list(Id = as.integer(Id))
    class(out) <- c("OraConnection", "dbConnection", "OraObject", "dbObjectId")
@@ -550,7 +539,7 @@ function(max.con=10, fetch.default.rec = 500, force.reload=F)
   if(fetch.default.rec<=0)
     stop("default num of records per fetch must be positive")
   id <- load.OraManager(max.con, fetch.default.rec, force.reload)
-  new("OraManager", Id = id)
+  NEW("OraManager", Id = id)
 }
 
 as.integer.dbObjectId <- function(x, ...)
@@ -560,15 +549,15 @@ as.integer.dbObjectId <- function(x, ...)
 }
 as.OraManager <- function(object)
 {
-  new("OraManager", Id = as(object, "integer")[1])
+  NEW("OraManager", Id = AS(object, "integer")[1])
 }
 as.OraConnection <- function(object)
 {
-  new("OraConnection", Id=as(object, "integer")[1:2])
+  NEW("OraConnection", Id=AS(object, "integer")[1:2])
 }
 as.OraResultSet <- function(object)
 {
-  new("OraResultSet", Id=as(object, "integer")[1:3])
+  NEW("OraResultSet", Id=AS(object, "integer")[1:3])
 }
 loadManager.OraManager <- function(mgr, ...)
   load.OraManager(...)
@@ -577,13 +566,13 @@ loadManager.OraManager <- function(mgr, ...)
 dbConnect.OraManager <- function(mgr, ...)
 {
   id <- newConnection.OraManager(mgr, ...)
-  new("OraConnection",Id = id)
+  NEW("OraConnection",Id = id)
 }
 dbConnect.OraConnection <- function(mgr, ...)
 {
-  con.id <- as(mgr, "integer")
+  con.id <- AS(mgr, "integer")
   con <- .Call("RS_Ora_cloneConnection", con.id)
-  new("OraConnection", Id = con)
+  NEW("OraConnection", Id = con)
 }
 dbConnect.default <- function(mgr, ...)
 {
@@ -601,7 +590,7 @@ getConnections.OraManager <- function(mgr, ...)
 getManager.OraConnection <- getManager.OraResultSet <-
 function(obj, ...)
 {
-   as(obj, "OraManager")
+   AS(obj, "OraManager")
 }
 quickSQL <- function(con, statement, ...)
 {
@@ -624,7 +613,7 @@ function(con, statement, ...)
 
 ## Class: resultSet
 
-new.OraResultSet <- function(Id)
+NEW.OraResultSet <- function(Id)
 {
   out <- list(Id = as.integer(Id))
   class(out) <- c("OraResultSet", "dbResultSet", "OraObject", "dbObjectId")
@@ -635,7 +624,7 @@ getConnection.OraConnection <-
 getConnection.OraResultSet <- 
 function(object)
 {
-  new("OraConnection", Id=as(object, "integer")[1:2])
+  NEW("OraConnection", Id=AS(object, "integer")[1:2])
 }
 
 getStatement.OraResultSet <- function(object)
@@ -722,36 +711,262 @@ getTableIndices.OraConnection <- function(obj, table, dbname, ...)
   quickSQL(obj, cmd)
 }
 
+".Oracle.NA.string" <- ""
 
-SQLDataType.OraConnection <-
-SQLDataType.OraManager <- 
-function(obj, ...)
+"assignTable.OraConnection" <-
+function(con, name, value, field.types, row.names = T, 
+   overwrite=F, append=F, ...)
+## Create table "name" (must be an SQL identifier) and populate
+## it with the values of the data.frame "value" (possibly after coercion
+## to data.frame).
+## 
+## BUG: In the unlikely event that value has a field called "row.names"
+## we could inadvertently overwrite it (here the user should set row.names=F)
+##
+## TODO: This function should execute its sql as a single transaction,
+## and allow converter functions.
+##
+## Hack alert: we silently accept the "rhost" argument (as part of ...)
+## if set, we run the SQL*Loader on the remote host pointed by "rhost";
+## in this case we need to set/guess values for ORACLE_HOME on the remote
+## host, our heuristic is
+## (1) use the arg "ora.home" (if part of ...); if not specified,
+## (2) set it to `dbhome`, which is an Oracle utility in rhost:/usr/local/bin
+## which supposedly returns the ORACLE_HOME (I didn't find this too reliable).
+##
+## We also look for the "rcp" and "rsh" arguments in "..." to tells
+## us which remote shell utilities to use, if not set, we use scp and ssh.
+## (This song and dance allows us to create a static linked version of 
+## ROracle and run it on machines that don't even have the client Oracle 
+## software.)  I'm not sure yet this is a good idea.
+{
+   if(overwrite && append)
+      stop("overwrite and append cannot both be TRUE")
+   if(!is.data.frame(value))
+      value <- as.data.frame(value)
+   if(row.names && !is.null(row.names(value))){
+      value <- cbind(row.names(value), value)  ## can't use row.names= here
+      names(value)[1] <- "row.names"
+   }
+   if(missing(field.types) || is.null(field.types)){
+      ## the following mapping should be coming from some kind of table
+      ## also, need to use converter functions (for dates, etc.)
+      field.types <- sapply(value, SQLDataType, mgr = con)
+   } 
+   names(field.types) <- make.SQL.names(names(field.types), 
+                             keywords = .OraSQLKeywords,
+                             allow.keywords=F)
+   if(length(getResultSets(con))!=0){ ## do we need to clone the connection?
+      new.con <- dbConnect(con)       ## there's pending work, so clone
+      on.exit(close(new.con))
+   } 
+   else 
+      new.con <- con
+   tbl.exists <- existsTable(new.con, name)
+   if(tbl.exists){
+      if(overwrite){
+         if(removeTable(new.con, name))
+            tbl.exists <- FALSE    ## not anymore!
+         else {
+            warning(paste("table", name, "couldn't be overwritten"))
+            return(FALSE)
+         }
+      }
+      else if(!append){
+         warning(paste("table",name,"exists in database: aborting assignTable"))
+         return(FALSE)
+      }
+   } 
+   if(!tbl.exists){     ## need to create a new (empty) table
+      sql1 <- paste("create table ", name, "\n(\n\t", sep="")
+      sql2 <- paste(paste(names(field.types), field.types), collapse=",\n\t", sep="")
+      sql3 <- "\n)\n"
+      sql <- paste(sql1, sql2, sql3, sep="")
+      rs <- try(dbExecStatement(new.con, sql))
+      if(inherits(rs, ErrorClass)){
+         warning("aborting assignTable: could not create table")
+         return(FALSE)
+      } 
+      else 
+         close(rs)
+   }
+
+   fn <- tempfile("ora")
+   ctl.fname <- paste(fn, ".ctl", sep="")   ## SQL*Load control file
+   ctl.file <- file(ctl.fname, "w")
+   log.file <- paste(fn, ".log", sep="")    ## SQL*Load log file
+
+   ## Step 1: form a connection string of the form user/passwd@dbname
+   conPars <- getInfo(con, c("user", "passwd", "dbname"))
+   con.string <- paste(conPars$user,"/",conPars$passwd,"@",conPars$dbname,sep="")
+
+   ## Step 2: create control file
+   hdr <- paste("LOAD DATA\nINFILE  *", "\n", 
+                ifelse(append, "APPEND\n",""),
+                "INTO TABLE ", name, 
+                "FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"'\n",
+                "\nTRAILING NULLCOLS ")
+   hdr <- paste(hdr, "(\n", 
+                paste(names(field.types), '\t', "char", collapse=",\n"),
+                "\n)\n", sep = "")
+   hdr <- paste(hdr, "BEGINDATA\n", sep="")
+   cat(hdr, file = ctl.file)
+   dots <- list(...)
+
+   ## Step 3: append the data.frame to the control file (actual data)
+   safe.write(value, file = ctl.file, batch = dots$batch)
+   close(ctl.file)
+
+   ## Step 4: invoke SQL*Loader, possibly on a remote system!
+   rhost <- dots$rhost
+   if(is.null(rhost)){    ## locally
+      cmd <- paste("sqlldr userid=", con.string, " control=", ctl.fname, 
+                   " log=", log.file, " silent=all", sep = "")
+      rc <- system(cmd, ignore.stderr=TRUE)
+      if(rc!=0){
+         warning("could not load data into Oracle table")
+         unlink(ctl.fname)
+         unlink(log.file)
+         if(!tbl.exists)
+            removeTable(new.con, name)
+         return(FALSE)
+      } 
+   } 
+   else {
+      ## hack allert: the following allows remote execution of sqlldr, but
+      ## I'm not sure if it's really useful (nor portable from one Oracle
+      ## installation to another). 
+
+      ## rcp the control file to rhost, rsh sqlldr there, and then
+      ## bring back the SQL*Loader log file
+      rsh <- ifelse(is.null(dots$rsh), "ssh", dots$rsh)
+      rcp <- ifelse(is.null(dots$rcp), "scp", dots$rcp)
+      ora.home <- ifelse(is.null(dots$ora.home), "`dbhome`", dots$ora.home)
+      ## write a mini Bourne shell script to run on rhost
+      sh.fname <- paste(fn, ".sh", sep="")
+      sh.file <- file(sh.fname, "w")
+      cat("#!/bin/sh\n", file = sh.file)
+      cat("ORACLE_HOME=", ora.home, "\n", sep = "", file = sh.file)
+      cat("PATH=$PATH:", ora.home, "/bin", "\n", sep = "", file = sh.file)
+      cat("export ORACLE_HOME PATH\n", file = sh.file)
+      cat("sqlldr userid=", con.string, " control=", ctl.fname, 
+          " log=", log.file, " silent=all\n", sep = "", file = sh.file)
+      close(sh.file)
+      ## string to copy control file and shell script to rhost
+      push <- paste(rcp, ctl.fname, paste(rhost, ctl.fname, sep=":"), "\n",
+                    rcp, sh.fname,  paste(rhost, sh.fname, sep=":"), "\n",
+                    collapse=" ")
+      ## string to run shell script
+      run <- paste(rsh, rhost, "/bin/sh", sh.fname)
+      ## string to clean on rhost and to bring back log file
+      pull <- paste(rcp, paste(rhost, log.file, sep=":"), log.file, "\n",
+                    rsh, rhost, "rm -rf", log.file, ctl.fname, sh.fname,"\n",
+                    collapse=" ")
+      rc <- system(push, ignore.stderr = TRUE)
+      if(rc!=0){
+         warning(paste("aborting assignTable: could not", rcp, 
+            "data into remote host", rhost))
+         unlink(sh.fname)
+         unlink(ctl.fname)
+         if(!tbl.exists)
+            removeTable(new.con, name)
+         return(FALSE)
+      }
+      rc <- system(run, ignore.stderr=TRUE)
+      if(rc!=0){
+         warning(paste("aborting assignTable:",
+            "could not run SQL*Loader in the remote host", rhost))
+         unlink(sh.fname)
+         unlink(ctl.fname)
+         if(!tbl.exists)
+            removeTable(new.con, name)
+         return(FALSE)
+      }
+      rc <- system(pull, ignore.stderr=T)
+      if(rc!=0){
+         warning(paste("could not bring SQL*Loader log file from", rhost))
+         unlink(sh.fname)
+         unlink(ctl.fname)
+         unlink(log.file)
+         if(!tbl.exists)
+            removeTable(new.con, name)
+         return(FALSE)
+      }
+   } 
+   TRUE
+}
+
+"SQLDataType.OraConnection" <-
+"SQLDataType.OraManager" <- 
+function(mgr, obj, ...)
 ## find a suitable SQL data type for the R/S object obj
 ## TODO: Lots and lots!! (this is a very rough first draft)
 ## need to register converters, abstract out Ora and generalize 
 ## to Oracle, Informix, etc.  Perhaps this should be table-driven.
-## NOTE: MySQL data types differ from the SQL92 (e.g., varchar truncate
-## trailing spaces).  MySQL enum() maps rather nicely to factors (with
-## up to 65535 levels)
+## NOTE: Oracle data types differ from the SQL92, "varchar2" data
+## can hold character data up to 4000 characters, if larger than this,
+## we use "long"
 {
-  rs.class <- data.class(obj)
-  rs.mode <- storage.mode(obj)
-  if(rs.class=="numeric"){
-    sql.type <- if(rs.mode=="integer") "bigint" else  "double"
-  } 
-  else {
-    sql.type <- switch(rs.class,
-                  character = "text",
-                  logical = "tinyint",
-                  factor = "text",	## up to 65535 characters
-                  ordered = "text",
-                  "text")
-  }
-  sql.type
+   rs.class <- data.class(obj)
+   rs.mode <- storage.mode(obj)
+   if(rs.class=="numeric"){
+      sql.type <- if(rs.mode=="integer") "integer" else  "double precision"
+   } 
+   else {
+      "OraCharType" <- function(x){
+         n <- max(nchar(as.character(x)))+1  ## do we really the +1?
+         if(n>4000)
+            "long"
+         else
+            paste("varchar2(",n,")", sep="")
+      }
+      sql.type <- switch(rs.class, 
+                         logical = "smallint",
+                         character = OraCharType(obj), 
+                         factor = OraCharType(obj), 
+                         ordered =OraCharType(obj),
+                         OraCharType(obj)
+                         )
+   }
+   sql.type
 }
-## $Id$
+
+".OraSQLKeywords" <-
+c( "ACCESS", "ADD", "ALL", "ALTER", "AND", "ANY", "ARRAY", "AS", "ACS",
+   "AUDIT", "AUTHID", "AVG", "BEGIN", "BETWEEN", "BINARY INTEGER",
+   "BODY", "BOOLEAN", "BULK", "BY", "CHAR", "CHAR_BASE", "CHECK", "CLOSE",
+   "CLUSTER", "COLUMN", "COLLECT", "COMMENT", "COMMIT", "COMPRESS", 
+   "CONNECT", "CONSTANT", "CREATE", "CURRENT", "CURRVAL", "CURSORS", "DATE",
+   "DAY", "DECLARE", "DECIMAL", "DEFAULT", "DELETE", "DESC", "DISTINCT",
+   "DO", "DROP", "ELSE", "ELSEIF", "END", "EXCEPTION", "EXCLUSIVE",
+   "EXECUTE", "EXISTS", "EXIT", "EXTENDS", "FALSE", "FETCH", "FILE", "FLOAT",
+   "FOR", "FORALL", "FROM", "FUNCTION", "GOTO", "GRANT", "GROUP", "HAVING",
+   "HEAP", "HOUR", "IDENTIFIED", "IF", "IMMEDIATE", "IN", "INCREMENT",
+   "INDEX", "INDICATOR", "INITIAL", "INSERT", "INTEGER", "INTERFACE", 
+   "INTERSECT", "INTERVAL", "INTI", "IS", "ISOLATION", "JAVA", "LEVEL", 
+   "LIKE", "LIMITED", "LOCK", "LONG", "LOOP", "MAX", "MAXEXTENTS", "MIN",
+   "MINUS", "MINUTE", "MSLABEL", "MOD", "MODE", "MODIFY", "MONTH", "NATURALN",
+   "NEW", "NEXTVAL", "NOAUDIT", "NOCOMPRESS", "NOCOPY", "NOT", "NOWAIT", 
+   "NULL", "NUMBER", "NUMBER_BASE", "OCIROWID", "OF", "OFFLINE", "ON", 
+   "ONLINE", "OPAQUE", "OPEN", "OPERATOR", "OPTION", "OR", "ORDER", 
+   "ORGANIZATION", "OTHER", "OUT", "PACKAGE", "PARTITION", "PCTFREE", 
+   "PLS_INTEGER", "POSITIVE", "POSITIVEN", "PRAGMA", "PRIOR", "PRIVATE",
+   "PRIVILEGES", "PROCEDURE", "PUBLIC", "RAISE", "RANGE", "RAW", "REAL", 
+   "RECORDS", "REF", "RELEASE", "RENAME", "RESOURCE",
+   "RETURN", "REVERSE", "REVOKE", "ROLLBACK", "ROW", "ROWS", "ROWID",
+   "ROWLABEL", "ROWNUM", "ROWTYPE", "SAVEPOINT", "SECOND", "SELECT",
+   "SEPARATE", "SESSION", "SET", "SHARE", "SIZE", "SMALLINT", "SPACE",
+   "SQL", "SQLCODE", "SQLERRM", "START", "STDDEV", "SUBTYPE", "SUCCESSFUL",
+   "SUM", "SYNONYM", "SYSDATE", "TABLE", "THEN", "TIME", "TIMESTAMP", "TO",
+   "TRIGGER", "TRUE", "TYPE", "UID", "UNION", "UNIQUE", "UPDATE", "USE",
+   "USER", "VALIDATE", "VALUES", "VARCHAR", "VARCHAR2", 
+   "VARIANCE", "VIEW", "WHEN", "WHENEVER", "WHERE", "WHILE", "WITH", "WORK",
+   "WRITE", "YEAR", "ZONE"
+)
 ##
-## Copyright (C) 1999 The Omega Project for Statistical Computing.
+## $Id: OraSupport.q,v 1.1 2002/05/20 21:04:23 dj Exp dj $
+##
+## Copyright (C) 1999-2002 The Omega Project for Statistical Computing.
 ##
 ## This library is free software; you can redistribute it and/or
 ## modify it under the terms of the GNU Lesser General Public
@@ -780,9 +995,9 @@ function(obj, ...)
 function(max.con = 1, fetch.default.rec = 500, reload = F)
 ## return a manager id
 {
-  config.params <- as.integer(c(max.con, fetch.default.rec))
-  reload <- as(reload, "logical")[1]
-  .Call("RS_Ora_init", config.params, reload)
+   config.params <- as.integer(c(max.con, fetch.default.rec))
+   reload <- AS(reload, "logical")[1]
+   .Call("RS_Ora_init", config.params, reload)
 }
 
 "describe.OraManager" <-
@@ -790,20 +1005,20 @@ function(obj, verbose = F, ...)
 ## Print out nicely a brief description of the connection Manager
 {
   info <- getInfo.OraManager(obj)
-  show(obj)
+  print(obj)
   cat("  Driver name: ", info$drvName, "\n")
   cat("  Max  connections:", info$length, "\n")
   cat("  Conn. processed:", info$counter, "\n")
   cat("  Default records per fetch:", info$"fetch_default_rec", "\n")
   if(verbose){
-    cat("  Oracle client version: ", info$clientVersion, "\n")
+    cat("  Oracle R/S client version: ", info$clientVersion, "\n")
     cat("  RS-DBI version: ", "0.2", "\n")
   }
   cat("  Open connections:", info$"num_con", "\n")
   if(verbose && !is.null(info$connectionIds)){
     for(i in seq(along = info$connectionIds)){
       cat("   ", i, " ")
-      show(info$connectionIds[[i]])
+      print(info$connectionIds[[i]])
     }
   }
   invisible(NULL)
@@ -812,23 +1027,27 @@ function(obj, verbose = F, ...)
 "unload.OraManager"<- 
 function(dbMgr, ...)
 {
-  mgrId <- as(dbMgr, "integer")
+  mgrId <- AS(dbMgr, "integer")
   .Call("RS_Ora_close", mgrId)
 }
 
 "getInfo.OraManager" <- 
 function(obj, what)
 {
-  mgrId <- as(obj, "integer")
+  if(!isIdCurrent(obj)){
+     print(obj)
+     return(invisible(NULL))
+  }
+  mgrId <- AS(obj, "integer")
   info <- .Call("RS_Ora_managerInfo", mgrId)
   mgrId <- info$managerId
   ## replace mgr/connection id w. actual mgr/connection objects
   conObjs <- vector("list", length = info$"num_con")
   ids <- info$connectionIds
   for(i in seq(along = ids))
-    conObjs[[i]] <- new("OraConnection", Id = c(mgrId, ids[i]))
+    conObjs[[i]] <- NEW("OraConnection", Id = c(mgrId, ids[i]))
   info$connectionIds <- conObjs
-  info$managerId <- new("OraManager", Id = mgrId)
+  info$managerId <- NEW("OraManager", Id = mgrId)
   if(!missing(what))
     info <- info[what]
   if(length(info)==1)
@@ -849,14 +1068,15 @@ function(dbMgr, ...)
 { 
   getInfo(dbMgr, what = "connectionIds")
 }
+
 "newConnection.OraManager"<- 
 function(dbMgr, username="", password="", dbname = 
          if(usingR()) Sys.getenv("ORACLE_SID") else getenv("ORACLE_SID"),
 	 max.results=1)
 {
-  con.params <- as.character(c(username, password, dbname))
-  mgrId <- as(dbMgr, "integer")
-  max.results <- as(max.results, "integer")
+  con.params <- parse.OraConParams(username, password, dbname)
+  mgrId <- AS(dbMgr, "integer")
+  max.results <- AS(max.results, "integer")
   if(max.results!=1){
     warning("currently we can only have one open resultSet")
     max.results <- 1
@@ -875,8 +1095,10 @@ function(con)
 "describe.OraConnection" <- 
 function(obj, verbose = F, ...)
 {
+  print(obj)
+  if(!isIdCurrent(obj))
+     return(invisible(NULL))
   info <- getInfo(obj)
-  show(obj)
   cat("  User:", info$user, "\n")
   cat("  Dbname:", info$dbname, "\n")
   if(verbose){
@@ -884,8 +1106,8 @@ function(obj, verbose = F, ...)
     srvVersion <- getVersion(obj)
     for(v in srvVersion)
       cat(paste("    ", v, sep=""), "\n")
-    cat("  Oracle client version: ", 
-	getInfo(as(obj, "OraManager"),what="clientVersion"), "\n")
+    cat("  Oracle R/S client version: ", 
+	getInfo(AS(obj, "OraManager"),what="clientVersion"), "\n")
   }
   resIds <- info$resultSetIds
   if(!is.null(resIds)){
@@ -893,35 +1115,51 @@ function(obj, verbose = F, ...)
       if(verbose)
         describe(resIds[[i]], verbose = F)
       else
-        show(resIds[[i]])
+        print(resIds[[i]])
     }
   } else cat("  No resultSet available\n")
   invisible(NULL)
 }
 
 "close.OraConnection" <- 
-function(con, ...)
+function(con, ..., force = F)
+## close connection (force=T to close its pending result sets, if any)
 {
-  conId <- as(con, "integer")
+  if(!isIdCurrent(con))
+    return(TRUE)
+  rs <- getResultSets(con)
+  if(length(rs)>0){    ## any open result sets?
+    done <- sapply(rs, hasCompleted)
+    if(all(done) || force){
+      cl <- sapply(rs, close)   ## safe to close result sets
+      if(any(!cl))
+         stop("error while closing result sets")
+    }
+    else 
+       stop("pending result sets -- must close manually")
+  }
+  conId <- AS(con, "integer")
   .Call("RS_Ora_closeConnection", conId)
 }
 "getVersion.OraConnection" <-
 function(obj)
 {
-  con <- as(obj, "OraConnection")
+  con <- AS(obj, "OraConnection")
   quickSQL(con, "select * from V$VERSION")[[1]]
 }
 "getInfo.OraConnection" <-
 function(obj, what)
 {
-  id <- as(obj, "integer")[1:2]
-  info <- .Call("RS_Ora_connectionInfo", id)
-  if(length(info$resultSetIds)){
-    rs <- vector("list", length(info$resultSetIds))
-    for(i in seq(along = rs))
-      rs[[i]] <- new("OraResultSet", Id = c(id, info$resultSetIds[i]))
-    info$resultSetIds <- rs
+  if(!isIdCurrent(obj)){
+     print(obj)
+     return(invisible(NULL))
   }
+  id <- AS(obj, "integer")[1:2]
+  info <- .Call("RS_Ora_connectionInfo", id)
+  rs <- vector("list", length(info$resultSetIds))
+  for(i in seq(along = rs))
+    rs[[i]] <- NEW("OraResultSet", Id = c(id, info$resultSetIds[i]))
+  info$resultSetIds <- rs
   if(!missing(what))
     info <- info[what]
   if(length(info)==1)
@@ -942,14 +1180,12 @@ function(con, statement)
 ## output, otherwise it produces a resultSet that can
 ## be used for fetching rows.
 {
-  conId <- as(con, "integer")
-  statement <- as(statement, "character")
+  if(!isIdCurrent(con))
+     stop("expired connection")
+  conId <- AS(con, "integer")
+  statement <- AS(statement, "character")
   rsId <- .Call("RS_Ora_exec", conId, statement)
-#  out <- new("OraResult", Id = rsId)
-#  if(getInfo(out)$isSelect)
-#    out <- new("OraResultSet", Id = rsId)
-#  out
-  new("OraResultSet", Id = rsId)
+  NEW("OraResultSet", Id = rsId)
 }
 
 ## helper function: it exec's *and* retrieves a statement. It should
@@ -965,15 +1201,14 @@ quickSQL.OraConnection <- function(con, statement)
   } else  rs <- dbExecStatement(con, statement)
   if(hasCompleted(rs)){
     close(rs)
-    invisible()
-    return(rs)
+    return(invisible(rs))
   }
-  res <- fetch(rs, n = -1)
+  out <- fetch(rs, n = -1)
   if(hasCompleted(rs))
     close(rs)
   else 
     warning(paste("pending rows in resultSet", rs))
-  res
+  out
 }
 
 "fetch.OraResultSet" <- 
@@ -995,8 +1230,8 @@ function(res, n=0)
     warning("no more records to fetch")
     return(NULL)
   }
-  n <- as(n, "integer")
-  rsId <- as(res, "integer")
+  n <- AS(n, "integer")
+  rsId <- AS(res, "integer")
   rel <- .Call("RS_Ora_fetch", rsId, nrec = n)
   if(length(rel)==0)
     return(NULL)
@@ -1005,10 +1240,10 @@ function(res, n=0)
   nrec <- length(rel[[1]])
   indx <- seq(from = cnt - nrec + 1, length = nrec)
   attr(rel, "row.names") <- as.character(indx)
-  if(usingR(1,4))
+  if(usingR())
      class(rel) <- "data.frame"
   else
-     oldClass(rel) <- "data.frame"
+     oldClass(rel) <- "data.frame"   ## Splus
   rel
 }
 
@@ -1020,7 +1255,11 @@ function(res, n=0)
 #"getInfo.OraResult" <- 
 function(obj, what)
 {
-   id <- as(obj, "integer")
+   if(!isIdCurrent(obj)){
+      print(obj)
+      return(NULL)
+   }
+   id <- AS(obj, "integer")
    info <- .Call("RS_Ora_resultSetInfo", id)
    if(!missing(what))
      info <- info[what]
@@ -1030,17 +1269,16 @@ function(obj, what)
      info
 }
 
-
 if(F){
   ##"describe.OraResultSet" <- 
   "describe.OraResult" <- 
     function(obj, verbose = F, ...)
       {
 	if(!isIdCurrent(obj)){
-	  show(obj)
+	  print(obj)
 	  invisible(return(NULL))
 	}
-	show(obj)
+	print(obj)
 	cat("  Statement:", getStatement(obj), "\n")
 	cat("  Has completed?", if(hasCompleted(obj)) "yes" else "no", "\n")
 	cat("  Affected rows:", getRowsAffected(obj), "\n")
@@ -1050,12 +1288,9 @@ if(F){
 "describe.OraResultSet" <- 
 function(obj, verbose = F, ...)
 {
-
-  if(!isIdCurrent(obj)){
-    show(obj)
-    invisible(return(NULL))
-  }
-  show(obj)
+  print(obj)
+  if(!isIdCurrent(obj))
+    return(invisible(NULL))
   cat("  Statement:", getStatement(obj), "\n")
   cat("  Has completed?", if(hasCompleted(obj)) "yes" else "no", "\n")
   cat("  Affected rows:", getRowsAffected(obj), "\n")
@@ -1071,7 +1306,9 @@ function(obj, verbose = F, ...)
 "close.OraResultSet" <- 
 function(con, ...)
 {
-  rsId <- as(con, "integer")
+  if(!isIdCurrent(con))
+    return(TRUE)
+  rsId <- AS(con, "integer")
   .Call("RS_Ora_closeResultSet", rsId)
 }
 
@@ -1079,10 +1316,61 @@ function(con, ...)
 function(obj)
 ## verify that dbObjectId refers to a currently open/loaded database
 { 
-  obj <- as(obj, "integer")
+  obj <- AS(obj, "integer")
   .Call("RS_DBI_validHandle", obj)
 }
 
+"safe.write" <- function(value, file, batch, ...)
+## safe.write makes sure write.table don't exceed available memory by batching
+## at most batch rows (but it is still slowww)
+{  
+   N <- nrow(value)
+   if(N<1){
+      warning("no rows in data.frame")
+      return(NULL)
+   }
+   if(missing(batch) || is.null(batch))
+      batch <- 10000
+   else if(batch<=0) 
+      batch <- N
+   from <- 1 
+   to <- min(batch, N)
+   while(from<=N){
+      if(usingR())
+         write.table(value[from:to, drop=FALSE], file = file, append = T, 
+               quote = T, sep=",", na = .Oracle.NA.string, 
+               row.names=F, col.names=F, eol = '\n', ...)
+      else
+         write.table(value[from:to, drop=FALSE], file = file, append = T, 
+               quote.string = T, sep=",", na = .Oracle.NA.string, 
+               dimnames.write=F, end.of.row = '\n', ...)
+      from <- to+1
+      to <- min(to+batch, N)
+   }
+   invisible(NULL)
+}
+"parse.OraConParams" <-
+function(username="", password="", 
+   dbname=ifelse(usingR(), Sys.getenv("ORACLE_SID"), getenv("ORACLE_SID")))
+{
+## split an Oracle conenction string into the tuple (username, password, dbname),
+## possibly overriding with supplied params
+   pos <- regexpr("@", username)
+   if(pos>0){  ## extract dbname 
+      dbn <- substring(username, first = pos+1)
+      username <- substring(username, first = 1, last=pos-1)
+      if(dbname=="") dbname <- dbn
+   }
+   pos <- regexpr("/", username)
+   if(pos>0){
+      pwd <- substring(username, first = pos+1)
+      username <- substring(username, first = 1, last = pos-1)
+      if(password=="") password <- pwd
+   }
+   if(username=="" && password=="")
+      username <- "/"
+   c(username, password, dbname)
+}
 .conflicts.OK <- TRUE
 .First.lib <- function(lib, pkg) {
   library.dynam("ROracle", pkg, lib)

@@ -1,10 +1,70 @@
 
-   NOTE: Next version will probably comply with the emerging common
-         database interface being drafted by the R-SIG-DB.  This will
-         probably change slightly the function names, but not the
-         basic functionality.
+   NOTE: Next major version will comply with the emerging common
+         database interface DBI, if agreed by the R-SIG-DB.  This 
+         will probably change the function names, but not the basic 
+         functionality.
 
-Version 0.3.1
+Version 0.3-3
+
+* Some minor clean up of the RS-DBI C code.
+
+* Updated the use of NAs in strings in the C code, according to the new 
+  1.5.0 stricter rules.
+
+* added a PROTECT() when re-setting the length of output data.frame 
+  during fetching that could lead to random core dumps (thanks to 
+  Don MacQueen for reporting this pesky bug).
+
+* getInfo() on a connection object now also returns the password used
+  on the connection (needed, e.g., in assignTable, see below).
+
+* A few fixes to assignTable.OraConnection:
+
+    A bug in the SQL*Loader script that assignTable() creates to
+    efficiently transfer data.frames to Oracle (the bug was that NAs in
+    the last column caused SQL*Loader to fail);
+
+    assingTable() now also provides the password in the call to SQL*Loader 
+    to avoid being prompted for it.
+
+    Added an argument "batch=10000"; this is used to write.table() these
+    many rows at a time from the data.frame in order to avoid huge memory 
+    build ups.  It's still shamefully slow (due to write.table), but at least
+    it won't exahust memory. [Need to find an efficient alternative to 
+    write.table(), perhaps we need to write our own specialized C code?]
+
+* Extended the size of the internal connections parameters (user, password 
+  and dbname) to 1024 to allow users to embed the tnsnames.ora string, e.g.,
+
+     con <- dbConnect(Oracle(), 
+             "user/passwd@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=foo.misc.de)(PORT=1521))(CONNECT_DATA=(SID=TEST))
+
+  [this seems to be an undocumented "feature" that Oracle gurus use quite
+  commonly when they don't have priviledges to update the network config
+  file $ORALCE_HOME/network/admin/tnsname.ora (thanks to Michael Mader for 
+  this trick!]
+
+* ifdef all S4/Splus' idioms if(IS_LIST(x)) x = AS_LIST(x).  I'm not sure
+  whether these should be PROTECTED in R, but since the idiom is only
+  needed in S4/Splus5+, it's better not to have it in R.
+
+* Fixed a bug in SQLDataType.OraConnection (wrong signature).
+
+* Added dbObject validity checks to a bunch of the meta-data functions.
+
+Version 0.3-2
+
+* Added code to be able to copy data.frames to Oracle, see
+  assignTable().
+
+Version 0.3-1
+
+* Note that if you statically link against the Oracle libraries
+  you may move the resulting package to systems w.o. Oracle (of
+  course, subject to the other system being binary compatible).
+  If you do this, you may need to provide additional Oracle
+  configuration parameters to ROracle.  See the file "README.client"
+  for details.
 
 * Ported to R, added a configure script.  
 
@@ -15,8 +75,7 @@ Version 0.3.1
   going on.
 
 * Modified the documentation to pass R CMD check. Unfortunately we now
-  have two slightly separate versions of the help (one for Splus, another
-  for R).
+  have two separate versions of the help (one for Splus, another for R).
 
 Splus-specific
 

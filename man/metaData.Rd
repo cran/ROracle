@@ -24,12 +24,12 @@
 Extract meta-data associated with various objects
 }
 \usage{
-getInfo(dbObject, what)      # meta-data for any dbObject
+getInfo(obj, what)      # meta-data for any dbObject
 getConnection(what, ...)
 
 getConnections(mgr)          # meta-data for dbManager objects
 getDatabases(obj, ...)       
-getTables(obj, dbname, row.names, ...)
+getTables(obj, dbname, ...)
 getVersion(obj, ...)
 getTableIndices(res, table, dbname, ...)
 
@@ -46,32 +46,34 @@ getRowsAffected(res, ...)
 getNullOk(res, ...)
 }
 \arguments{
-\item{dbObject}{
+\item{obj}{
   any object that implements some functionality in the R/S
   interface to databases (e.g., \code{dbManager},
   \code{dbConnection}, \code{dbResultSet}).
-  
+}
+\item{what}{
+   a character vector identifying the piece of meta-data to extract,
+   e.g., \code{"statement"} in the case of a \code{dbResultSet} object
+   or \code{"dbname"} for a \code{dbConnection} object.
 }
 \item{mgr}{
   refers to a \code{dbManager} object.
-  
 }
 \item{con}{
   refers to a \code{dbConnection} object.
-  
 }
-\item{rs}{
+\item{res}{
   refers to a \code{dbResultSet} object.
-  
 }
 \item{dbname}{
   refers to a database name (instance) on the server.
-  
 }
 \item{table}{
   refers to a table name in either the current database or 
   in \code{dbname}.
-  
+}
+\item{...}{
+   any other parameters are passed to the actual methods.
 }
 }
 \value{

@@ -1,7 +1,17 @@
-The ROracle was tested with R 1.3.1 and with Oracle 8.0.4 Enterprise
-as a server on a Solaris system. Also, it was tested  on a Linux
-8.1.7 client-only installation.  (A previous version was successfully
-run with Oracle 7).
+The ROracle was tested with R 1.3.1, R-1.4.1, and 1.5.0 (development)
+and with Oracle 8.0.4 Enterprise as a server on a Solaris
+system. Also, it was tested  on a Linux 8.1.7 client-only
+installation.  (A previous version of ROracle was successfully run
+with Oracle 7 on Solaris).
+
+A note of caution for Linux users.
+----------------------------------
+
+I've received comments telling me that Oracle9i on Linux (as of 03 Nov 2001)
+created too many problems with the ProC/C++ to be able to compile ROracle.
+Similarly, another person had problems with Oracle 8.0.5 on linux
+(the oracle precompiler "proc" itself core dumped!).  Comments on
+your experience on compiling ROracle on Linux are welcome.
 
 Oracle Requirements:
 --------------------
@@ -46,11 +56,11 @@ Shell variables:
   2. PATH must include the path to Oracle's pre-compiler "proc", e.g.,
      PATH=$PATH:$ORACLE_HOME/bin
 
-Simple Installation (should work for Oracle8 and Oracle9):
+Simple Installation (should work for Oracle8 and Oracle9(?)):
 
   R CMD [options] ROracle_<version>.tar.gz
 
-Creating a static library:
+Creating a static library (this is the default):
 
   You may statically link ROracle to the Oracle libs (this creates
   a much bigger executable file) with
