@@ -1,0 +1,96 @@
+<!doctype s-function-doc system "s-function-doc.dtd" [
+<!entity % S-OLD "INCLUDE">
+]
+>
+<s-function-doc>
+<s-topics>
+<s-topic> load </s-topic>
+<s-topic> unload </s-topic>
+</s-topics>
+<s-title>
+Load/unload the client part of a database interface
+</s-title>
+<s-description>
+Initialize or free the client-side of an R/S database interface
+</s-description>
+<s-usage>
+<s-old-style-usage>
+load(dbMgr, ...)
+
+unload(dbMgr, ...)
+</s-old-style-usage>
+</s-usage>
+<s-args-required>
+<s-arg name= dbMgr >
+a <s-class>dbManager</s-class> object, as created
+through <s-function name = "dbManger.sgm">dbManger</s-function>
+</s-arg>
+</s-args-required>
+<s-args-optional>
+<s-arg name= ... >
+any database-specific parameters.
+</s-arg>
+</s-args-optional>
+<s-value>
+NULL
+</s-value>
+<s-side-effects>
+These functions initialize and release client-part software
+of the RS-DBI implementation.
+</s-side-effects>
+<s-section name = "REFERENCES">
+See <url name = "The Omeaga Project for Statistical Computing"
+             url = "http://www.omegahat.org">
+for more details on the R/S database interface.
+</s-section>
+<s-see>
+<descrip>
+<tag>On database managers:</tag><p>
+<s-function name="dbManager.sgm">dbManager</s-function>
+<s-function name="MySQL.sgm">MySQL</s-function>
+<s-function name="Oracle.sgm">Oracle</s-function>
+<s-function name="load.sgm">load</s-function>
+<s-function name="unload.sgm">unload</s-function>
+<tag>On connections, SQL statements and resultSets:</tag><p>
+<s-function name="dbExecStatement.sgm">dbExecStatement</s-function>
+<s-function name="dbExec.sgm">dbExec</s-function>
+<s-function name="fetch.sgm">fetch</s-function>
+<s-function name="quickSQL.sgm">quickSQL</s-function>
+<tag>On transaction management:</tag><p>
+<s-function name="commit.sgm">commit</s-function>
+<s-function name="rollback.sgm">rollback</s-function>
+<tag>On meta-data:</tag><p>
+<s-function name="describe.sgm">describe</s-function>
+<s-function name="getVersion.sgm">getVersion</s-function>
+<s-function name="getDatabases.sgm">getDatabases</s-function>
+<s-function name="getTables.sgm">getTables</s-function>
+<s-function name="getFields.sgm">getFields</s-function>
+<s-function name="getCurrentDatabase.sgm">getCurrentDatabase</s-function>
+<s-function name="getTableIndeces.sgm">getTableIndeces</s-function>
+<s-function name="getException.sgm">getException</s-function>
+<s-function name="getStatement.sgm">getStatement</s-function>
+<s-function name="hasCompleted.sgm">hasCompleted</s-function>
+<s-function name="getRowCount.sgm">getRowCount</s-function>
+<s-function name="getAffectedRows.sgm">getAffectedRows</s-function>
+<s-function name="getNullOk.sgm">getNullOk</s-function>
+<s-function name="getInfo.sgm">getInfo</s-function>
+</descrip>
+</s-see>
+<s-examples>
+<s-example>
+m <- MySQL()
+...
+unload(m)
+</s-example>
+</s-examples>
+<s-keywords>
+<s-keyword>RS-DBI</s-keyword>
+<s-keyword>MySQL</s-keyword>
+<s-keyword>databases</s-keyword>
+<s-keyword>RDBMS</s-keyword>
+<s-keyword>manip</s-keyword>
+</s-keywords>
+<s-docclass>
+function
+</s-docclass>
+</s-function-doc>

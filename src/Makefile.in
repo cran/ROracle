@@ -1,0 +1,26 @@
+#
+# Input variables:
+#   $(R_HOME_DIR), and $(ORACLE_HOME)
+#
+
+# The Oracle ProC/C++ precompiler
+PROC = proc       
+RHOME = @R_HOME_DIR@
+
+SRC   = RS-DBI.h RS-DBI.c RS-Oracle.h RS-Oracle.pc S4R.h
+OBJ   = RS-DBI.o RS-Oracle.o
+
+ROracle.so:  $(OBJ) 
+	R CMD SHLIB -o ROracle.so RS-DBI.o RS-Oracle.o
+
+RS-DBI.o: RS-DBI.h RS-DBI.c
+	R CMD COMPILE RS-DBI.c
+
+RS-Oracle.o: RS-Oracle.c
+	R CMD COMPILE RS-Oracle.c
+
+RS-Oracle.c: RS-Oracle.h RS-Oracle.pc 
+	$(PROC) CODE=ANSI_C INCLUDE=$(RHOME)/include RS-Oracle.pc 
+
+clean:
+	rm -f $(OBJ) RS-Oracle.c

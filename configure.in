@@ -1,0 +1,114 @@
+dnl
+dnl ROracle
+dnl
+dnl Generate a "configure" script that will install the ROracle package.
+dnl
+dnl Compiling an Oracle application can be tricky.  Compiling an application
+dnl that needs both R and Oracle headers and libraries can be even
+dnl trickier.  So we'll stick closely to the recommended makefiles and
+dnl procedures by both Oracle and R.  The logic is very simple:
+dnl
+dnl 1. Define ORA_VERSION. By default it's 8.  This is needed to find out
+dnl    where the env_precomp.mk makefile resides.
+dnl
+dnl 2. Run a simple make only using the Oracle facilities to query
+dnl    the libraries (and their order) that we need to link against.
+dnl    This run complies nothing.  It links nothing. It only prints
+dnl    the correct list of libraries for linking.
+dnl
+dnl 3. Define the PKG_CPPFLAGS and PKG_LIBS from above.
+dnl    PKG_CPPFLAGS=    
+dnl    PKG_LIBS = `cat oracle.libs`
+dnl
+dnl TODO: implement --enable-static 
+dnl
+
+AC_INIT(src/RS-Oracle.pc)
+
+AC_PROG_CPP
+
+if test -z "${ORACLE_HOME}" ; then
+   echo ""
+   echo "${R_PACKAGE_NAME} configuration error:"
+   echo ""
+   echo "   You must set the shell variable ORACLE_HOME to the"
+   echo "   directory where Oracle resides and re-run R CMD INSTALL"
+   echo "   e.g., (using Bourne shell syntax):"
+   echo ""
+   echo "      export ORACLE_HOME=/opt/oracle"
+   echo "      R CMD INSTALL ${R_PACKAGE_NAME}"
+   echo ""
+   exit 1
+fi
+
+if test ! -f "${ORACLE_HOME}/bin/proc" ; then
+   echo "${R_PACKAGE_NAME} configuration warning:"
+   echo "Oracle pre-compiler proc not in ${ORACLE_HOME}/bin/proc"
+   echo "you may not be able to compile ${R_PACKAGE_NAME}"
+   echo ""
+fi
+
+PATH="${PATH}":"${ORACLE_HOME}"/bin
+
+#
+# static or shared link to oracle's libraries? Defaults to "shared".
+#
+AC_ARG_ENABLE(static,
+            [--enable-static           use static linking to Oracle libraries])
+if test -n "${enable_static}" -a "${enable_static}" = "yes" ; then
+   load="static"
+else
+   load="shared"
+fi
+
+#
+# What version of Oracle do we have (defaults to Oracle8)
+#
+AC_ARG_WITH(oracle,
+            [--with-oracle=VERSION     Oracle version (7/[8]/9) installation],
+            ORA_VERSION="${with_oracle}",
+            ORA_VERSION=8)
+case "${ORA_VERSION}" in 
+  7*) ORA_MAKE="${ORACLE_HOME}/precomp/env_precomp.mk"    ;;
+  8*) ORA_MAKE="${ORACLE_HOME}/precomp/lib/env_precomp.mk";;
+  9*) ORA_MAKE="${ORACLE_HOME}/precomp/lib/env_precomp.mk";;
+  *)  AC_MSG_ERROR([unrecognized Oracle version ${VERSION}]) ;;
+esac
+
+#
+# compute the list of Oracle libraries we need to hand off to R SHLIB
+#
+tmp_makefile=/tmp/oraLibs$$.mk
+trap 'rm -f ${tmp_makefile}' 1 2 3 9 15
+
+cat > ${tmp_makefile} <<!
+
+include ${ORA_MAKE}
+
+SHLIBS = -L\$(ORACLE_HOME)/lib -L\$(ORACLE_HOME)/network/lib \$(STATICPROLDLIBS)
+STLIBS = -L\$(ORACLE_HOME)/lib -L\$(ORACLE_HOME)/network/lib \$(PROLDLIBS)
+
+shared:
+	@echo \$(SHLIBS)
+static:
+	@echo \$(STLIBS)
+!
+
+if test -z "${PKG_LIBS}" ; then
+   PKG_LIBS=`make -f "${tmp_makefile}" "${load}"`
+   export PKG_LIBS 
+   rm -rf "${tmp_makefile}"
+fi
+
+if test -z "${PKG_CPPFLAGS}" ; then
+   PKG_CPPFLAGS=""
+fi
+
+R_HOME_DIR=`R RHOME`
+
+AC_SUBST(PKG_CPPFLAGS)
+AC_SUBST(PKG_LIBS)
+AC_SUBST(R_HOME_DIR)
+
+AC_OUTPUT(src/Makevars src/Makefile)
+

@@ -1,0 +1,167 @@
+<!doctype s-function-doc system "s-function-doc.dtd" [
+<!entity % S-OLD "INCLUDE">
+]
+>
+<s-function-doc>
+<s-topics>
+<s-topic> dbManager </s-topic>
+</s-topics>
+<s-title>
+Instantiate a database manager
+</s-title>
+<s-description>
+This function creates an object that allows you to
+connect to the Relational Database Systems (RDBMS) 
+specified in its argument.
+</s-description>
+<s-usage>
+<s-old-style-usage>
+dbManager(dbMgr, ...)
+</s-old-style-usage>
+</s-usage>
+<s-args-required>
+<s-arg name= dbMgr >
+a character string specifying the RDBMS, e.g., "MySQL", 
+"Oracle", "Informix". 
+</s-arg>
+</s-args-required>
+<s-args-optional>
+<s-arg name= ... >
+additional parameters may be specified for the actual database engine.
+E.g., the MySQL implementation allows you to specify the maximum 
+number of open connection and a default maximum number of records 
+to be transferred from the database.
+See the individual manager functions for details,
+e.g., <s-function name=MySQL.sgm>MySQL</s-function>, 
+<s-function name=Oracle.sgm>Oracle</s-function>.
+</s-arg>
+</s-args-optional>
+<s-value>
+An object that extends <s-class>dbManager</s-class> and 
+<s-class>dbObjectId</s-class> in a database-specific manner.
+For instance <s-class>dbManager("MySQL")</s-class> produces
+an object of class <s-class>MySQLManager</s-class> and 
+is equivalent to using <code>MySQL</code>.
+Similarly <code>dbManager("Oracle")</code> produces
+an <code>OracleManager</code> object and its equivalent
+to invoking <code>Oracle</code>.
+<p>
+This object is required to create connections
+to one or several database engines.
+</p>
+</s-value>
+<s-side-effects>
+The R/S client part of the database communication is initialized,
+connecting to the database engine needs to be done through
+calls to <code>dbConnect</code>.
+</s-side-effects>
+<s-details>
+This object is a singleton, that is, if you invoke this function
+again, it will return the same initialized object. 
+</s-details>
+<s-section name = "REFERENCES">
+See <url name = "The Omeaga Project for Statistical Computing"
+             url = "http://www.omegahat.org">
+for more details on the R/S database interface.
+</s-section>
+<s-see>
+<descrip>
+<tag>On database managers:</tag><p>
+<s-function name="dbManager.sgm">dbManager</s-function>
+<s-function name="MySQL.sgm">MySQL</s-function>
+<s-function name="Oracle.sgm">Oracle</s-function>
+<s-function name="load.sgm">load</s-function>
+<s-function name="unload.sgm">unload</s-function>
+<tag>On connections, SQL statements and resultSets:</tag><p>
+<s-function name="dbExecStatement.sgm">dbExecStatement</s-function>
+<s-function name="dbExec.sgm">dbExec</s-function>
+<s-function name="fetch.sgm">fetch</s-function>
+<s-function name="quickSQL.sgm">quickSQL</s-function>
+<tag>On transaction management:</tag><p>
+<s-function name="commit.sgm">commit</s-function>
+<s-function name="rollback.sgm">rollback</s-function>
+<tag>On meta-data:</tag><p>
+<s-function name="describe.sgm">describe</s-function>
+<s-function name="getVersion.sgm">getVersion</s-function>
+<s-function name="getDatabases.sgm">getDatabases</s-function>
+<s-function name="getTables.sgm">getTables</s-function>
+<s-function name="getFields.sgm">getFields</s-function>
+<s-function name="getCurrentDatabase.sgm">getCurrentDatabase</s-function>
+<s-function name="getTableIndeces.sgm">getTableIndeces</s-function>
+<s-function name="getException.sgm">getException</s-function>
+<s-function name="getStatement.sgm">getStatement</s-function>
+<s-function name="hasCompleted.sgm">hasCompleted</s-function>
+<s-function name="getRowCount.sgm">getRowCount</s-function>
+<s-function name="getAffectedRows.sgm">getAffectedRows</s-function>
+<s-function name="getNullOk.sgm">getNullOk</s-function>
+<s-function name="getInfo.sgm">getInfo</s-function>
+</descrip>
+</s-see>
+<s-examples>
+<s-example>
+# create a MySQL instance and create one connection.
+> m <- dbManager("MySQL")
+> m
+MySQLManager id = (7269) 
+
+# open the connection using user, passsword, etc., as
+# specified in the file <file>$HOME/.my.cnf</file>
+> con <- dbConnect(m)    
+
+# Let's look at the status of the manager
+> describe(m, verbose = F)   
+MySQLManager id = (7269) 
+  Max  connections: 16 
+  Conn. processed: 1 
+  Default records per fetch: 500 
+  Open connections: 1 
+</s-example>
+<s-example>
+# Run an SQL statement by creating first a resultSet object
+> rs <- dbExecStatement(con, 
+         statement = "SELECT w.laser_id, w.wavelength, p.cut_off 
+                      FROM WL w, PURGE P
+                      WHERE w.laser_id = p.laser_id
+                      SORT BY w.laser_id")
+> rs
+MySQLResultSet id = (12629,1,3)
+
+# we now fetch records from the restulSet into a data.frame
+> data <- fetch(rs, n = -1)   # extract all rows
+> dim(data)
+[1] 1779  18
+</s-example>
+<s-example>
+# Extract meta-data information.  What MySQL databases are there 
+# available on host "wyner"
+> getDatabases(m, host = "wyner")
+   Database 
+1     mysql
+2      opto
+3      test
+4 iptraffic
+5     fraud
+</s-example>
+<s-example>
+> # What tables are there in the "opto" database? 
+> dbTables(m, dbname = "opto", host = "wyner")
+  Tables in opto 
+1           PBCT
+2          PURGE
+3             WL
+4          liv25
+5          liv85
+</s-example>
+</s-examples>
+<s-keywords>
+<s-keyword>RS-DBI</s-keyword>
+<s-keyword>MySQL</s-keyword>
+<s-keyword>databases</s-keyword>
+<s-keyword>RDBMS</s-keyword>
+<s-keyword>manip</s-keyword>
+<s-keyword></s-keyword>
+</s-keywords>
+<s-docclass>
+function
+</s-docclass>
+</s-function-doc>

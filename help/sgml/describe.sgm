@@ -1,0 +1,141 @@
+<!doctype s-function-doc system "s-function-doc.dtd" [
+<!entity % S-OLD "INCLUDE">
+]
+>
+<s-function-doc>
+<s-topics>
+<s-topic> describe </s-topic>
+</s-topics>
+<s-title>
+Describe an object through its meta-data
+</s-title>
+<s-description>
+Prints a concise description of the meta-data associated
+with an object
+</s-description>
+<s-usage>
+<s-old-style-usage>
+describe(object, verbose, ...)
+</s-old-style-usage>
+</s-usage>
+<s-args-required>
+<s-arg name= object >
+any object that implements some functionality under the R/S interface 
+to databases, e.g.,
+<s-class>dbManager</s-class>,
+<s-class>dbConnection</s-class>,
+<s-class>dbResultSet</s-class>,
+<s-class>resultSet</s-class>.
+</s-arg>
+</s-args-required>
+<s-args-optional>
+<s-arg name= verbose >
+a logical controling the amount of output. 
+</s-arg>
+<s-arg name= ... >
+any other argument that the individual methods may take.
+</s-arg>
+</s-args-optional>
+<s-value>
+NULL
+</s-value>
+<s-side-effects>
+This function is used mainly for its printing side effects.
+</s-side-effects>
+<s-section name = "REFERENCES">
+See <url name = "The Omega Project for Statistical Computing"
+             url = "http://www.omegahat.org">
+for more details on the R/S database interface.
+</s-section>
+<s-see>
+<descrip>
+<tag>On database managers:</tag><p>
+<s-function name="dbManager.sgm">dbManager</s-function>
+<s-function name="MySQL.sgm">MySQL</s-function>
+<s-function name="Oracle.sgm">Oracle</s-function>
+<s-function name="load.sgm">load</s-function>
+<s-function name="unload.sgm">unload</s-function>
+<tag>On connections, SQL statements and resultSets:</tag><p>
+<s-function name="dbExecStatement.sgm">dbExecStatement</s-function>
+<s-function name="dbExec.sgm">dbExec</s-function>
+<s-function name="fetch.sgm">fetch</s-function>
+<s-function name="quickSQL.sgm">quickSQL</s-function>
+<tag>On transaction management:</tag><p>
+<s-function name="commit.sgm">commit</s-function>
+<s-function name="rollback.sgm">rollback</s-function>
+<tag>On meta-data:</tag><p>
+<s-function name="describe.sgm">describe</s-function>
+<s-function name="getVersion.sgm">getVersion</s-function>
+<s-function name="getDatabases.sgm">getDatabases</s-function>
+<s-function name="getTables.sgm">getTables</s-function>
+<s-function name="getFields.sgm">getFields</s-function>
+<s-function name="getCurrentDatabase.sgm">getCurrentDatabase</s-function>
+<s-function name="getTableIndeces.sgm">getTableIndeces</s-function>
+<s-function name="getException.sgm">getException</s-function>
+<s-function name="getStatement.sgm">getStatement</s-function>
+<s-function name="hasCompleted.sgm">hasCompleted</s-function>
+<s-function name="getRowCount.sgm">getRowCount</s-function>
+<s-function name="getAffectedRows.sgm">getAffectedRows</s-function>
+<s-function name="getNullOk.sgm">getNullOk</s-function>
+<s-function name="getInfo.sgm">getInfo</s-function>
+</descrip>
+</s-see>
+<s-examples>
+<s-example>
+> m <- dbManager("MySQL")
+> ...
+# Let's look at the status of the manager
+
+> describe(m, verbose = F)   
+MySQLManager id = (7269) 
+  Max  connections: 16 
+  Conn. processed: 1 
+  Default records per fetch: 500 
+  Open connections: 1 
+
+</s-example>
+<s-example>
+> rs <- dbExecStatement(con, query)
+> ...
+
+# The following shows that we extracted only one field
+# names "Tables in opto" plus its corresponding S class, internal 
+# database type, and various other internal attributes.
+
+> getFields(rs)
+           name    Sclass              type len precision scale nullOK 
+1 Tables in opto character FIELD_TYPE_STRING  64        64     0      F
+
+</s-example>
+<s-example>
+# A full description of the result set is
+
+> describe(rs, verbose = T)
+MySQLResultSet id = (7269,3,1) 
+  Statement: show tables 
+  Has completed? no 
+  Affected rows: -1 
+  Rows fetched: 3 
+  Fields:
+            name    Sclass              type len precision scale nullOK 
+1 Tables in opto character FIELD_TYPE_STRING  64        64     0      F
+
+</s-example>
+</s-examples>
+<s-keywords>
+<s-keyword>RS-DBI</s-keyword>
+<s-keyword>MySQL</s-keyword>
+<s-keyword>databases</s-keyword>
+<s-keyword>RDBMS</s-keyword>
+<s-keyword>manip</s-keyword>
+<s-keyword></s-keyword>
+</s-keywords>
+<s-docclass>
+function
+</s-docclass>
+</s-function-doc>
+
+
+
+
+

@@ -1,0 +1,122 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/darren@hiebert.com/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://darren.hiebert.com/ctags/	/official site/
+!_TAG_PROGRAM_VERSION	3.4	/with C, C++, Eiffel, Fortran, and Java  support/
+CON_HANDLE_TYPE	RS-DBI.h	/^  CON_HANDLE_TYPE = 2,     \/* dbConnection handle *\/$/;"	e	enum:enum_handle_type
+CON_ID	RS-DBI.h	69;"	d
+Con_Handle	RS-DBI.h	56;"	d
+DBI_EXCEPTION	RS-DBI.h	/^} DBI_EXCEPTION;$/;"	t
+Db_Handle	RS-DBI.h	58;"	d
+HANDLE_TYPE	RS-DBI.h	/^} HANDLE_TYPE; $/;"	t
+MGR_HANDLE_TYPE	RS-DBI.h	/^  MGR_HANDLE_TYPE = 1,     \/* dbManager handle *\/$/;"	e	enum:enum_handle_type
+MGR_ID	RS-DBI.h	68;"	d
+Mgr_Handle	RS-DBI.h	55;"	d
+RES_HANDLE_TYPE	RS-DBI.h	/^  RES_HANDLE_TYPE = 3      \/* dbResult handle *\/$/;"	e	enum:enum_handle_type
+RES_ID	RS-DBI.h	70;"	d
+RS_DBI_ERROR	RS-DBI.h	/^  RS_DBI_ERROR,$/;"	e	enum:enum_dbi_exception
+RS_DBI_MAX_IDENTIFIER_LENGTH	RS-DBI.c	1132;"	d	file:
+RS_DBI_MESSAGE	RS-DBI.h	/^  RS_DBI_MESSAGE,$/;"	e	enum:enum_dbi_exception
+RS_DBI_SclassNames	RS-DBI.c	/^RS_DBI_SclassNames(s_object *type)$/;"	f
+RS_DBI_TERMINATE	RS-DBI.h	/^  RS_DBI_TERMINATE$/;"	e	enum:enum_dbi_exception
+RS_DBI_WARNING	RS-DBI.h	/^  RS_DBI_WARNING,$/;"	e	enum:enum_dbi_exception
+RS_DBI_allocConnection	RS-DBI.c	/^RS_DBI_allocConnection(Mgr_Handle *mgrHandle, Sint max_res)$/;"	f
+RS_DBI_allocFields	RS-DBI.c	/^RS_DBI_allocFields(Sint num_fields)$/;"	f
+RS_DBI_allocManager	RS-DBI.c	/^RS_DBI_allocManager(const char *drvName, Sint max_con,$/;"	f
+RS_DBI_allocOutput	RS-DBI.c	/^RS_DBI_allocOutput(s_object *output, RS_DBI_fields *flds,$/;"	f
+RS_DBI_allocResultSet	RS-DBI.c	/^RS_DBI_allocResultSet(Con_Handle *conHandle)$/;"	f
+RS_DBI_asConHandle	RS-DBI.c	/^RS_DBI_asConHandle(Sint mgrId, Sint conId)$/;"	f
+RS_DBI_asMgrHandle	RS-DBI.c	/^RS_DBI_asMgrHandle(Sint mgrId)$/;"	f
+RS_DBI_asResHandle	RS-DBI.c	/^RS_DBI_asResHandle(Sint mgrId, Sint conId, Sint resId)$/;"	f
+RS_DBI_connection	RS-DBI.h	/^} RS_DBI_connection;$/;"	t
+RS_DBI_connectionInfo	RS-DBI.c	/^RS_DBI_connectionInfo(Con_Handle *conHandle)$/;"	f
+RS_DBI_copyString	RS-DBI.c	/^RS_DBI_copyString(const char *str)$/;"	f
+RS_DBI_copyfields	RS-DBI.c	/^RS_DBI_copyfields(RS_DBI_fields *flds)$/;"	f
+RS_DBI_createNamedList	RS-DBI.c	/^RS_DBI_createNamedList(char **names, Stype *types, Sint *lengths, Sint  n)$/;"	f
+RS_DBI_errorMessage	RS-DBI.c	/^RS_DBI_errorMessage(char *msg, DBI_EXCEPTION exception_type)$/;"	f
+RS_DBI_exception	RS-DBI.h	/^} RS_DBI_exception;$/;"	t
+RS_DBI_fields	RS-DBI.h	/^} RS_DBI_fields;$/;"	t
+RS_DBI_freeConnection	RS-DBI.c	/^RS_DBI_freeConnection(Con_Handle *conHandle)$/;"	f
+RS_DBI_freeEntry	RS-DBI.c	/^RS_DBI_freeEntry(Sint *table, Sint indx)$/;"	f
+RS_DBI_freeFields	RS-DBI.c	/^RS_DBI_freeFields(RS_DBI_fields *flds)$/;"	f
+RS_DBI_freeManager	RS-DBI.c	/^RS_DBI_freeManager(Mgr_Handle *mgrHandle)$/;"	f
+RS_DBI_freeResultSet	RS-DBI.c	/^RS_DBI_freeResultSet(Res_Handle *rsHandle)$/;"	f
+RS_DBI_getConnection	RS-DBI.c	/^RS_DBI_getConnection(Con_Handle *conHandle)$/;"	f
+RS_DBI_getFieldDescriptions	RS-DBI.c	/^RS_DBI_getFieldDescriptions(RS_DBI_fields *flds)$/;"	f
+RS_DBI_getManager	RS-DBI.c	/^RS_DBI_getManager(Mgr_Handle *handle)$/;"	f
+RS_DBI_getResultSet	RS-DBI.c	/^RS_DBI_getResultSet(Res_Handle *rsHandle)$/;"	f
+RS_DBI_getTypeName	RS-DBI.c	/^RS_DBI_getTypeName(Sint t, struct data_types table[])$/;"	f
+RS_DBI_listEntries	RS-DBI.c	/^RS_DBI_listEntries(Sint *table, Sint length, Sint *entries)$/;"	f
+RS_DBI_lookup	RS-DBI.c	/^RS_DBI_lookup(Sint *table, Sint length, Sint obj_id)$/;"	f
+RS_DBI_makeDataFrame	RS-DBI.c	/^RS_DBI_makeDataFrame(s_object *data)$/;"	f
+RS_DBI_makeSQLNames	RS-DBI.c	/^RS_DBI_makeSQLNames(s_object *snames)$/;"	f
+RS_DBI_manager	RS-DBI.h	/^} RS_DBI_manager;$/;"	t
+RS_DBI_managerInfo	RS-DBI.c	/^RS_DBI_managerInfo(Mgr_Handle *mgrHandle)$/;"	f
+RS_DBI_nCopyString	RS-DBI.c	/^RS_DBI_nCopyString(const char *str, size_t len, int del_blanks)$/;"	f
+RS_DBI_newEntry	RS-DBI.c	/^RS_DBI_newEntry(Sint *table, Sint length)$/;"	f
+RS_DBI_resultSet	RS-DBI.h	/^} RS_DBI_resultSet;$/;"	t
+RS_DBI_resultSetInfo	RS-DBI.c	/^RS_DBI_resultSetInfo(Res_Handle *rsHandle)$/;"	f
+RS_DBI_setException	RS-DBI.c	/^RS_DBI_setException(Db_Handle *handle, DBI_EXCEPTION exceptionType,$/;"	f
+RS_DBI_validHandle	RS-DBI.c	/^RS_DBI_validHandle(Db_Handle *handle)$/;"	f
+RS_dataTypeTable	RS-DBI.h	/^static struct data_types RS_dataTypeTable[] = {$/;"	v
+RS_is_na	RS-DBI.c	/^RS_is_na(void *ptr, Stype type)$/;"	f
+RS_na_set	RS-DBI.c	/^RS_na_set(void *ptr, Stype type)$/;"	f
+Res_Handle	RS-DBI.h	57;"	d
+Sclass	RS-DBI.h	/^  Stype *Sclass;        \/* R\/S class (type) -- may be overriden *\/$/;"	m	struct:st_sdbi_fields
+_RS_DBI_H	RS-DBI.h	2;"	d
+completed	RS-DBI.h	/^  Sint  completed;       \/* have we fetched all rows? *\/$/;"	m	struct:st_sdbi_resultset
+conParams	RS-DBI.h	/^  void  *conParams;      \/* pointer to connection params (host, user, etc)*\/$/;"	m	struct:st_sdbi_connection
+connectionId	RS-DBI.h	/^  Sint   connectionId; $/;"	m	struct:st_sdbi_connection
+connectionId	RS-DBI.h	/^  Sint  connectionId;    \/* validating stuff coming from S *\/$/;"	m	struct:st_sdbi_resultset
+connectionIds	RS-DBI.h	/^  Sint *connectionIds;              \/* array of connectionIds *\/$/;"	m	struct:st_sdbi_manager
+connections	RS-DBI.h	/^  RS_DBI_connection **connections;  \/* list of dbConnections *\/$/;"	m	struct:st_sdbi_manager
+counter	RS-DBI.h	/^  Sint   counter;                    \/* total number of queries *\/$/;"	m	struct:st_sdbi_connection
+counter	RS-DBI.h	/^  Sint counter;                     \/* num of connections handled so far*\/$/;"	m	struct:st_sdbi_manager
+data_types	RS-DBI.h	/^struct data_types {$/;"	s
+dbManager	RS-DBI.c	/^static RS_DBI_manager *dbManager = NULL;$/;"	v	file:
+drvConnection	RS-DBI.h	/^  void  *drvConnection;  \/* pointer to the actual DBMS connection struct*\/$/;"	m	struct:st_sdbi_connection
+drvData	RS-DBI.h	/^  void  *drvData;        \/* a pointer to driver-specific data *\/$/;"	m	struct:st_sdbi_resultset
+drvData	RS-DBI.h	/^  void  *drvData;        \/* to be used at will by individual drivers *\/$/;"	m	struct:st_sdbi_connection
+drvData	RS-DBI.h	/^  void *drvData;                    \/* to be used by the drv implementation*\/$/;"	m	struct:st_sdbi_manager
+drvName	RS-DBI.h	/^  char *drvName;                    \/* what driver are we implementing?*\/$/;"	m	struct:st_sdbi_manager
+drvResultSet	RS-DBI.h	/^  void  *drvResultSet;   \/* the actual (driver's) cursor\/result set *\/$/;"	m	struct:st_sdbi_resultset
+enum_dbi_exception	RS-DBI.h	/^typedef enum enum_dbi_exception {$/;"	g
+enum_handle_type	RS-DBI.h	/^typedef enum enum_handle_type {$/;"	g
+errorMsg	RS-DBI.h	/^  char *errorMsg;           \/* SQL error message *\/$/;"	m	struct:st_sdbi_exception
+errorNum	RS-DBI.h	/^  int  errorNum;            \/* SQL error number (possibly driver-dependent*\/$/;"	m	struct:st_sdbi_exception
+exception	RS-DBI.h	/^  RS_DBI_exception *exception;    $/;"	m	struct:st_sdbi_manager
+exception	RS-DBI.h	/^  RS_DBI_exception *exception;$/;"	m	struct:st_sdbi_connection
+exceptionType	RS-DBI.h	/^  DBI_EXCEPTION  exceptionType; \/* one of RS_DBI_WARN, RS_RBI_ERROR, etc *\/$/;"	m	struct:st_sdbi_exception
+fetch_default_rec	RS-DBI.h	/^  Sint fetch_default_rec;           \/* default num of records per fetch *\/$/;"	m	struct:st_sdbi_manager
+fields	RS-DBI.h	/^  RS_DBI_fields *fields;$/;"	m	struct:st_sdbi_resultset
+isSelect	RS-DBI.h	/^  Sint  isSelect;        \/* boolean for testing SELECTs *\/$/;"	m	struct:st_sdbi_resultset
+isVarLength	RS-DBI.h	/^  Sint  *isVarLength;   \/* DBMS variable-length char type *\/$/;"	m	struct:st_sdbi_fields
+is_validHandle	RS-DBI.c	/^is_validHandle(Db_Handle *handle, HANDLE_TYPE handleType)$/;"	f
+length	RS-DBI.h	/^  Sint   length;                     \/* max num of concurrent resultSets *\/$/;"	m	struct:st_sdbi_connection
+length	RS-DBI.h	/^  Sint  *length;        \/* DBMS lengths in bytes *\/$/;"	m	struct:st_sdbi_fields
+length	RS-DBI.h	/^  Sint length;                      \/* max num of concurrent connections *\/$/;"	m	struct:st_sdbi_manager
+managerId	RS-DBI.h	/^  Sint   managerId;$/;"	m	struct:st_sdbi_connection
+managerId	RS-DBI.h	/^  Sint  managerId;       \/* the 3 *Id's are used for   *\/$/;"	m	struct:st_sdbi_resultset
+managerId	RS-DBI.h	/^  Sint managerId;                   \/* typically, process id *\/$/;"	m	struct:st_sdbi_manager
+name	RS-DBI.h	/^  char  **name;         \/* DBMS field names *\/$/;"	m	struct:st_sdbi_fields
+nullOk	RS-DBI.h	/^  Sint  *nullOk;        \/* DBMS indicator for DBMS'  NULL type *\/$/;"	m	struct:st_sdbi_fields
+num_con	RS-DBI.h	/^  Sint num_con;                     \/* num of opened connections *\/$/;"	m	struct:st_sdbi_manager
+num_fields	RS-DBI.h	/^  int num_fields;$/;"	m	struct:st_sdbi_fields
+num_res	RS-DBI.h	/^  Sint   num_res;                    \/* num of open resultSets *\/$/;"	m	struct:st_sdbi_connection
+precision	RS-DBI.h	/^  Sint  *precision;     \/* DBMS num of digits for numeric types *\/$/;"	m	struct:st_sdbi_fields
+resultSetId	RS-DBI.h	/^  Sint  resultSetId;  $/;"	m	struct:st_sdbi_resultset
+resultSetIds	RS-DBI.h	/^  Sint   *resultSetIds;$/;"	m	struct:st_sdbi_connection
+resultSets	RS-DBI.h	/^  RS_DBI_resultSet  **resultSets;    \/* vector to result set ptrs  *\/$/;"	m	struct:st_sdbi_connection
+rowCount	RS-DBI.h	/^  Sint  rowCount;        \/* rows fetched so far (SELECT-types)*\/$/;"	m	struct:st_sdbi_resultset
+rowsAffected	RS-DBI.h	/^  Sint  rowsAffected;    \/* used by non-SELECT statements *\/$/;"	m	struct:st_sdbi_resultset
+scale	RS-DBI.h	/^  Sint  *scale;         \/* DBMS num of decimals for numeric types *\/$/;"	m	struct:st_sdbi_fields
+st_sdbi_connection	RS-DBI.h	/^typedef struct st_sdbi_connection {$/;"	s
+st_sdbi_exception	RS-DBI.h	/^typedef struct st_sdbi_exception {$/;"	s
+st_sdbi_fields	RS-DBI.h	/^typedef struct st_sdbi_fields {$/;"	s
+st_sdbi_manager	RS-DBI.h	/^typedef struct st_sdbi_manager {$/;"	s
+st_sdbi_resultset	RS-DBI.h	/^typedef struct st_sdbi_resultset {$/;"	s
+statement	RS-DBI.h	/^  char  *statement;      \/* SQL statement *\/$/;"	m	struct:st_sdbi_resultset
+type	RS-DBI.h	/^  Sint  *type;          \/* DBMS internal types *\/$/;"	m	struct:st_sdbi_fields
+typeId	RS-DBI.h	/^    Sint typeId;$/;"	m	struct:data_types
+typeName	RS-DBI.h	/^    char *typeName;$/;"	m	struct:data_types

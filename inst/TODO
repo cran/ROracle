@@ -1,0 +1,22 @@
+
+* Need to implement the assign/exists/remove methods to 
+  be able to attach() oracle connections.
+
+* Should we re-implement the guts using OCI instead of the ProC/C++?
+ 
+* Testing -- needs a lot more testing.
+
+* Implement the "bind variables" idea -- useful for writing into
+  databases, but not too critical(?) for select operations.
+ 
+* Implement the "host arrays" feature that allows us to fetch
+  multiple records per EXEC SQL FETCH.  This may give us
+  a "markedly" performance (Ch 12, ProC/C++ manual).
+ 
+* Security. Need to implement a better authentication mechanism,
+  possibly similar to the MySQL or the ODBC?
+ 
+* Implement transaction control.
+ 
+* Performance. We haven't done anything on this yet.
+ 
