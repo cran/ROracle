@@ -3,7 +3,7 @@
 \alias{OraDriver-class}
 \title{Class OraDriver}
 \description{
-   An Oracle driver implementing the R/Splus database (DBI) API.
+   An Oracle driver implementing the R/S-Plus database (DBI) API.
 }
 \section{Generators}{
    The main generators are \code{\link[DBI]{dbDriver}} and 
@@ -30,7 +30,6 @@ Class \code{"dbObjectId"}, by class "OraObject".
   \code{DBI.pdf} in the base directory of this package
   or \url{http://developer.r-project.org/db}.
 }
-\author{R-SIG-DB}
 
 \seealso{
  DBI classes:

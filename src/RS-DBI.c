@@ -1,5 +1,5 @@
 /* 
- * $Id: RS-DBI.c,v 1.6 2002/08/24 02:13:39 dj Exp dj $ 
+ * $Id: RS-DBI.c,v 1.2 2003/04/18 21:09:34 dj Exp dj $ 
  *
  *
  * Copyright (C) 1999-2002 The Omega Project for Statistical Computing
@@ -1228,25 +1228,28 @@ RS_na_set(void *ptr, Stype type)
   }
 }
 int
-RS_is_na(void *ptr, Stype type)
+RS_is_na(void *ptr, Stype type)   
 {
-   int *i, out = -2;
-   char *c;
+   Sint *i, out = -2;
+   char *c;                  
    double *d;
 
    switch(type){
    case INTEGER_TYPE:
    case LOGICAL_TYPE:
-      i = (int *) ptr;
+      i = (Sint *) ptr;
       out = (int) ((*i) == NA_INTEGER);
       break;
    case NUMERIC_TYPE:
       d = (double *) ptr;
       out = ISNA(*d);
       break;
-   case STRING_TYPE:
+   case CHARACTER_TYPE:
+      /* BUG: We cannot determine NA in strings like this. */
+      RS_DBI_errorMessage(
+         "internal error: invalid invocation to RS_is_na", RS_DBI_ERROR);
       c = (char *) ptr;
-      out = (int) (strcmp(c, CHR_EL(NA_STRING, 0))==0);
+      out = (int) (strcmp(c, "NA")==0);   
       break;
    }
    return out;

@@ -1,5 +1,5 @@
 ##
-## $Id: S4R.R,v 1.2 2002/08/23 21:46:21 dj Exp dj $
+## $Id: S4R.R,v 1.2 2002/08/23 21:46:21 dj Exp $
 ##
 ## S4/Splus/R compatibility 
 
@@ -17,12 +17,12 @@ if(usingR()){
 } else {
   ErrorClass <- "Error"  
 }
-## $Id: zzz.R,v 1.3 2002/08/27 00:57:17 dj Exp dj $
+## $Id: zzz.R,v 1.4 2003/04/18 14:42:57 dj Exp dj $
 .conflicts.OK <- TRUE
-require(DBI, quietly = TRUE, warn.conflicts = FALSE)
+library(DBI, warn.conflicts = FALSE)
 .First.lib <- function(lib, pkg) {
    library(methods)
-   require(DBI, quietly = TRUE, warn.conflicts = FALSE)
+   library(DBI, warn.conflicts = FALSE)
    library.dynam(.OraPkgName, pkg, lib)
 }
 ##
@@ -99,7 +99,7 @@ function(obj)
    .Call("RS_DBI_validHandle", obj, PACKAGE = .OraPkgName)
 }
 ##
-## $Id: Oracle.R,v 1.3 2002/08/27 00:53:00 dj Exp dj $
+## $Id: Oracle.R,v 1.4 2003/04/18 14:42:57 dj Exp dj $
 ##
 ## Copyright (C) 1999-2002 The Omega Project for Statistical Computing.
 ##
@@ -121,10 +121,36 @@ function(obj)
 ## Constants (.OraSQLKeywords is defined in OraSupport.q)
 ##
 
-.OraPkgRCS  <- "$Id: Oracle.R,v 1.3 2002/08/27 00:53:00 dj Exp dj $"
-.OraPkgName <- "ROracle"  ## TODO: should we setting these from the DESCRIPTION?
-.OraPkgVersion <- package.description(.OraPkgName, field = "Version")
+.OraPkgName <- "ROracle"  
+.OraPkgRCS  <- "$Id: Oracle.R,v 1.4 2003/04/18 14:42:57 dj Exp dj $"
+.OraPkgVersion <- "0.5-0"
 .Ora.NA.string <- ""      ## char that Oracle maps to NULL
+
+setOldClass("data.frame") ## to appease setMethod's signature warnings...
+
+## ------------------------------------------------------------------
+## Begin DBI extensions: 
+##
+## class DBIPreparedStatment and generics dbPrepareStatement, and
+## dbExecStatement
+##
+setClass("DBIPreparedStatement", representation("DBIObject", "VIRTUAL"))
+setGeneric("dbPrepareStatement", 
+   def = function(conn, statement, bind, ...) {
+      standardGeneric("dbPrepareStatement")
+   },
+   valueClass = "DBIPreparedStatement"
+)
+setGeneric("dbExecStatement",
+   def = function(ps, data, ...){
+      standardGeneric("dbExecStatement")
+   },
+   valueClass = "DBIPreparedStatement"
+)
+##
+## End DBI extensions
+## ------------------------------------------------------------------
+
 
 ##
 ## Class: DBIObject
@@ -194,7 +220,7 @@ setMethod("dbDisconnect", "OraConnection",
 
 setMethod("dbSendQuery", 
    signature(conn = "OraConnection", statement = "character"),
-   def = function(conn, statement, ...) oraExecStatement(conn, statement, ...),
+   def = function(conn, statement, ...) oraExecDirect(conn, statement, ...),
    valueClass = "OraResult"
 )
 
@@ -278,12 +304,16 @@ setMethod("dbListFields",
   valueClass = "character"
 )
 
+## need to define begin transaction, which Oracle does not explicitly does
+## Limitations: Apparently we cannot use savepoints w. ProC/C++,
+##   thus if you need savepoints, code them as a regular sql statement
+##   and dbGetQuery() them.
 setMethod("dbCommit", "OraConnection",
-   def = function(conn, ...) .NotYetImplemented()
+   def = function(conn, ...) oraCommit(conn, ...)
 )
 
 setMethod("dbRollback", "OraConnection",
-   def = function(conn, ...) .NotYetImplemented()
+   def = function(conn, ...) oraRollback(conn,...)
 )
 
 setMethod("dbCallProc", "OraConnection",
@@ -383,13 +413,56 @@ setMethod("summary", "OraResult",
    def = function(object, ...) oraDescribeResult(object, ...)
 )
 
-## getTableIndices.OraConnection <- function(obj, table, dbname, ...)
-## {
-##   if (missing(dbname))
-##     cmd <- paste("show index from", table)
-##   else cmd <- paste("show index from", table, "from", dbname)
-##   quickSQL(obj, cmd)
-## }
+##
+## Class: DBIPreparedStatement  (ROracle extension to DBI 0.1-5)
+##
+##  Currently we define prepare statements as (implementation) extensions 
+##  of results sets.  To be precise, the current C implementation uses 
+##  one struct to hold all aspect of a statement: its string represenation,
+##  whether it produces output or not, if so, a description of the output
+##  fields, and in the case of prepared statements, a pointer to a full
+##  description of the buffers bound to the data.frame columns.  Thus,
+##  a prepared statements signals the code to these bound buffers, and
+##  in addition, allows us to dispatch properly dbExecStatements()
+##  (we could overload dbSendQuery and dbGetQuery, but I find those
+##  methods too PostgrSQL-specific, and semantically not quite what we're
+##  trying to do with bindings).
+
+setClass("OraPreparedStatement", 
+   representation("DBIPreparedStatement", "OraResult"))
+
+setMethod("dbPrepareStatement",
+   sig = signature(conn = "OraConnection", statement = "character",
+                   bind = "character"),
+   def = function(conn, statement, bind, ...){
+      oraPrepareStatement(conn, statement, bind, ...)
+   }, 
+   valueClass = "OraPreparedStatement"
+)
+
+setMethod("dbPrepareStatement",
+   sig = signature(conn = "OraConnection", statement = "character",
+                   bind = "data.frame"),
+   def = function(conn, statement, bind, ...){
+      oraPrepareStatement(conn, statement, bind, ...)
+   }, 
+   valueClass = "OraPreparedStatement"
+)
+
+setMethod("dbExecStatement",
+   sig = signature(ps = "OraPreparedStatement",
+                   data = "data.frame"),
+   def = function(ps, data, ...) oraExecStatement(ps, data, ...),
+   valueClass = "OraPreparedStatement"
+)
+
+setMethod("dbGetInfo", "OraPreparedStatement",
+   def = function(dbObj, ...) oraPreparedStatementInfo(dbObj, ...)
+)
+
+setMethod("summary", "OraPreparedStatement",
+   def = function(object, ...) oraDescribePreparedStatement(object, ...)
+)
 
 setMethod("dbDataType", 
    signature(dbObj = "OraObject", obj = "ANY"),
@@ -418,7 +491,7 @@ setMethod("isSQLKeyword",
    valueClass = "character"
 )
 ##
-## $Id: OraSupport.q,v 1.3 2002/08/27 00:55:21 dj Exp dj $
+## $Id: OraSupport.R,v 1.1 2003/04/18 14:42:57 dj Exp dj $
 ##
 ## Copyright (C) 1999-2002 The Omega Project for Statistical Computing.
 ##
@@ -532,28 +605,58 @@ function(con, ..., force = FALSE)
    .Call("RS_Ora_closeConnection", as(con, "integer"), PACKAGE = .OraPkgName)
 }
 
-"oraExecStatement" <- 
-function(con, statement)
+"oraPrepareStatement" <-
+function(con, statement, bind)
+{
+   if(!isIdCurrent(con))
+      stop("expired connection")
+   con.id <- as(con, "integer")
+   if(is.data.frame(bind))
+      bind <- sapply(bind, class)
+   ps.id <- .Call("RS_Ora_prepareStatement",
+                  con.id = con.id, statement = as.character(statement), 
+                  bind.classes = as.character(bind),
+                  PACKAGE = .OraPkgName)
+   new("OraPreparedStatement", Id = ps.id)
+}
+
+"oraExecStatement" <-
+function(ps, data = NULL, ora.buf.size = -1)
+{
+   ## Note that the current implementation matches placeholders (bindings)
+   ## to data fields by position, not by name.
+   if(!is(ps, "OraPreparedStatement") || !isIdCurrent(ps))
+      stop("expired or invalid prepared statement")
+   df.classes <- as.character(sapply(data, class))
+   out.id <- .Call("RS_Ora_exec",
+                   ps = as(ps, "integer"), 
+                   data = data, data.classes = df.classes, 
+                   buf.size = as.integer(ora.buf.size),
+                   PACKAGE = .OraPkgName)
+   new("OraPreparedStatement", Id = out.id)  ## we assert this is identical ps
+}
+
+"oraExecDirect" <- 
+function(con, statement, ora.buf.size = 500)
 ## submits the sql statement to Oracle and creates a
 ## dbResult object if the SQL operation does not produce
 ## output, otherwise it produces a result that can
 ## be used for fetching rows.
 {
    if(!isIdCurrent(con))
-      stop("expired connection")
-   rs <- dbListResults(con)
-   .OraMaxResults <- 1      ## TODO: should be in the metadata
-   if(length(rs)==.OraMaxResults){
-      ## can we close result?
-      if(dbHasCompleted(rs[[1]]))
-         dbClearResult(rs[[1]])
-      else 
-         stop("pending result on connection")
-   }
-   conId <- as(con, "integer")
-   statement <- as(statement, "character")
-   rsId <- .Call("RS_Ora_exec", conId, statement, PACKAGE = .OraPkgName)
-   new("OraResult", Id = rsId)
+      stop("expired connection object")
+   ps <- rs <- NULL
+   rc <- try({
+           ps <- oraPrepareStatement(con, statement, bind=NULL)
+           rs <- oraExecStatement(ps, ora.buf.size =
+                    as(ora.buf.size,"integer"))
+   })
+   if(inherits(rc, ErrorClass)){
+      if(!isIdCurrent(ps)) dbClearResult(ps)
+      if(!isIdCurrent(rs)) dbClearResult(rs)
+      stop()
+   } 
+   rs
 }
 
 "oraQuickSQL" <- 
@@ -561,11 +664,11 @@ function(con, statement, ...)
 {
    if(!isIdCurrent(con))
       stop(paste("expired", class(con), deparse(substitute(con))))
-   if(length(oraConnectionInfo(con, "resultSetIds"))>0){
+   if(length(dbListResults(con))>0){
       new.con <- dbConnect(con)
       on.exit(dbDisconnect(new.con))
-      rs <- oraExecStatement(new.con, statement)
-   } else  rs <- oraExecStatement(con, statement)
+      rs <- oraExecDirect(new.con, statement, ...)
+   } else  rs <- oraExecDirect(con, statement, ...)
    if(dbHasCompleted(rs)){
       dbClearResult(rs)
       return(invisible(rs))
@@ -579,7 +682,7 @@ function(con, statement, ...)
 }
 
 "oraFetch" <- 
-function(res, n=0, ...)
+function(res, n=0, ..., ora.buf.size=-1)
 ## Fetch at most n records from the opened result (n = -1 means
 ## all records, n=0 means extract as many as "default_fetch_rec",
 ## as defined by OraDriver (see summary(mgr, T)).
@@ -599,7 +702,9 @@ function(res, n=0, ...)
    }
    n <- as(n, "integer")
    rsId <- as(res, "integer")
-   rel <- .Call("RS_Ora_fetch", rsId, nrec = n, PACKAGE = .OraPkgName)
+   rel <- .Call("RS_Ora_fetch", rsId, nrec = n, 
+              ora.buf.size = as(ora.buf.size, "integer"), 
+              PACKAGE = .OraPkgName)
    if(length(rel)==0)
       return(NULL)
    ## we don't want to coerce character data to factors
@@ -620,6 +725,30 @@ function(res, ...)
    if(!isIdCurrent(res))
       return(TRUE)   ## nothing to do
    .Call("RS_Ora_closeResultSet", as(res, "integer"), PACKAGE = .OraPkgName)
+}
+
+## transactions 
+"oraCommit" <- 
+function(conn, ...)
+{
+   if(!isIdCurrent(conn))
+      stop("expired connection")
+   .Call("RS_Ora_commit", as(conn, "integer"))
+}
+
+"oraRollback" <-
+function(conn, ...)
+{
+   ## currently we define transactions at the connection level,
+   ## thus when we rollback we close all open results/cursors in
+   ## that one connection.
+   if(!isIdCurrent(conn))
+      stop("expired connection")
+   rs.ids <- dbListResults(con)
+   out <- .Call("RS_Ora_rollback", as(conn, "integer"))
+   for(rs in rs.ids)
+      dbClearResult(rs)       ## TODO: move to .Call("RS_Ora_rollbac")
+   out
 }
 
 "oraTableFields" <-
@@ -780,6 +909,49 @@ function(obj, verbose = FALSE, ...)
   invisible(NULL)
 }
 
+"oraPreparedStatementInfo" <-
+function(obj, what, ...)
+{
+   info <- oraResultInfo(obj, what, ...)  ## next method
+   info$boundParams <- oraBoundParamsInfo(obj)
+   if(!missing(what))
+     info <- info[what]
+   if(FALSE && length(info)==1)
+     info[[1]]
+   else
+     info
+}
+
+"oraBoundParamsInfo" <- 
+function(obj)
+{
+   if(!isIdCurrent(obj) || !inherits(obj, "OraPreparedStatement")){
+      return(NULL)
+   }
+   id <- as(obj, "integer")
+   info <- .Call("RS_Ora_boundParamsInfo", id, PACKAGE = .OraPkgName)
+   if(!is.null(info)){
+      info$Sclass <- .Call("RS_DBI_SclassNames", info$Sclass, 
+                        PACKAGE = .OraPkgName)
+      ## no factors
+      info <- structure(info, row.names = paste(seq(along=info[[1]])),
+                            class = "data.frame")
+   }
+   info
+}
+
+"oraDescribePreparedStatement" <-
+function(obj, verbose = FALSE, ...)
+{
+   oraDescribeResult(obj, verbose, ...)
+   if(verbose){
+      cat("  Bound parameters:\n")
+      info <- dbGetInfo(obj)
+      print(info$boundParams)
+   }
+   invisible(NULL)
+}
+
 "safe.write" <- function(value, file, batch, ...)
 ## safe.write makes sure write.table don't exceed available memory by batching
 ## at most batch rows (but it is still slowww)
@@ -880,8 +1052,9 @@ function(con, name, row.names = "row.names", check.names = TRUE, ...)
    } else warning("row.names not set on output (duplicate elements in field)")
    out
 } 
+
 "oraWriteTable" <-
-function(con, name, value, field.types, row.names = TRUE, 
+function(con, name, value, field.oraTypes, row.names = TRUE, 
    overwrite=FALSE, append=FALSE, ...)
 ## Create table "name" (must be an SQL identifier) and populate
 ## it with the values of the data.frame "value" (possibly after coercion
@@ -889,23 +1062,9 @@ function(con, name, value, field.types, row.names = TRUE,
 ## 
 ## BUG: In the unlikely event that value has a field called "row.names"
 ## we could inadvertently overwrite it (here the user should set row.names=F)
+## 
+## Note: transactions are being defined... Here I need a "savepoint foo"
 ##
-## TODO: This function should execute its sql as a single transaction,
-## and allow converter functions.
-##
-## Hack alert: we silently accept the "rhost" argument (as part of ...)
-## if set, we run the SQL*Loader on the remote host pointed by "rhost";
-## in this case we need to set/guess values for ORACLE_HOME on the remote
-## host, our heuristic is
-## (1) use the arg "ora.home" (if part of ...); if not specified,
-## (2) set it to `dbhome`, which is an Oracle utility in rhost:/usr/local/bin
-## which supposedly returns the ORACLE_HOME (I didn't find this too reliable).
-##
-## We also look for the "rcp" and "rsh" arguments in "..." to tells
-## us which remote shell utilities to use, if not set, we use scp and ssh.
-## (This song and dance allows us to create a static linked version of 
-## ROracle and run it on machines that don't even have the client Oracle 
-## software.)  I'm not sure yet this is a good idea.
 {
    if(overwrite && append)
       stop("overwrite and append cannot both be TRUE")
@@ -915,12 +1074,12 @@ function(con, name, value, field.types, row.names = TRUE,
       value <- cbind(row.names(value), value)  ## can't use row.names= here
       names(value)[1] <- "row.names"
    }
-   if(missing(field.types) || is.null(field.types)){
+   if(missing(field.oraTypes) || is.null(field.oraTypes)){
       ## the following mapping should be coming from some kind of table
       ## also, need to use converter functions (for dates, etc.)
-      field.types <- sapply(value, oraDataType, mgr = con)
+      field.oraTypes <- sapply(value, oraDataType, mgr = con)
    } 
-   names(field.types) <- make.db.names.default(names(field.types), 
+   names(field.oraTypes) <- make.db.names.default(names(field.oraTypes), 
                              keywords = .OraSQLKeywords,
                              allow.keywords=FALSE)
    if(length(dbListResults(con))!=0){ ## do we need to clone the connection?
@@ -940,16 +1099,17 @@ function(con, name, value, field.types, row.names = TRUE,
          }
       }
       else if(!append){
-         warning(paste("table",name,"exists in database: aborting oraWriteTable"))
+         warning(paste("table", name, 
+                       "exists in database: aborting oraWriteTable"))
          return(FALSE)
       }
    } 
    if(!tbl.exists){     ## need to create a new (empty) table
       sql1 <- paste("create table ", name, "\n(\n\t", sep="")
-      sql2 <- paste(paste(names(field.types), field.types), collapse=",\n\t", sep="")
+      sql2 <- paste(paste(names(field.oraTypes), field.oraTypes), collapse=",\n\t", sep="")
       sql3 <- "\n)\n"
       sql <- paste(sql1, sql2, sql3, sep="")
-      rs <- try(oraExecStatement(new.con, sql))
+      rs <- try(oraExecDirect(new.con, sql))
       if(inherits(rs, ErrorClass)){
          warning("aborting oraWriteTable: could not create table")
          return(FALSE)
@@ -958,109 +1118,40 @@ function(con, name, value, field.types, row.names = TRUE,
          dbClearResult(rs)
    }
 
-   fn <- tempfile("ora")
-   ctl.fname <- paste(fn, ".ctl", sep="")   ## SQL*Load control file
-   ctl.file <- file(ctl.fname, "w")
-   log.file <- paste(fn, ".log", sep="")    ## SQL*Load log file
+   ## we now bind the data
+   fld.names <- names(field.oraTypes)
+   istmt <- paste("insert into ", name, 
+                      "(", paste(fld.names, collapse=","), ")",
+                      "VALUES (", 
+                      paste(":", seq(along=fld.names), sep="", collapse=","), 
+                      ")"
+                     )
+   fields.Sclass <- sapply(value, class)
+   ## should we convert any columns before we ship data?
+   prim.types <- c("numeric", "integer", "logical", "character")
+   for(i in seq(along = fields.Sclass)){
+      if(!(fields.Sclass[i] %in% prim.types)){
+         value[[i]] <- as.character(value[[i]])
+         fields.Sclass[i] <- "character"
+      }
+   }
 
-   ## Step 1: form a connection string of the form user/passwd@dbname
-   conPars <- dbGetInfo(con, c("user", "passwd", "dbname"))
-   con.string <- paste(conPars$user,"/",conPars$passwd,"@",conPars$dbname,sep="")
-
-   ## Step 2: create control file
-   hdr <- paste("LOAD DATA\nINFILE  *", "\n", 
-                ifelse(append, "APPEND\n",""),
-                "INTO TABLE ", name, 
-                "FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"'\n",
-                "\nTRAILING NULLCOLS ")
-   hdr <- paste(hdr, "(\n", 
-                paste(names(field.types), '\t', "char", collapse=",\n"),
-                "\n)\n", sep = "")
-   hdr <- paste(hdr, "BEGINDATA\n", sep="")
-   cat(hdr, file = ctl.file)
-   dots <- list(...)
-
-   ## Step 3: append the data.frame to the control file (actual data)
-   safe.write(value, file = ctl.file, batch = dots$batch)
-   close(ctl.file)
-
-   ## Step 4: invoke SQL*Loader, possibly on a remote system!
-   rhost <- dots$rhost
-   if(is.null(rhost)){    ## locally
-      cmd <- paste("sqlldr userid=", con.string, " control=", ctl.fname, 
-                   " log=", log.file, " silent=all", sep = "")
-      rc <- system(cmd, ignore.stderr=TRUE)
-      if(rc!=0){
-         warning("could not load data into Oracle table")
-         unlink(ctl.fname)
-         unlink(log.file)
-         if(!tbl.exists)
-            dbRemoveTable(new.con, name)
-         return(FALSE)
-      } 
-   } 
+   ## Begin transaction
+   rc <- try({
+      ps <- dbPrepareStatement(new.con, istmt, bind = fields.Sclass, ...)
+      rs <- dbExecStatement(ps, data = value, ...)
+      dbClearResult(rs)
+   })
+   if(inherits(rc, ErrorClass)){
+      if(!tbl.exists)
+         dbRemoveTable(con, name)
+      out <- FALSE
+   }
    else {
-      ## hack allert: the following allows remote execution of sqlldr, but
-      ## I'm not sure if it's really useful (nor portable from one Oracle
-      ## installation to another). 
-
-      ## rcp the control file to rhost, rsh sqlldr there, and then
-      ## bring back the SQL*Loader log file
-      rsh <- ifelse(is.null(dots$rsh), "ssh", dots$rsh)
-      rcp <- ifelse(is.null(dots$rcp), "scp", dots$rcp)
-      ora.home <- ifelse(is.null(dots$ora.home), "`dbhome`", dots$ora.home)
-      ## write a mini Bourne shell script to run on rhost
-      sh.fname <- paste(fn, ".sh", sep="")
-      sh.file <- file(sh.fname, "w")
-      cat("#!/bin/sh\n", file = sh.file)
-      cat("ORACLE_HOME=", ora.home, "\n", sep = "", file = sh.file)
-      cat("PATH=$PATH:", ora.home, "/bin", "\n", sep = "", file = sh.file)
-      cat("export ORACLE_HOME PATH\n", file = sh.file)
-      cat("sqlldr userid=", con.string, " control=", ctl.fname, 
-          " log=", log.file, " silent=all\n", sep = "", file = sh.file)
-      close(sh.file)
-      ## string to copy control file and shell script to rhost
-      push <- paste(rcp, ctl.fname, paste(rhost, ctl.fname, sep=":"), "\n",
-                    rcp, sh.fname,  paste(rhost, sh.fname, sep=":"), "\n",
-                    collapse=" ")
-      ## string to run shell script
-      run <- paste(rsh, rhost, "/bin/sh", sh.fname)
-      ## string to clean on rhost and to bring back log file
-      pull <- paste(rcp, paste(rhost, log.file, sep=":"), log.file, "\n",
-                    rsh, rhost, "rm -rf", log.file, ctl.fname, sh.fname,"\n",
-                    collapse=" ")
-      rc <- system(push, ignore.stderr = TRUE)
-      if(rc!=0){
-         warning(paste("aborting oraWriteTable: could not", rcp, 
-            "data into remote host", rhost))
-         unlink(sh.fname)
-         unlink(ctl.fname)
-         if(!tbl.exists)
-            dbRemoveTable(new.con, name)
-         return(FALSE)
-      }
-      rc <- system(run, ignore.stderr=TRUE)
-      if(rc!=0){
-         warning(paste("aborting oraWriteTable:",
-            "could not run SQL*Loader in the remote host", rhost))
-         unlink(sh.fname)
-         unlink(ctl.fname)
-         if(!tbl.exists)
-            dbRemoveTable(new.con, name)
-         return(FALSE)
-      }
-      rc <- system(pull, ignore.stderr=T)
-      if(rc!=0){
-         warning(paste("could not bring SQL*Loader log file from", rhost))
-         unlink(sh.fname)
-         unlink(ctl.fname)
-         unlink(log.file)
-         if(!tbl.exists)
-            dbRemoveTable(new.con, name)
-         return(FALSE)
-      }
-   } 
-   TRUE
+      dbCommit(new.con)
+      out <- TRUE
+   }
+   out
 }
 
 ".OraSQLKeywords" <-

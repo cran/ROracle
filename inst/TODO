@@ -1,17 +1,20 @@
-* The RS-DBI needs to be finalized.  Once the R-SIG-DB agrees on
-  a final API implement it.
+* [Done] Implement the "bind variables" idea -- useful for writing
+  into databases, but not too critical(?) for select operations.
 
-* Implement the "bind variables" idea -- useful for writing into
-  databases, but not too critical(?) for select operations.
- 
-* Implement the "host arrays" feature that allows us to fetch
-  multiple records per EXEC SQL FETCH.  This may give us
-  a "markedly" performance (Ch 12, ProC/C++ manual).
- 
+* [Done] Implement the "host arrays" feature that allows us to fetch
+  multiple records per EXEC SQL FETCH.  This may give us a "markedly"
+  performance (Ch 12, ProC/C++ manual).
+
 * Security. Need to implement a better authentication mechanism,
   possibly similar to the MySQL or the ODBC?
- 
+
 * Performance. We haven't done anything on this yet.
 
-* Long term. Should we reimplement the guts using OCI instead of the ProC/C++?
+* Long term. We should reimplement the guts to sue OCI instead of
+  the ProC/C++.
+
+* The RS-DBI needs to be finalized.  Once the R-SIG-DB agrees on
+  a final API implement it. (We need to specify transactions, 
+  asynchronous operations, bindings, security.)
+
  

@@ -1,3 +1,30 @@
+Version 0.5-0
+
+* This version has an experimental dynamic SQL binding to data frame
+  columns.  SQL statements can be "prepared" (parsed and cached
+  for improved performance), and columns of data frames bound to
+  them for automatic data transfer).  For details see the help()
+  for "Oracle", "dbPrepareStatement" and "dbExecStatement".
+
+  (Note, dbPrepareStatement() and dbExecStatement() are extension to
+  the DBI package.)
+
+* Host arrays are now operational. These are buffers used by Oracle's
+  internal implementation to reduce network traffic and speed
+  up fetches and prepared statements.  Currently fetches use a
+  default buffer size (host arrays) of size 500 (previous version
+  did no buffering).  **Very preliminary** results suggest performance
+  improvements on fetching of about a factor of 2.
+  (Note that the maximum size of these buffers is limited to about 
+  65K bytes per column.)
+ 
+* dbCommit() and dbRollback() are now explicitly implemented,
+  but save points are not (you may code them through dynamic SQL).
+
+* The precompiler ProC/C++ is now used with the option PARSE=none
+  to avoid bogus C errors with some compilers and/or platforms
+  (e.g., Mac OS X).
+
 Version 0.4-0
 
 * The package is now compliant with the R/S Database interface (DBI), 
@@ -6,7 +33,7 @@ Version 0.4-0
 
 * Simplified the underlying (support) functions by deleting more than a few,
   and changing their names to start with "ora" (the previous function and
-  their names where a vestige of S3 stype methods, which we no longer need).
+  their names where a vestige of S3 style methods, which we no longer need).
 
 * No changes to the C code (except for minor changes to RS_DBI.c to
   generate more helpful error messages in case of internal errors).
@@ -43,7 +70,7 @@ Version 0.3-3
     Added an argument "batch=10000"; this is used to write.table() these
     many rows at a time from the data.frame in order to avoid huge memory 
     build ups.  It's still shamefully slow (due to write.table), but at least
-    it won't exahust memory. [Need to find an efficient alternative to 
+    it won't exhaust memory. [Need to find an efficient alternative to 
     write.table(), perhaps we need to write our own specialized C code?]
 
 * Extended the size of the internal connections parameters (user, password 
@@ -53,7 +80,7 @@ Version 0.3-3
              "user/passwd@(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=foo.misc.de)(PORT=1521))(CONNECT_DATA=(SID=TEST))
 
   [this seems to be an undocumented "feature" that Oracle gurus use quite
-  commonly when they don't have priviledges to update the network config
+  commonly when they don't have privileges to update the network config
   file $ORALCE_HOME/network/admin/tnsname.ora (thanks to Michael Mader for 
   this trick!]
 

@@ -166,7 +166,7 @@ extern "C" {
 #ifdef USING_R
 #  define NA_SET(p,t)   RS_na_set((p),(t))
 #  define NA_CHR_SET(p) SET_CHR_EL(p, 0, NA_STRING)
-#  define IS_NA(p,t)    RS_is_na((p),(t))
+#  define IS_NA(p,t)    RS_is_na(((void *)p),(t))
 #else
 #  define NA_SET(p,t)   na_set((p),(t))
 #  define NA_CHR_SET(p) (p) = C_S_CPY(NA_STRING)
