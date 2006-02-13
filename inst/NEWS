@@ -1,6 +1,59 @@
+Version 0.5-7
+
+* Remove install.R (to be deprecated as of R 2.3.0).
+
+* Allow empty username/passwords, as per ProC/C++ convention, fixed a 
+  memory leak when extracting char data, and added a workaround for the
+  incorrect Oracle 9.2 sgls() that reports no select on the first query
+  (thanks to David Hinds for all these patches).  
+
+* Modified the configure.in to define the C macro RS_ORA_SQLGLS_WORKAROUND
+  when the Oracle version is 9* (should we restirict it to 9i and >9.2?).
+  If the macro is defined, we use David Hinds' patch to guess whether the 
+  SQL statement being prepared is a select or not.
+
+* Yet another Pro C/C++ bug workaround.  Added --enable-prefetch=1 to the 
+  configure script to allow a workaround to the ProC/C++ bug when building 
+  on an Oracle 8i but connecting to a Oracle 9i server (thanks to Marco Kienzle 
+  for the very informative Pro C/C++ bug report).
+  
+* Trivial changes to Makefile.win to create windows binaries for 2.2.1.
+
+* Fixed documentation typos.
+
+Version 0.5-6
+
+* After trial and error (under Linux, older Oracle 8), the size for the
+  internal dynamic statment (RS_ORA_STATEMENT_LEN) was increased to 20000 
+  characters (the Oracle documentation is apparently silent on how big 
+  the statement string can be).  This should allow exporting data.frames 
+  up to ~255 columns.  Your mileage may vary.
+
+* Include a workaround in oraQuickSQL() to the Pro C/C++ 9.2 bug or 
+  "feature" that causes sqlgls() to return the wrong SQL function code 
+  (we rely on the value 04 to identify SELECT statements).  See the 
+  Pro C/C++ Readme file.
+
+* Thanks to Sunny Ho's painstaking detective work, ROracle now includes 
+  SQLCA.H and SQLDA.H (all uppercase) to avoid the nasty PostgreSQL/Oracle 
+  co-existance problem (at least) on Red Hat linux systems.  For details, 
+  see Sunny's 2004-11-23 posting to R-help "ROracle: fetch return zero rows 
+  or empty dataset (a workaround)".
+
+* Fixed the problem of leaving connections open upon disconnection (thanks
+  to Rebeca Steffan for the hint.)
+
+* Fixed bug where the indicator variables for prepared statements
+  were not re-initialized (thanks to David Hinds for the patch).
+
+* Fixed typo in oraRollbackback().
+
+* Fixed bug in dbReadTable's method that incorrectly processed the default
+  for detecting row names.
+
 Version 0.5-5
 
-* Fixed documentation types.
+* Fixed documentation typos.
 
 Version 0.5-4
 

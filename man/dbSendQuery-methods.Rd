@@ -1,4 +1,4 @@
-% $Id: dbSendQuery-methods.Rd,v 1.1 2003/11/03 22:41:41 dj Exp $
+% $Id: dbSendQuery-methods.Rd,v 1.2 2006/02/08 19:17:00 dj Exp dj $
 \name{dbSendQuery-methods}
 \docType{methods}
 \alias{dbSendQuery-methods}
@@ -47,7 +47,7 @@ res <- dbSendQuery(con, "SELECT * from liv25")
 data <- fetch(res, n = -1)
 }
 }
-\keywords{methods}
+\keyword{methods}
 \keyword{interface}
 \keyword{database}
 % vim: syntax=tex

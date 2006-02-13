@@ -1,4 +1,4 @@
-% $Id: OraDriver-class.Rd,v 1.2 2003/11/04 03:09:25 dj Exp dj $
+% $Id: OraDriver-class.Rd,v 1.2 2003/11/04 03:09:25 dj Exp $
 \name{OraDriver-class}
 \docType{class}
 \alias{OraDriver-class}

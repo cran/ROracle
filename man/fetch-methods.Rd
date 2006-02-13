@@ -1,4 +1,4 @@
-% $Id: fetch-methods.Rd,v 1.1 2003/11/03 22:41:41 dj Exp $
+% $Id: fetch-methods.Rd,v 1.2 2006/02/08 19:17:00 dj Exp dj $
 \name{fetch-methods}
 \docType{methods}
 \alias{fetch-methods}
@@ -65,7 +65,7 @@ dbHasCompleted(res)
 data2 <- fetch(res, n = -1)
 }
 }
-\keywords{methods}
+\keyword{methods}
 \keyword{interface}
 \keyword{database}
 % vim: syntax=tex

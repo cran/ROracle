@@ -17,15 +17,11 @@ if(usingR()){
 } else {
   ErrorClass <- "Error"  
 }
-## $Id: zzz.R,v 1.4 2003/04/18 14:42:57 dj Exp dj $
-.conflicts.OK <- TRUE
-require(methods)
-require(DBI)
-#library(methods, warn.conflicts = FALSE)
-#library(DBI, warn.conflicts = FALSE)
-.First.lib <- function(lib, pkg) {
-   library(methods, warn.conflicts = FALSE)
-   library(DBI, warn.conflicts = FALSE)
+## $Id: zzz.R,v 1.5 2006/02/08 19:17:41 dj Exp dj $
+
+".First.lib" <- 
+function(lib, pkg) 
+{
    library.dynam(.OraPkgName, pkg, lib)
 }
 ##
@@ -102,7 +98,7 @@ function(obj)
    .Call("RS_DBI_validHandle", obj, PACKAGE = .OraPkgName)
 }
 ##
-## $Id: Oracle.R,v 1.6 2003/10/30 16:58:09 dj Exp dj $
+## $Id: Oracle.R,v 1.7 2006/02/08 19:17:41 dj Exp dj $
 ##
 ## Copyright (C) 1999-2002 The Omega Project for Statistical Computing.
 ##
@@ -125,8 +121,8 @@ function(obj)
 ##
 
 .OraPkgName <- "ROracle"  
-.OraPkgRCS  <- "$Id: Oracle.R,v 1.6 2003/10/30 16:58:09 dj Exp dj $"
-.OraPkgVersion <- "0.5-4" #package.description(.OraPkgName, fields = "Version")
+.OraPkgRCS  <- "$Id: Oracle.R,v 1.7 2006/02/08 19:17:41 dj Exp dj $"
+.OraPkgVersion <- "0.5-7" #package.description(.OraPkgName, fields = "Version")
 .Ora.NA.string <- ""         ## char that Oracle maps to NULL
 
 setOldClass("data.frame") ## to appease setMethod's signature warnings...
@@ -494,7 +490,7 @@ setMethod("isSQLKeyword",
    valueClass = "character"
 )
 ##
-## $Id: OraSupport.R,v 1.2 2003/05/27 20:05:32 dj Exp $
+## $Id: OraSupport.R,v 1.3 2006/02/08 19:17:41 dj Exp dj $
 ##
 ## Copyright (C) 1999-2002 The Omega Project for Statistical Computing.
 ##
@@ -679,7 +675,11 @@ function(con, statement, ...)
       on.exit(dbDisconnect(new.con))
       rs <- oraExecDirect(new.con, statement, ...)
    } else  rs <- oraExecDirect(con, statement, ...)
-   if(dbHasCompleted(rs)){
+   ## ProC/C++ bug (or "side-effect") 9.2.0 (see the description for 
+   ## bug 471975 in the README file for product Pro*C/C++ RELEASE 9.2.0)
+   ## (note that we don't look for comments before 'select')
+   hack <- grep("^[ \\t]*select ", tolower(dbGetInfo(rs)$statement))
+   if(dbHasCompleted(rs) || length(hack)==0){
       dbClearResult(rs)
       return(invisible(rs))
    }
@@ -754,7 +754,7 @@ function(conn, ...)
    ## that one connection.
    if(!isIdCurrent(conn))
       stop("expired connection")
-   rs.ids <- dbListResults(con)
+   rs.ids <- dbListResults(conn)
    out <- .Call("RS_Ora_rollback", as(conn, "integer"), PACKAGE = .OraPkgName)
    for(rs in rs.ids)
       dbClearResult(rs)       ## TODO: move to .Call("RS_Ora_rollbac")
@@ -1024,7 +1024,7 @@ function(obj, ...)
 
 
 "oraReadTable" <-
-function(con, name, row.names = "row.names", check.names = TRUE, ...)
+function(con, name, row.names = "row_names", check.names = TRUE, ...)
 ## Should we also allow row.names to be a character vector (as in read.table)?
 ## is it "correct" to set the row.names of output data.frame?
 ## Use NULL, "", or 0 as row.names to prevent using any field as row.names.
@@ -1046,7 +1046,7 @@ function(con, name, row.names = "row.names", check.names = TRUE, ...)
    if(as.numeric(j)==0) 
       return(out)
    if(is.logical(j)) ## Must be TRUE
-      j <- match("row.names", tolower(nms), nomatch=0) 
+      j <- match(row.names, tolower(nms), nomatch=0) 
    if(j<1 || j>ncol(out)){
       warning("row.names not set on output data.frame (non-existing field)")
       return(out)
@@ -1192,65 +1192,3 @@ c( "ACCESS", "ADD", "ALL", "ALTER", "AND", "ANY", "ARRAY", "AS", "ACS",
    "VARIANCE", "VIEW", "WHEN", "WHENEVER", "WHERE", "WHILE", "WITH", "WORK",
    "WRITE", "YEAR", "ZONE"
 )
-##
-## This file contains a patch to be used only with Oracle 9 (client).
-##
-## Bug description:
-##
-## Apparently there is a bug (either in the Oracle 9 ProC/C++ function 
-## sqlgls or in the ROracle code) that causes a SELECT on a newly opened 
-## connection to be misidentified by sqlgls() as fun code 0, instead of 
-## the correct 04, causing ROracle to incorrectly generate the error 
-## message "cannot retrieve data from non-select" (or somthing like this).
-##
-## Workaround:
-##
-## Source this file either in your global environment, or append it
-## to $R_PACKAGE_DIR/R/ROracle, prior to invoking R.  E.g., 
-##
-##    cat ora9.patch.R >> /home/local/lib/R/library/ROracle/R/ROracle
-##
-## Note: This is a horrible hack that forces a trivial SELECT on every 
-## new connection.
-
-## NOTE: We're defining the default behavior to assume it is 
-## using Oracle 9.  
-
-"ora9.workaround" <-
-function(con)
-{
-   if(exists(".Oracle9") && !.Oracle9)
-      return(FALSE)
-   rs <- dbSendQuery(con, "select * from V$VERSION")
-   dbClearResult(rs)
-}
-
-"oraNewConnection"<- 
-function(drv, username="", password="", 
-   dbname = if(usingR()) Sys.getenv("ORACLE_SID") else getenv("ORACLE_SID"),
-   max.results=1)
-{
-   con.params <- oraParseConParams(username, password, dbname)
-   drvId <- as(drv, "integer")
-   max.results <- as(max.results, "integer")
-   .OraMaxResults <- 1
-   if(max.results>.OraMaxResults){
-      warning(paste("can only have up to", .OraMaxResults, 
-         "results per connection"))
-      max.results <- .OraMaxResults
-   }
-   id <- .Call("RS_Ora_newConnection", drvId, con.params, max.results, 
-               PACKAGE = .OraPkgName)
-   con <- new("OraConnection", Id = id)
-   ora9.workaround(con)
-   con
-}
-
-"oraCloneConnection" <- 
-function(drv, ...)
-{
-   id <- .Call("RS_Ora_cloneConnection", as(drv,"integer"), PACKAGE=.OraPkgName)
-   con <- new("OraConnection", Id = id)
-   ora9.workaround(con)
-   con
-}

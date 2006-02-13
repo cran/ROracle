@@ -1,6 +1,6 @@
 #ifndef _RS_Oracle_H
 #define _RS_Oracle_H 1
-/*  $Id: RS-Oracle.h,v 1.5 2003/10/30 16:30:56 dj Exp dj $
+/*  $Id: RS-Oracle.h,v 1.6 2006/02/08 19:16:04 dj Exp dj $
  *
  * Copyright (C) 1999 The Omega Project for Statistical Computing.
  *
@@ -25,7 +25,7 @@
 extern "C" {
 #endif
  
-#define  RS_ORA_VERSION "$Revision: 1.5 $"   
+#define  RS_ORA_VERSION "$Revision: 1.6 $"   
 #include "RS-DBI.h"
 
 #define RS_Ora_Min(a, b)  ((a)<=(b) ? (a) : (b))
@@ -38,8 +38,8 @@ typedef struct st_ora_conparams{
   char *passwd;
 } RS_Ora_conParams;
 
-EXEC SQL INCLUDE sqlca;    /* #include <sqlca.h>, defines the sqlca struct*/
-EXEC SQL INCLUDE sqlda;    /* i.e., #include <sqlda.h> */
+EXEC SQL INCLUDE SQLCA;    /* #include <sqlca.h>, defines the sqlca struct*/
+EXEC SQL INCLUDE SQLDA;    /* i.e., #include <sqlda.h> */
 
 /* We use these (instead of the SQLAlloc, etc.) for Oracle Version 7's sake*/
 #if 1
@@ -55,7 +55,7 @@ EXEC SQL INCLUDE sqlda;    /* i.e., #include <sqlda.h> */
 
 /* Oracle-specific magic numbers */
 #define RS_ORA_MAX_STRING      4000  /* max VARCHAR2/String we'll import */
-#define RS_ORA_STATEMENT_LEN   4000  /* dynamic statement length */
+#define RS_ORA_STATEMENT_LEN   20000  /* dynamic statement length */
 #define RS_ORA_MAX_ITEMS        256  /* max items in selects, SQL92 is 100 */
 #define RS_ORA_MAX_VNAME_LEN     30  /* name len (ANSI SQL92 max is 18) */
 #define RS_ORA_NUM_CURSORS       10  /* SQL92 max is 10, Oracle's 100 */

@@ -2,16 +2,13 @@ dbCallProc-methods      Call an SQL stored procedure
 dbCommit-methods        DBMS Transaction Management
 dbConnect-methods       Create a connection object to an Oracle DBMS
 dbDataType-methods      Determine the SQL Data Type of an S object
-dbDriver-methods        Oracle implementation of the Database
-                        Interface (DBI) classes and drivers
+dbDriver-methods        Oracle implementation of the Database Interface
+                        (DBI) classes and drivers
 dbGetInfo               Database interface meta-data
 DBIPreparedStatement-class
                         Class DBIPreparedStatement
-dbListTables-methods    List items from an Oracle DBMS and from
-                        objects
+dbListTables-methods    List items from an Oracle DBMS and from objects
 dbObjectId-class        Class dbObjectId
-dbPrepareStatement      Create a prepared SQL statement for repeated
-                        execution
 dbPrepareStatement-methods
                         Create a prepared SQL statement for repeated
                         execution
@@ -25,7 +22,7 @@ fetch-methods           Fetch records from a previously executed query
 isIdCurrent             Check whether an dbObjectId handle object is
                         valid or not
 Oracle                  Instantiate an Oracle client from the current
-                        R/S-Plus session
+                        \R session
 OraConnection-class     Class OraConnection
 OraDriver-class         Class OraDriver
 oraInitDriver           Support Functions

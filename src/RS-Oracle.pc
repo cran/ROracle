@@ -1,6 +1,6 @@
 /* R and S-Plus Database Interface to Oracle */
 /* 
- * $Id: RS-Oracle.pc,v 1.7 2003/10/30 16:29:51 dj Exp dj $ 
+ * $Id: RS-Oracle.pc,v 1.8 2006/02/08 19:16:04 dj Exp dj $ 
  *
  * vim:syntax=c 
  */
@@ -28,15 +28,12 @@
 /* 
  * Limitations/TODO:
  *
- *  - Only handle up to 255 bytes per field.
- *  - Max num of 10 simultaneous connections.
- *  - One open results set per connection.
- *  - No asychronous operations.
- *  - Haven't implemented any of the Oracle RAW types. 
- *  - Make sure we don't leave any variables/structs that may make this
- *    code thread unsafe.
- *  - Move the transaction control to their own functions so that
- *    they can be invoked by the dbConnection methods explicitly.
+ *  - Only handle up to 255 bytes per field.  - Max num of 10 simultaneous
+ *  connections.  - One open results set per connection.  - No asychronous
+ *  operations.  - Haven't implemented any of the Oracle RAW types.  - Make
+ *  sure we don't leave any variables/structs that may make this code thread
+ *  unsafe.  - Move the transaction control to their own functions so that they
+ *  can be invoked by the dbConnection methods explicitly.
  */
 
 /*
@@ -87,7 +84,7 @@
  *   The original thought was to implement this Oracle driver using embedded
  *   SQL to make the code easy to port to Informix, Ingres, DB2, etc.
  *   But I now feel that it was not worth the aggravation.  Using OCI 
- *   directly would have been easier and we could better exploit 
+ *   directly would have been easier and we could better exploit  
  *   Oracle's performance.  
  *
  */
@@ -189,15 +186,19 @@ RS_Ora_newConnection(Mgr_Handle *mgrHandle, s_object *conn_params,
   conParams = RS_Ora_allocConParams();
   conParams->user = RS_DBI_nCopyString(CHR_EL(conn_params,0), ORA_BUF_LEN,0);
 #define IS_EMPTY(s1)   !strcmp((s1), "")
+/* 
   if(IS_EMPTY(conParams->user)){
      RS_Ora_freeConParams(conParams);
      RS_DBI_errorMessage("username must be non-empty", RS_DBI_ERROR);
   }
+*/
   conParams->passwd = RS_DBI_nCopyString(CHR_EL(conn_params,1), ORA_BUF_LEN,0);
+/*
   if(IS_EMPTY(conParams->passwd)){
      RS_Ora_freeConParams(conParams);
      RS_DBI_errorMessage("password must be non-empty", RS_DBI_ERROR);
   }
+*/
   conParams->dbname = RS_DBI_nCopyString(CHR_EL(conn_params,2), ORA_BUF_LEN,0);
   if(IS_EMPTY(conParams->dbname)){
      RS_Ora_freeConParams(conParams);
@@ -264,14 +265,6 @@ RS_Ora_cloneConnection(Con_Handle *conHandle)
 s_object *    /* boolean */
 RS_Ora_closeConnection(Con_Handle *conHandle)
 {
-  /* As far as I can tell, there's no way to close a connection.
-   * The Oracle ProC/C++ manual does not mention it! The X/Open std does
-   * mention the DISCONNECT embeded statement, but I just couldn't
-   * find it in any of the Oracle manuals, although I did find that
-   * ALTER SESESSION allows one to close the session (I don't think
-   * it's of much use in our embedded SQL). Thus we'll just free
-   * our own memory and return.
-   */
   S_EVALUATOR
   s_object *status;
   RS_DBI_connection *con;
@@ -284,6 +277,9 @@ RS_Ora_closeConnection(Con_Handle *conHandle)
     return status;
   }
     
+  EXEC SQL WHENEVER SQLERROR CONTINUE;
+  EXEC SQL COMMIT RELEASE;
+
   RS_Ora_freeConParams((RS_Ora_conParams *) con->conParams);
   con->conParams = (void *) NULL;
   RS_DBI_freeConnection(conHandle);
@@ -348,8 +344,8 @@ RS_Ora_prepareStatement(
   char alias[128];
 
   EXEC SQL BEGIN DECLARE SECTION;
-     char   dyn_statement[4000];
-     EXEC SQL VAR dyn_statement IS STRING(4000);
+     char   dyn_statement[20000];
+     EXEC SQL VAR dyn_statement IS STRING(20000);
   EXEC SQL END DECLARE SECTION;
 
   RS_DBI_resultSet  *result;
@@ -467,10 +463,54 @@ RS_Ora_prepareStatement(
   result->drvData = (void *) desArea;
 
   /* sqlgls() describes the parsed SQL statements (insert, select, etc.) */
-  sqlgls(deparsed_stmt, &stmt_len, &sqlFunCode); 
-  /* SQLStmtGetText(SQL_SINGLE_RCTX, deparsed_stmt, &stmt_len, &sqlFunCode); */
-  result->isSelect  = (Sint) (sqlFunCode == ORA_SQL_CODE_SELECT);
+  sqlgls(deparsed_stmt, &stmt_len, &sqlFunCode);
 
+#ifndef RS_ORA_SQLGLS_WORKAROUND
+  result->isSelect  = (Sint) (sqlFunCode == ORA_SQL_CODE_SELECT);
+#else
+  /* Workaround for the Oracle 9.2.0.x sqlgls() bug, as per David Hinds' 
+   * patch.
+   */
+  { 
+    int i;
+    for(i=0; i<stmt_len; i++)              /* convert to uppercase */
+      if(isalpha(deparsed_stmt[i]))
+         deparsed_stmt[i] = toupper(deparsed_stmt[i]);
+    for(i=0; i<stmt_len; i++)              /* skip whitespace */
+      if(isgraph(deparsed_stmt[i])) break;
+    result->isSelect = 
+      (Sint) (strncmp(deparsed_stmt, "SELECT", (size_t) 6)==0 ||
+              strncmp(deparsed_stmt, "WITH",   (size_t) 4)==0);
+  }
+#endif
+
+#if 0
+  /* here we show that sqlgls() is returning wrong codes in Oracle 9.2.0.1
+   * on Windows (I had no problems whatsoever in Linux/Oracle 8.1.7.0.1). 
+   * Note that the sql code appears to be lagged 1 sqlgls() function call.  
+   * The most relevant codes are:
+   * 1==create table,  3==insert, 4==select, 5==update, 8==drop table
+   */
+  {
+    char *str;  
+    if(stmt_len!=0){
+       str = (char *) malloc((size_t) stmt_len+1);
+       (void) strncpy(str, deparsed_stmt, stmt_len);
+       str[stmt_len] = '\0';
+    }
+    else
+       str = (char *) calloc((size_t) 1, (size_t) 1);
+    fprintf(stderr, "-------------------- DEBUG --------------------\n");
+    fprintf(stderr, "R stmt  =%s\n", result->statement);
+    if(stmt_len>0)
+    fprintf(stderr, "Ora stmt=%s\n", str);
+    fprintf(stderr, "Ora stmt_len=%d\n", (int) stmt_len);
+    fprintf(stderr, "isSelect=%d\tsqlFunCode=%d\tsqlcode=%d\n",
+       (int) result->isSelect, (int) sqlFunCode, (int) sqlca.sqlcode);
+    fprintf(stderr, "-----------------------------------------------\n");
+    fflush(stderr);
+  }
+#endif
   return rsHandle; 
 
 prepare_error:
@@ -488,7 +528,7 @@ RS_Ora_exec(Res_Handle *resHandle,
    s_object *s_data_classes,
    s_object *ora_buf_size)
 {
-   /* Limitation:  We don't fully implemented sql statements that are select
+   /* Limitation:  We don't fully implement sql statements that are select
     * AND that have input parameters larger than one bufferSize rows.  The
     * reason is somewhat complicated and due to the fact that each time
     * we need to refill the buffers we need to re-OPEN cursors -- this in turn
@@ -831,7 +871,7 @@ RS_Ora_setOraToSMappings(RS_Ora_desArea *desArea)
       flds->isVarLength[j] = (Sint) 0;
       flds->Sclass[j] = (Stype) CHARACTER_TYPE;
       break;
-    case  ORA_IN_VARCHAR2 :                /* up to 4000 chars */
+    case  ORA_IN_VARCHAR2 :                /* up to 20000 chars */
       /* Note that on input, Oracle strips blanks from a VARCHAR2
        * variable, so we'll need to do the same on output (fetch).
        */
@@ -970,6 +1010,7 @@ RS_Ora_cpyOraToDataFrame(SQLDA *select_dp, int n_rows,
             if(null_item[r]>=0){
                out = RS_DBI_nCopyString(&V[r*len], (size_t) len, isVarLength);
                SET_LST_CHR_EL(output,j,from+r, C_S_CPY(out));
+               free(out);
                if(null_item[r]>0)
                   RS_DBI_errorMessage("truncated value", RS_DBI_WARNING);
             }
@@ -1283,6 +1324,7 @@ RS_Ora_cpyDataFrameToOra(
 #endif
                   I[i] = (short) -1;               /* must be -1, not 1 */
                else {
+                  I[i] = (short) 0;  /* must re-init to clear prev. field's */
                   here = &V[i*L];
                   (void) strncpy(here, schars, L1);      /* leave space for eos */
                   for(k=(int) strlen(schars); k<L1; k++)  /* needs padding w. spaces */
@@ -1297,8 +1339,10 @@ RS_Ora_cpyDataFrameToOra(
                x = LST_NUM_EL(input, df_field, from+i);
                if(IS_NA(&x, NUMERIC_TYPE))
                   I[i] = (short) -1;
-               else
+               else {
+                  I[i] = (short) 0;
                   ((double *)V)[i] = (double) x;
+               }
             }
             break;
 
@@ -1308,8 +1352,10 @@ RS_Ora_cpyDataFrameToOra(
                d = LST_INT_EL(input, df_field, from+i);
                if(IS_NA(&d, INTEGER_TYPE))
                   I[i] = (short) -1;
-               else
+               else {
+                  I[i] = (short) 0;
                   ((Sint *)V)[i] = (Sint) d;
+               }
             }
             break;
 #ifndef USING_R
@@ -1318,9 +1364,11 @@ RS_Ora_cpyDataFrameToOra(
             for(i=0; i<n_rows; i++){
                f = LST_NUM_EL(input, df_field, from+i);
                if(IS_NA(&f, SINGLE_TYPE))
-                  I[i] = -1;
-               else
+                  I[i] = (short) -1;
+               else {
+                  I[i] = (short) 0;
                   ((float *)V)[i] = (float) f;
+               }
             }
             break;
 #endif

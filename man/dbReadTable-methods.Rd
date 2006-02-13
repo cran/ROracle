@@ -1,4 +1,4 @@
-% $Id: dbReadTable-methods.Rd,v 1.1 2003/11/03 22:41:41 dj Exp $
+% $Id: dbReadTable-methods.Rd,v 1.2 2006/02/08 19:17:00 dj Exp dj $
 \name{dbReadTable-methods}
 \docType{methods}
 \alias{dbReadTable-methods}
@@ -97,7 +97,7 @@ else
 }
 }
 }
-\keywords{methods}
+\keyword{methods}
 \keyword{interface}
 \keyword{database}
 % vim: syntax=tex

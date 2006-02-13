@@ -1,4 +1,4 @@
-% $Id: dbListTables-methods.Rd,v 1.1 2003/11/03 22:41:41 dj Exp $
+% $Id: dbListTables-methods.Rd,v 1.2 2006/02/08 19:17:00 dj Exp dj $
 \name{dbListTables-methods}
 \docType{methods}
 \alias{dbListTables-methods}
@@ -47,7 +47,7 @@ for(con in dbListConnections(drv)){
 }
 }
 }
-\keywords{methods}
+\keyword{methods}
 \keyword{interface}
 \keyword{database}
 % vim: syntax=tex

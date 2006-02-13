@@ -1,4 +1,4 @@
-% $Id: oraParseConParams.Rd,v 1.2 2003/11/04 03:09:25 dj Exp dj $
+% $Id: oraParseConParams.Rd,v 1.3 2006/02/08 19:17:00 dj Exp dj $
 \name{oraParseConParams}
 \alias{oraParseConParams}
 \title{Parse an Oracle connection string}
@@ -39,5 +39,5 @@ oraParseConParams(username="", password="", dbname=ifelse(usingR(), Sys.getenv("
 }
 }
 \keyword{database}
-\keywords{interface}
+\keyword{interface}
 % vim:syntax=tex

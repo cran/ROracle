@@ -1,4 +1,4 @@
-% $Id: dbDataType-methods.Rd,v 1.1 2003/11/03 22:41:41 dj Exp $
+% $Id: dbDataType-methods.Rd,v 1.2 2006/02/08 19:17:00 dj Exp dj $
 \name{dbDataType-methods}
 \docType{methods}
 \alias{dbDataType-methods}
@@ -38,7 +38,7 @@ drv <- dbDriver("Oracle")
 sql.type <- dbDataType(drv, quakes)
 }
 }
-\keywords{methods}
+\keyword{methods}
 \keyword{interface}
 \keyword{database}
 % docclass is function
