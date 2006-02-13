@@ -1,4 +1,4 @@
-% $Id: dbCommit-methods.Rd,v 1.1 2003/11/03 22:41:41 dj Exp $
+% $Id: dbCommit-methods.Rd,v 1.2 2006/02/08 19:17:00 dj Exp dj $
 \name{dbCommit-methods}
 \docType{methods}
 \alias{dbCommit-methods}
@@ -45,7 +45,7 @@ if(dbGetInfo(rs, what = "rowsAffected") > 250){
 }
 }
 }
-\keywords{methods}
+\keyword{methods}
 \keyword{interface}
 \keyword{database}
 % vim: syntax=tex

@@ -11,12 +11,13 @@ OBJ   = RS-DBI.o RS-Oracle.o
 ##
 ## The Oracle ProC/C++ precompiler and options we need
 ##
-PROC=proc              ## this is the ProC/C++ executable
-CODE=ANSI_C            ## the following are ProC/C++ options
+PROC=proc
+CODE=ANSI_C
 MODE=ORACLE
 PARSE=NONE
-LINES=false            ## use true for debugging
-
+LINES=false
+PREFETCH=@PREFETCH@
+#PREFETCH=0    ## uncomment when compiling w. Oracle 8i (up to 8.1.7.2)
 
 ROracle.so:  $(OBJ) 
 	R CMD SHLIB -o ROracle.so RS-DBI.o RS-Oracle.o
@@ -29,6 +30,6 @@ RS-Oracle.o: RS-Oracle.c
 
 RS-Oracle.c: RS-Oracle.h RS-Oracle.pc 
 	$(PROC) CODE=$(CODE) MODE=$(MODE) INCLUDE=$(RHOME)/include \
-                PARSE=$(PARSE) LINES=$(LINES) RS-Oracle.pc
+                PARSE=$(PARSE) LINES=$(LINES) PREFETCH=$(PREFETCH) RS-Oracle.pc
 clean:
 	rm -f $(OBJ) RS-Oracle.c

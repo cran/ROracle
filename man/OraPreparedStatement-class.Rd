@@ -1,4 +1,4 @@
-% $Id: OraPreparedStatement-class.Rd,v 1.2 2003/11/04 03:09:25 dj Exp dj $
+% $Id: OraPreparedStatement-class.Rd,v 1.3 2006/02/08 19:17:00 dj Exp dj $
 \name{OraPreparedStatement-class}
 \docType{class}
 \alias{OraPreparedStatement-class}
@@ -8,7 +8,7 @@ A class that encapsulates the information on an Oracle
 prepared statement
 }
 \section{Objects from the Class}{
-Use the method \code{\link{dbPrepareStatement}} to create an Oracle 
+Use the method \code{\link[ROracle:dbPrepareStatement-methods]{dbPrepareStatement}} to create an Oracle 
 prepared statement and \code{\link{dbExecStatement}} to re-bind new 
 data and execute the cached statement.
 }
@@ -46,7 +46,7 @@ when the SQL code is to be executed repeatedly but with different data;
 for instance when inserting the rows of a \code{data.frame} into a table
 the SQL for each row is exactly the same, only the row data changes.
 
-The function \code{\link{dbPrepareStatement}} creates objects that
+The function \code{\link[ROracle:dbPrepareStatement-methods]{dbPrepareStatement}} creates objects that
 extend the base class \code{DBIPreparedStatement}.
 These objects are simple references into C structures that store
 the various aspects (the text of the SQL statement, sets of buffers
@@ -77,7 +77,7 @@ of the R/S Database Interface definition (DBI).}
 
 \examples{\dontrun{
   ora <- dbDriver("Oracle")
-  con <- dbConnection(ora, "user/password")
+  con <- dbconnect(ora, "user/password")
   ps <- dbPrepareStatement(con, 
            "INSERT into QUAKES (lat, long_1) VALUES (:1, :2)",
            bind = c("numeric", "numeric"))

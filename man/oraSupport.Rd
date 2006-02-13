@@ -1,4 +1,4 @@
-% $Id: oraSupport.Rd,v 1.2 2003/11/04 03:09:25 dj Exp dj $
+% $Id: oraSupport.Rd,v 1.3 2006/02/08 19:17:00 dj Exp dj $
 \name{oraSupport}
 \alias{oraInitDriver}            % driver-related function
 \alias{oraDriverInfo}
@@ -27,7 +27,6 @@
 \alias{oraWriteTable}            % convenience functions
 \alias{oraTableFields}
 \alias{oraDataType}
-\alias{ora9.workaround}          % bug workaround
 \alias{.OraPkgName}              % constants
 \alias{.OraPkgVersion}
 \alias{.OraPkgRCS}
@@ -56,7 +55,6 @@
    oraConnectionInfo(obj, what)
    oraDescribeConnection(obj, verbose = FALSE, ...)
    oraCloseConnection(con, ..., force = FALSE)
-   ora9.workaround(con)
 
    ## OraResult-related
    oraExecStatement(ps, data = NULL, ora.buf.size = -1)
@@ -80,7 +78,7 @@
 
    ## data mappings and convenience functions
    oraDataType(obj, ...)
-   oraReadTable(con, name, row.names = "row.names", check.names = TRUE, ...)
+   oraReadTable(con, name, row.names = "row\_names", check.names = TRUE, ...)
    oraWriteTable(con, name, value, field.oraTypes, row.names = TRUE, 
       overwrite=FALSE, append=FALSE, ...)
    oraTableFields(con, name, ...)

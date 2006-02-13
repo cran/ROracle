@@ -64,46 +64,6 @@ Oracle software.
        > # or explicitly
        > con2 <- dbConnect(ora, "user", "password", "oras")
 
-[ The following restriction does not apply to ROracle versions 0.5-0
-  and later --- oraWriteTable() no longer requires SQL*Loader.
-]
-
-There's one problem, though.  The function oraWriteTable (which
-copies a data.frame into an Oracle table) uses the Oracle utility
-SQL*Loader that does bulk, fast data loading.  This is a program in
-$ORACLE_HOME/bin/sqlldr, thus even if you are able to statically link
-ROracle you may not have sqlldr if you don't have the Oracle software
-on your local machine.  For this case, we have extended oraWriteTable()
-to look for the argument "rhost" as part of "...".  E.g.,
-
-        > data(quakes)
-        # dbWriteTable invokes oraWriteTable
-        > dbWriteTable(con, "QUAKES", quakes, rhost = "apollo")
-        
-This will use scp (by default) to copy the data.frame quakes to 
-a tmporary file in the remote host apollo, then attempt to run the 
-SQL*Loader there.  For this to succeed, the variable ORACLE_HOME
-has to be set *on the remote host*.  We do this following the following
-heuristic:
-
-  (1) use the arg "ora.home" (if part of ...)
-      
-      > assignTable(con, "QUAKES", quakes, rhost="apollo",
-                    ora.home = "/opt/oracle") 
-
-      (you may need this as a measure of last resource, when case (2)
-       below cannot guess correctly the value of ORACLE_HOME).
-
-  (2) if the above fails, then set it to `dbhome`, which is an 
-      Oracle utility in rhost:/usr/local/bin that attempts to guess
-      the right ORACLE_HOME value (I haven't found this too reliable).
-
-The full details for assignTable() are:
-      
-  > oraWriteTable(con, "name", value, overwrite = F, append = F, 
-                rhost, ora.home = Sys.getenv("ORACLE_HOME"), 
-                rcp = "scp", rsh = "ssh", ...)
-
 NOTE: 
 
    It is possible to connect to the **default** Oracle database

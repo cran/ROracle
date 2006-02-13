@@ -1,12 +1,12 @@
-% $Id: Oracle.Rd,v 1.2 2003/11/04 03:09:25 dj Exp dj $
+% $Id: Oracle.Rd,v 1.4 2006/02/08 19:17:00 dj Exp dj $
 \name{Oracle}
 \alias{Oracle}
 \title{
-  Instantiate an Oracle client from the current R/S-Plus session
+  Instantiate an Oracle client from the current \R session
 }
 \description{
 This function creates and initializes an Oracle client from
-the current R/S-Plus session.
+the current \R session.
 It returns an object that allows you to connect 
 to one or several Oracle servers.
 }
@@ -37,7 +37,7 @@ function \code{dbConnect},
 to one or several Oracle database engines.
 }
 \section{Side Effects}{
-The R/S-Plus client part of the database communication is initialized,
+The \R client part of the database communication is initialized,
 but note that connecting to the database engine needs to be done through
 calls to \code{\link[DBI]{dbConnect}}.
 }
@@ -68,15 +68,15 @@ string of any of the following forms:
 
 \section{Prepared statements and data.frame bindings}{
 
-As of version 0.5-0, \code{ROracle} implements R/S-Plus data binding
+As of version 0.5-0, \code{ROracle} implements \R data binding
 to prepared SQL statements.  This is done in two stages with the functions
-\code{\link{dbPrepareStatement}} and \code{\link{dbExecStatement}}.
+\code{\link[ROracle:dbPrepareStatement-methods]{dbPrepareStatement}} and \code{\link{dbExecStatement}}.
 
 In the first stage of preparing a statement column numbers are embedded 
 inside the SQL statement, e.g., 
 \code{"insert into my\_table (id, name, val) VALUES (:1, :3, :2)"} 
 and the S class of those columns are specified in the \code{bind=} argument
-to \code{\link{dbPrepareStatement}} 
+to \code{\link[ROracle:dbPrepareStatement-methods]{dbPrepareStatement}} 
 
 In the second stage \code{\link{dbExecStatement}}
 binds the pre-specified columns from a supplied  \code{data=} data frame 
@@ -109,7 +109,7 @@ or roll back your work before issuing any of these helper functions.
 }
 
 \section{References}{
-For more details on the R/S-Plus database interface
+For more details on the \R database interface
 see the PDF file \code{DBI.pdf} under the \code{doc}
 directory of this package, 
 \url{http://stat.bell-labs/RS-DBI}, and
@@ -138,8 +138,8 @@ On queries, prepared statements, and result objects:
 \code{\link[DBI]{fetch}}
 \code{\link[DBI]{dbGetQuery}}
 \code{\link[DBI]{dbClearResult}}
-\code{\link{dbPrepareStatement}}   % should be moved to DBI
-\code{\link{dbExecStatement}}       % should be moved to DBI
+\code{\link[ROracle:dbPrepareStatement-methods]{dbPrepareStatement}}   % should be moved to DBI
+\code{\link[ROracle:dbPrepareStatement-methods]{dbExecStatement}}       % should be moved to DBI
 
 On transaction management:
 

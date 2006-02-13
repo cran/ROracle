@@ -1,4 +1,4 @@
-% $Id: dbConnect-methods.Rd,v 1.1 2003/11/03 22:41:41 dj Exp $
+% $Id: dbConnect-methods.Rd,v 1.2 2006/02/08 19:17:00 dj Exp dj $
 \name{dbConnect-methods}
 \docType{methods}
 \alias{dbDisconnect-methods}
@@ -72,7 +72,7 @@ data <- fetch(rs, n = -1)   # extract all rows
 dim(data)
 }
 }
-\keywords{methods}
+\keyword{methods}
 \keyword{interface}
 \keyword{database}
 % vim: syntax=tex
