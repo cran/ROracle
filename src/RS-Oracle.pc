@@ -1,6 +1,6 @@
 /* R and S-Plus Database Interface to Oracle */
 /* 
- * $Id: RS-Oracle.pc,v 1.8 2006/02/08 19:16:04 dj Exp dj $ 
+ * $Id: RS-Oracle.pc 154 2006-02-08 19:16:04Z dj $ 
  *
  * vim:syntax=c 
  */

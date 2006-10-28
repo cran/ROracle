@@ -1,6 +1,6 @@
 #ifndef _RS_Oracle_H
 #define _RS_Oracle_H 1
-/*  $Id: RS-Oracle.h,v 1.6 2006/02/08 19:16:04 dj Exp dj $
+/*  $Id: RS-Oracle.h 154 2006-02-08 19:16:04Z dj $
  *
  * Copyright (C) 1999 The Omega Project for Statistical Computing.
  *
@@ -25,7 +25,7 @@
 extern "C" {
 #endif
  
-#define  RS_ORA_VERSION "$Revision: 1.6 $"   
+#define  RS_ORA_VERSION "$Revision: 154 $"   
 #include "RS-DBI.h"
 
 #define RS_Ora_Min(a, b)  ((a)<=(b) ? (a) : (b))

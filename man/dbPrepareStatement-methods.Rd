@@ -1,4 +1,4 @@
-% $Id: dbPrepareStatement-methods.Rd,v 1.3 2006/02/08 19:17:00 dj Exp dj $
+% $Id: dbPrepareStatement-methods.Rd 216 2006-10-28 15:52:15Z sethf $
 \name{dbPrepareStatement-methods}
 \docType{methods}
 \alias{dbPrepareStatement}

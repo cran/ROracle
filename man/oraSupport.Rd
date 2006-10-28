@@ -1,4 +1,4 @@
-% $Id: oraSupport.Rd,v 1.3 2006/02/08 19:17:00 dj Exp dj $
+% $Id: oraSupport.Rd 215 2006-10-27 17:35:04Z sethf $
 \name{oraSupport}
 \alias{oraInitDriver}            % driver-related function
 \alias{oraDriverInfo}
@@ -78,7 +78,7 @@
 
    ## data mappings and convenience functions
    oraDataType(obj, ...)
-   oraReadTable(con, name, row.names = "row\_names", check.names = TRUE, ...)
+   oraReadTable(con, name, row.names = "row_names", check.names = TRUE, ...)
    oraWriteTable(con, name, value, field.oraTypes, row.names = TRUE, 
       overwrite=FALSE, append=FALSE, ...)
    oraTableFields(con, name, ...)

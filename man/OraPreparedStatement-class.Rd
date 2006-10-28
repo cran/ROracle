@@ -1,4 +1,4 @@
-% $Id: OraPreparedStatement-class.Rd,v 1.3 2006/02/08 19:17:00 dj Exp dj $
+% $Id: OraPreparedStatement-class.Rd 155 2006-02-08 19:19:08Z dj $
 \name{OraPreparedStatement-class}
 \docType{class}
 \alias{OraPreparedStatement-class}

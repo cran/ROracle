@@ -1,4 +1,4 @@
-% $Id: summary-methods.Rd,v 1.2 2003/11/04 03:09:25 dj Exp $
+% $Id: summary-methods.Rd 127 2003-11-04 03:09:25Z dj $
 \name{summary-methods}
 \docType{methods}
 \alias{coerce-methods}
