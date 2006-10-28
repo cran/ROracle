@@ -1,5 +1,5 @@
 dnl
-dnl $Id: configure.in,v 1.7 2006/02/13 21:13:10 dj Exp dj $
+dnl $Id: configure.in 156 2006-02-13 21:13:10Z dj $
 dnl
 dnl Generate a "configure" script that will install the ROracle package.
 dnl Usage:  autotconf

@@ -1,4 +1,4 @@
-% $Id: Oracle.Rd,v 1.4 2006/02/08 19:17:00 dj Exp dj $
+% $Id: Oracle.Rd 155 2006-02-08 19:19:08Z dj $
 \name{Oracle}
 \alias{Oracle}
 \title{

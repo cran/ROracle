@@ -1,4 +1,4 @@
-% $Id: dbDataType-methods.Rd,v 1.2 2006/02/08 19:17:00 dj Exp dj $
+% $Id: dbDataType-methods.Rd 155 2006-02-08 19:19:08Z dj $
 \name{dbDataType-methods}
 \docType{methods}
 \alias{dbDataType-methods}

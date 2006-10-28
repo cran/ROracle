@@ -1,4 +1,4 @@
-% $Id: DBIPreparedStatement-class.Rd,v 1.1 2003/11/03 22:41:41 dj Exp $
+% $Id: DBIPreparedStatement-class.Rd 126 2003-11-03 22:41:41Z dj $
 \name{DBIPreparedStatement-class}
 \docType{class}
 \alias{DBIPreparedStatement-class}
