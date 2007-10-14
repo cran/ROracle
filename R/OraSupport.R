@@ -1,5 +1,5 @@
 ##
-## $Id: OraSupport.R 155 2006-02-08 19:19:08Z dj $
+## $Id: OraSupport.R 335 2007-10-14 22:00:36Z daj025@gmail.com $
 ##
 ## Copyright (C) 1999-2002 The Omega Project for Statistical Computing.
 ##
@@ -542,7 +542,7 @@ function(con, name, row.names = "row_names", check.names = TRUE, ...)
    if(inherits(out, ErrorClass))
       stop(paste("could not find table", name))
    if(check.names)
-       names(out) <- make.names(names(out), unique = T)
+       names(out) <- make.names(names(out), unique = TRUE)
    ## should we set the row.names of the output data.frame?
    nms <- names(out)
    j <- switch(mode(row.names),
