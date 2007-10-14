@@ -1,4 +1,4 @@
-% $Id: Oracle.Rd 155 2006-02-08 19:19:08Z dj $
+% $Id: Oracle.Rd 335 2007-10-14 22:00:36Z daj025@gmail.com $
 \name{Oracle}
 \alias{Oracle}
 \title{
@@ -11,7 +11,7 @@ It returns an object that allows you to connect
 to one or several Oracle servers.
 }
 \usage{
-Oracle(max.con = 10, fetch.default.rec = 500, force.reload = F)
+Oracle(max.con = 10, fetch.default.rec = 500, force.reload = FALSE)
 }
 \arguments{
 \item{max.con }{

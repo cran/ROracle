@@ -1,5 +1,5 @@
 ##
-## $Id: Oracle.R 206 2006-10-25 20:35:14Z sethf $
+## $Id: Oracle.R 335 2007-10-14 22:00:36Z daj025@gmail.com $
 ##
 ## Copyright (C) 1999-2002 The Omega Project for Statistical Computing.
 ##
@@ -22,8 +22,8 @@
 ##
 
 .OraPkgName <- "ROracle"  
-.OraPkgRCS  <- "$Id: Oracle.R 206 2006-10-25 20:35:14Z sethf $"
-.OraPkgVersion <- "0.5-7" #package.description(.OraPkgName, fields = "Version")
+.OraPkgRCS  <- "$Id: Oracle.R 335 2007-10-14 22:00:36Z daj025@gmail.com $"
+.OraPkgVersion <- "0.5-9" #package.description(.OraPkgName, fields = "Version")
 .Ora.NA.string <- ""         ## char that Oracle maps to NULL
 
 setOldClass("data.frame") ## to appease setMethod's signature warnings...
@@ -69,7 +69,7 @@ setAs("OraObject", "OraDriver",
 )
 
 "Oracle" <- 
-function(max.con=10, fetch.default.rec = 500, force.reload=F)
+function(max.con=10, fetch.default.rec = 500, force.reload=FALSE)
 {
    oraInitDriver(max.con, fetch.default.rec, force.reload)
 }
