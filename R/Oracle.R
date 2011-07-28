@@ -1,5 +1,5 @@
 ##
-## $Id: Oracle.R 335 2007-10-14 22:00:36Z daj025@gmail.com $
+## $Id: Oracle.R st_server_demukhin_r/1 2011/07/22 22:11:36 vsashika Exp $
 ##
 ## Copyright (C) 1999-2002 The Omega Project for Statistical Computing.
 ##
@@ -22,7 +22,7 @@
 ##
 
 .OraPkgName <- "ROracle"  
-.OraPkgRCS  <- "$Id: Oracle.R 335 2007-10-14 22:00:36Z daj025@gmail.com $"
+.OraPkgRCS  <- "$Id: Oracle.R st_server_demukhin_r/1 2011/07/22 22:11:36 vsashika Exp $"
 .OraPkgVersion <- "0.5-9" #package.description(.OraPkgName, fields = "Version")
 .Ora.NA.string <- ""         ## char that Oracle maps to NULL
 

@@ -1,5 +1,5 @@
 ##
-## $Id: dbObjectId.R 52 2002-08-23 21:43:13Z dj $
+## $Id: dbObjectId.R st_server_demukhin_r/1 2011/07/22 22:11:36 vsashika Exp $
 ## 
 ## Copyright (C) 1999-2002 The Omega Project for Statistical Computing.
 ##

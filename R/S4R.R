@@ -1,5 +1,5 @@
 ##
-## $Id: S4R.R 55 2002-08-23 21:46:21Z dj $
+## $Id: S4R.R st_server_demukhin_r/1 2011/07/22 22:11:37 vsashika Exp $
 ##
 ## S4/Splus/R compatibility 
 

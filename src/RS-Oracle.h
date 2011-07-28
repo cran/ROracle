@@ -1,6 +1,6 @@
 #ifndef _RS_Oracle_H
 #define _RS_Oracle_H 1
-/*  $Id: RS-Oracle.h 154 2006-02-08 19:16:04Z dj $
+/*  $Id: RS-Oracle.h st_server_demukhin_r/1 2011/07/22 22:11:38 vsashika Exp $
  *
  * Copyright (C) 1999 The Omega Project for Statistical Computing.
  *
@@ -25,7 +25,7 @@
 extern "C" {
 #endif
  
-#define  RS_ORA_VERSION "$Revision: 154 $"   
+#define  RS_ORA_VERSION "$Revision: st_server_demukhin_r/1 $"   
 #include "RS-DBI.h"
 
 #define RS_Ora_Min(a, b)  ((a)<=(b) ? (a) : (b))
@@ -55,7 +55,7 @@ EXEC SQL INCLUDE SQLDA;    /* i.e., #include <sqlda.h> */
 
 /* Oracle-specific magic numbers */
 #define RS_ORA_MAX_STRING      4000  /* max VARCHAR2/String we'll import */
-#define RS_ORA_STATEMENT_LEN   20000  /* dynamic statement length */
+#define RS_ORA_STATEMENT_LEN  200000 /* dynamic statement length */
 #define RS_ORA_MAX_ITEMS        256  /* max items in selects, SQL92 is 100 */
 #define RS_ORA_MAX_VNAME_LEN     30  /* name len (ANSI SQL92 max is 18) */
 #define RS_ORA_NUM_CURSORS       10  /* SQL92 max is 10, Oracle's 100 */

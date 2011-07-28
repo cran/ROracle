@@ -1,5 +1,5 @@
 ## 
-## $Id: Makefile.win 163 2006-08-31 23:02:35Z sethf $
+## $Id: Makefile.win st_server_demukhin_r/1 2011/07/22 22:11:37 vsashika Exp $
 ##
 ## We need the Microsoft Visual C/C++ to compile ROracle.dll in order
 ## to satisfy Oracle's requirements (I think).  See the manual 

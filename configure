@@ -2474,7 +2474,7 @@ static:
 !
 
 if test -z "${PKG_LIBS}" ; then
-   PKG_LIBS=`make -f "${tmp_makefile}" "${load}"`
+   PKG_LIBS=`make -s -f "${tmp_makefile}" "${load}"`
    PKG_LIBS="${PKG_LIBS} ${enable_extralibs}"
    export PKG_LIBS
    rm -rf "${tmp_makefile}"
@@ -3376,5 +3376,4 @@ if test "$no_create" != yes; then
   # would make configure fail if this is the last instruction.
   $ac_cs_success || { (exit 1); exit 1; }
 fi
-
 
