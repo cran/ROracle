@@ -1,4 +1,4 @@
-% $Id: oraSupport.Rd 215 2006-10-27 17:35:04Z sethf $
+% $Id: oraSupport.Rd st_server_demukhin_r/1 2011/07/22 22:11:35 vsashika Exp $
 \name{oraSupport}
 \alias{oraInitDriver}            % driver-related function
 \alias{oraDriverInfo}

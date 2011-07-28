@@ -1,4 +1,4 @@
-% $Id: safe.write.Rd 127 2003-11-04 03:09:25Z dj $
+% $Id: safe.write.Rd st_server_demukhin_r/2 2011/07/27 13:16:05 paboyoun Exp $
 \name{safe.write}
 \alias{safe.write}
 \title{Write a data.frame avoiding exceeding memory limits}
@@ -16,7 +16,7 @@ safe.write(value, file, batch, ...)
   \item{\dots}{any other arguments are passed to \code{write.table}.}
 }
 \details{
-   The function has a while loop invoking \code{\link[base]{write.table}}
+   The function has a while loop invoking \code{\link[utils]{write.table}}
    for subsets of \code{batch} rows of \code{value}.  Since this is
    a helper function for \code{\link[ROracle]{oraWriteTable}} has hardcoded
    other arguments to \code{write.table}.
@@ -26,7 +26,7 @@ safe.write(value, file, batch, ...)
 }
 \note{No error checking whatsoever is done.}
 
-\seealso{\code{\link[base]{write.table}}} 
+\seealso{\code{\link[utils]{write.table}}} 
 
 \examples{\dontrun{
    ctr.file <- file("dump.sqloader", "w")

@@ -1,4 +1,4 @@
-% $Id: OraConnection-class.Rd 155 2006-02-08 19:19:08Z dj $
+% $Id: OraConnection-class.Rd st_server_demukhin_r/1 2011/07/22 22:11:34 vsashika Exp $
 \name{OraConnection-class}
 \docType{class}
 \alias{OraConnection-class}

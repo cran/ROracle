@@ -1,4 +1,4 @@
-% $Id: dbSendQuery-methods.Rd 155 2006-02-08 19:19:08Z dj $
+% $Id: dbSendQuery-methods.Rd st_server_demukhin_r/1 2011/07/22 22:11:33 vsashika Exp $
 \name{dbSendQuery-methods}
 \docType{methods}
 \alias{dbSendQuery-methods}

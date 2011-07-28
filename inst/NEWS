@@ -1,3 +1,17 @@
+Version 0.5-11
+
+* Added namespace to package.
+
+Version 0.5-10
+
+* Increased maximum SQL statement length from 20000 to 200000.
+
+* Fixed buffer sizes when copying data frame to Oracle.
+
+* Fixed casting of pointer assignments in C.
+
+* Fixed broken links in man pages.
+
 Version 0.5-9
 
 * Trivial changes to make "R CMD check" happy.

@@ -1,0 +1,21 @@
+useDynLib(ROracle)
+
+import(methods)
+import(DBI)
+importFrom(utils, write.table)
+
+
+exportClasses(DBIPreparedStatement, dbObjectId, OraConnection, OraDriver,
+              OraObject, OraPreparedStatement, OraResult)
+
+exportMethods(coerce, dbCallProc, dbClearResult, dbColumnInfo, dbCommit,
+              dbConnect, dbDataType, dbDisconnect, dbExecStatement,
+              dbExistsTable, dbGetException, dbGetInfo, dbGetQuery,
+              dbGetRowCount, dbGetRowsAffected, dbGetStatement, dbHasCompleted,
+              dbListConnections, dbListFields, dbListResults, dbListTables,
+              dbPrepareStatement, dbReadTable, dbRemoveTable, dbRollback,
+              dbSendQuery, dbUnloadDriver, dbWriteTable, fetch, format,
+              isSQLKeyword, make.db.names, print, show, SQLKeywords, summary)
+
+exportPattern("^[^\\.]")
+

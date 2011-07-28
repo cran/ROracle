@@ -1,5 +1,5 @@
 /* 
- * $Id: RS-DBI.c 153 2006-02-08 19:15:25Z dj $ 
+ * $Id: RS-DBI.c st_server_demukhin_r/2 2011/07/27 13:16:05 paboyoun Exp $ 
  *
  *
  * Copyright (C) 1999-2002 The Omega Project for Statistical Computing
@@ -1172,7 +1172,7 @@ RS_DBI_makeSQLNames(s_object *snames)
 
    nstrings = (Sint) GET_LENGTH(snames);
    for(i = 0; i<nstrings; i++){
-      name = CHR_EL(snames, i);
+      name = (char *) CHR_EL(snames, i);
       if(strlen(name)> RS_DBI_MAX_IDENTIFIER_LENGTH){
 	 (void) sprintf(errMsg,"SQL identifier %s longer than %d chars", 
 			name, RS_DBI_MAX_IDENTIFIER_LENGTH);
@@ -1223,7 +1223,7 @@ RS_na_set(void *ptr, Stype type)
     break;
   case STRING_TYPE:
     c = (char *) ptr;
-    c = CHR_EL(NA_STRING, 0);
+    c = (char *) CHR_EL(NA_STRING, 0);
     break;
   }
 }

@@ -1,6 +1,6 @@
 /* R and S-Plus Database Interface to Oracle */
 /* 
- * $Id: RS-Oracle.pc 154 2006-02-08 19:16:04Z dj $ 
+ * $Id: RS-Oracle.pc st_server_demukhin_r/2 2011/07/27 13:16:05 paboyoun Exp $ 
  *
  * vim:syntax=c 
  */
@@ -344,8 +344,9 @@ RS_Ora_prepareStatement(
   char alias[128];
 
   EXEC SQL BEGIN DECLARE SECTION;
-     char   dyn_statement[20000];
-     EXEC SQL VAR dyn_statement IS STRING(20000);
+     /* Update to use #define from RS-Oracle.h */
+     char   dyn_statement[200000];
+     EXEC SQL VAR dyn_statement IS STRING(200000);
   EXEC SQL END DECLARE SECTION;
 
   RS_DBI_resultSet  *result;
@@ -871,7 +872,7 @@ RS_Ora_setOraToSMappings(RS_Ora_desArea *desArea)
       flds->isVarLength[j] = (Sint) 0;
       flds->Sclass[j] = (Stype) CHARACTER_TYPE;
       break;
-    case  ORA_IN_VARCHAR2 :                /* up to 20000 chars */
+    case  ORA_IN_VARCHAR2 :                /* up to 65534 chars */
       /* Note that on input, Oracle strips blanks from a VARCHAR2
        * variable, so we'll need to do the same on output (fetch).
        */
@@ -1316,7 +1317,7 @@ RS_Ora_cpyDataFrameToOra(
 
          case CHARACTER_TYPE:
             for(i=0; i<n_rows; i++){
-               schars = LST_CHR_EL(input, df_field, from+i);
+               schars = (char *) LST_CHR_EL(input, df_field, from+i);
 #ifdef USING_R
                if(STRING_ELT(LST_EL(input,df_field),from+i)==NA_STRING)
 #else
@@ -1328,13 +1329,14 @@ RS_Ora_cpyDataFrameToOra(
                   here = &V[i*L];
                   (void) strncpy(here, schars, L1);      /* leave space for eos */
                   for(k=(int) strlen(schars); k<L1; k++)  /* needs padding w. spaces */
-                     here[k] = ' ';
+                     here[k] = '\0';
                   here[L1] = '\0';
                }
             }
             break;
 
          case NUMERIC_TYPE:
+            bind_dp->L[j] = (long) sizeof(double);
             for(i=0; i<n_rows; i++){
                x = LST_NUM_EL(input, df_field, from+i);
                if(IS_NA(&x, NUMERIC_TYPE))
@@ -1348,6 +1350,7 @@ RS_Ora_cpyDataFrameToOra(
 
          case INTEGER_TYPE:    /* we use the fact that logical *are* int */
          case LOGICAL_TYPE:
+            bind_dp->L[j] = (long) sizeof(Sint);
             for(i=0; i<n_rows; i++){
                d = LST_INT_EL(input, df_field, from+i);
                if(IS_NA(&d, INTEGER_TYPE))
@@ -1361,6 +1364,7 @@ RS_Ora_cpyDataFrameToOra(
 #ifndef USING_R
          /* S-Plus also needs to RAW_TYPE */
          case SINGLE_TYPE:
+            bind_dp->L[j] = (long) sizeof(double);
             for(i=0; i<n_rows; i++){
                f = LST_NUM_EL(input, df_field, from+i);
                if(IS_NA(&f, SINGLE_TYPE))
@@ -2130,7 +2134,7 @@ RS_SclassNames_To_StypeIds(s_object *s_col_classes)
       RS_DBI_errorMessage(
          "could not calloc array for Stype", RS_DBI_ERROR); 
    for(j=0; j<ncols; j++){
-      buff = CHR_EL(s_col_classes, (Sint) j);
+      buff = (char *) CHR_EL(s_col_classes, (Sint) j);
       if(strcmp(buff, "character")==0)
          S_dataClasses[j] = CHARACTER_TYPE;
       else if(strcmp(buff, "numeric")==0)

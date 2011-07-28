@@ -1,4 +1,4 @@
-% $Id: oraParseConParams.Rd 155 2006-02-08 19:19:08Z dj $
+% $Id: oraParseConParams.Rd st_server_demukhin_r/1 2011/07/22 22:11:35 vsashika Exp $
 \name{oraParseConParams}
 \alias{oraParseConParams}
 \title{Parse an Oracle connection string}

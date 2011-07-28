@@ -1,5 +1,5 @@
 ##
-## $Id: OraSupport.R 335 2007-10-14 22:00:36Z daj025@gmail.com $
+## $Id: OraSupport.R st_server_demukhin_r/2 2011/07/27 13:16:05 paboyoun Exp $
 ##
 ## Copyright (C) 1999-2002 The Omega Project for Statistical Computing.
 ##
@@ -514,7 +514,11 @@ function(obj, ...)
    } 
    else {
       "OraCharType" <- function(x){
-         n <- max(nchar(as.character(x)))+1  ## do we really the +1?
+         n <- unique(nchar(as.character(x)))
+         if (length(n) > 1)
+            n <- 2^(ceiling(log2(max(n)))+1) ## add padding
+         else if (n==0)
+            n <- 2
          if(n>4000)
             "long"
          else

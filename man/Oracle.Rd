@@ -1,4 +1,4 @@
-% $Id: Oracle.Rd 335 2007-10-14 22:00:36Z daj025@gmail.com $
+% $Id: Oracle.Rd st_server_demukhin_r/2 2011/07/27 13:16:05 paboyoun Exp $
 \name{Oracle}
 \alias{Oracle}
 \title{
@@ -158,7 +158,7 @@ On meta-data:
 \code{\link[DBI]{dbGetStatement}}
 \code{\link[DBI]{dbHasCompleted}}
 \code{\link[DBI]{dbGetRowCount}}
-\code{\link[DBI]{dbGetAffectedRows}}
+\code{\link[DBI]{dbGetRowsAffected}}
 }
 \examples{\dontrun{
 ## create a Oracle instance and create one connection.

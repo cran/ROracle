@@ -1,7 +1,7 @@
-## $Id: zzz.R 155 2006-02-08 19:19:08Z dj $
+## $Id: zzz.R st_server_demukhin_r/1 2011/07/22 22:11:37 vsashika Exp $
 
-".First.lib" <- 
+".First.lib" <- ".onLoad" <- 
 function(lib, pkg) 
 {
-   library.dynam(.OraPkgName, pkg, lib)
+   if(!usingR()) library.dynam(.OraPkgName, pkg, lib)
 }
