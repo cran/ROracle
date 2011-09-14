@@ -1,5 +1,5 @@
 /* 
- * $Id: RS-DBI.c st_server_demukhin_r/2 2011/07/27 13:16:05 paboyoun Exp $ 
+ * $Id: RS-DBI.c st_server_demukhin_r/4 2011/08/29 11:07:19 paboyoun Exp $ 
  *
  *
  * Copyright (C) 1999-2002 The Omega Project for Statistical Computing
@@ -19,6 +19,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include <ctype.h>
 #include "RS-DBI.h"
 
 /* TODO: monitor memory/object size consumption against S limits 
@@ -74,7 +75,7 @@ RS_DBI_allocManager(const char *drvName, Sint max_con,
   mgr->drvData = (void *) NULL;
   mgr->managerId = mgr_id;
   mgr->connections =  (RS_DBI_connection **) 
-    calloc((size_t) max_con, sizeof(RS_DBI_connection));
+    calloc((size_t) max_con, sizeof(RS_DBI_connection *));
   if(!mgr->connections){
     free(mgr);
     RS_DBI_errorMessage("could not calloc RS_DBI_connections", RS_DBI_ERROR);
@@ -168,7 +169,7 @@ RS_DBI_allocConnection(Mgr_Handle *mgrHandle, Sint max_res)
   
   /* result sets for this connection */
   con->resultSets = (RS_DBI_resultSet **)
-    calloc((size_t) max_res, sizeof(RS_DBI_resultSet));
+    calloc((size_t) max_res, sizeof(RS_DBI_resultSet *));
   if(!con->resultSets){
     char  *errMsg = "could not calloc resultSets for the dbConnection";
     RS_DBI_freeEntry(mgr->connectionIds, indx);
@@ -382,63 +383,6 @@ RS_DBI_freeFields(RS_DBI_fields *flds)
   return;
 }
 
-/* Make a data.frame from a named list by adding row.names, and class 
- * attribute.  Use "1", "2", .. as row.names.
- * NOTE: Only tested  under R (not tested at all under S4 or Splus5+).
- */
-void
-RS_DBI_makeDataFrame(s_object *data)
-{
-   S_EVALUATOR
-
-   s_object *row_names, *df_class_name; 
-#ifndef USING_R
-   s_object *S_RowNamesSymbol;       /* mimic Rinternal.h R_RowNamesSymbol */
-   s_object *S_ClassSymbol;
-#endif
-   Sint   i, n;
-   char   buf[1024];
-   
-#ifndef USING_R
-   if(IS_LIST(data))
-      data = AS_LIST(data);
-   else
-      RS_DBI_errorMessage(
-            "internal error in RS_DBI_makeDataFrame: could not corce named-list into data.frame",
-            RS_DBI_ERROR);
-#endif
-
-   MEM_PROTECT(data);
-   MEM_PROTECT(df_class_name = NEW_CHARACTER((Sint) 1));
-   SET_CHR_EL(df_class_name, 0, C_S_CPY("data.frame"));
-
-   /* row.names */
-   n = GET_LENGTH(LST_EL(data,0));            /* length(data[[1]]) */
-   MEM_PROTECT(row_names = NEW_CHARACTER(n));
-   for(i=0; i<n; i++){
-      (void) sprintf(buf, "%d", i+1);
-      SET_CHR_EL(row_names, i, C_S_CPY(buf));
-   }
-#ifdef USING_R
-   SET_ROWNAMES(data, row_names);
-   SET_CLASS_NAME(data, df_class_name);
-#else
-   /* untested S4/Splus code */
-   MEM_PROTECT(S_RowNamesSymbol = NEW_CHARACTER((Sint) 1));
-   SET_CHR_EL(S_RowNamesSymbol, 0, C_S_CPY("row.names"));
-
-   MEM_PROTECT(S_ClassSymbol = NEW_CHARACTER((Sint) 1));
-   SET_CHR_EL(S_ClassSymbol, 0, C_S_CPY("class"));
-   /* Note: the fun attribute() is just an educated guess as to 
-    * which function to use for setting attributes (see S.h) 
-    */
-   (void) attribute(data, S_ClassSymbol, df_class_name); 
-   MEM_UNPROTECT(2);
-#endif
-   MEM_UNPROTECT(3);
-   return;
-}
-
 void
 RS_DBI_allocOutput(s_object *output, RS_DBI_fields *flds,
 		   Sint num_rec, Sint  expand)
@@ -541,35 +485,6 @@ RS_DBI_validHandle(Db_Handle *handle)
    return valid;
 }
     
-void 
-RS_DBI_setException(Db_Handle *handle, DBI_EXCEPTION exceptionType,
-		    int errorNum, const char *errorMsg)
-{
-  HANDLE_TYPE handleType;
-  
-  handleType = (int) GET_LENGTH(handle);
-  if(handleType == MGR_HANDLE_TYPE){
-    RS_DBI_manager *obj;
-    obj =  RS_DBI_getManager(handle);
-    obj->exception->exceptionType = exceptionType;
-    obj->exception->errorNum = errorNum;
-    obj->exception->errorMsg = RS_DBI_copyString(errorMsg);
-  } 
-  else if(handleType==CON_HANDLE_TYPE){
-    RS_DBI_connection *obj;
-    obj = RS_DBI_getConnection(handle);
-    obj->exception->exceptionType = exceptionType;
-    obj->exception->errorNum = errorNum;
-    obj->exception->errorMsg = RS_DBI_copyString(errorMsg);
-  } 
-  else {
-    RS_DBI_errorMessage(
-          "internal error in RS_DBI_setException: could not setException",
-          RS_DBI_ERROR);
-  }
-  return;
-}
-
 void 
 RS_DBI_errorMessage(char *msg, DBI_EXCEPTION exception_type)
 {
@@ -880,22 +795,6 @@ RS_DBI_lookup(Sint *table, Sint length, Sint obj_id)
   }
   return indx;
 }
-
-/* return a list of entries pointed by *entries (we allocate the space,
- * but the caller should free() it).  The function returns the number
- * of entries.
- */
-Sint 
-RS_DBI_listEntries(Sint *table, Sint length, Sint *entries)
-{
-  int i,n;
-
-  for(i=n=0; i<length; i++){
-    if(table[i]<0) continue;
-    entries[n++] = table[i];
-  }
-  return n;
-}
 void 
 RS_DBI_freeEntry(Sint *table, Sint indx)
 { /* no error checking!!! */
@@ -941,189 +840,6 @@ is_validHandle(Db_Handle *handle, HANDLE_TYPE handleType)
   if(!con->resultSets[indx]) return 0;
 
   return 1;
-}
-
-/* The following 3 routines provide metadata for the 3 main objects 
- * dbManager, dbConnection and dbResultSet.  These functions 
- * an object Id and return a list with all the meta-data. In R/S we 
- * simply invoke one of these and extract the metadata piece we need, 
- * which can be NULL if non-existent or un-implemented.
- * 
- * Actually, each driver should modify these functions to add the
- * driver-specific info, such as server version, client version, etc.
- * That's how the various RS_MySQL_managerInfo, etc., were implemented.
- */
-
-s_object *         /* named list */
-RS_DBI_managerInfo(Mgr_Handle *mgrHandle)
-{
-  S_EVALUATOR
-
-  RS_DBI_manager *mgr;
-  s_object *output;
-  Sint  i, num_con;
-  Sint n = (Sint) 7;
-  char *mgrDesc[] = {"connectionIds", "fetch_default_rec","managerId",
-		     "length", "num_con", "counter", "clientVersion"};
-  Stype mgrType[] = {INTEGER_TYPE, INTEGER_TYPE, INTEGER_TYPE,
-		     INTEGER_TYPE, INTEGER_TYPE, INTEGER_TYPE, 
-                     CHARACTER_TYPE};
-  Sint  mgrLen[]  = {1, 1, 1, 1, 1, 1, 1};
-  
-  mgr = RS_DBI_getManager(mgrHandle);
-  num_con = (Sint) mgr->num_con;
-  mgrLen[0] = num_con;
-
-  output = RS_DBI_createNamedList(mgrDesc, mgrType, mgrLen, n);
-#ifndef USING_R
-  if(IS_LIST(output))
-    output = AS_LIST(output);
-  else
-    RS_DBI_errorMessage(
-          "internal error: could not alloc named list", 
-    	  RS_DBI_ERROR);
-#endif
-  for(i = 0; i < num_con; i++)
-    LST_INT_EL(output,0,i) = (Sint) mgr->connectionIds[i];
-
-  LST_INT_EL(output,1,0) = (Sint) mgr->fetch_default_rec;
-  LST_INT_EL(output,2,0) = (Sint) mgr->managerId;
-  LST_INT_EL(output,3,0) = (Sint) mgr->length;
-  LST_INT_EL(output,4,0) = (Sint) mgr->num_con;
-  LST_INT_EL(output,5,0) = (Sint) mgr->counter;
-  SET_LST_CHR_EL(output,6,0,C_S_CPY("NA"));   /* client versions? */
-
-  return output;
-}
-
-/* The following should be considered templetes to be 
- * implemented by individual drivers.
- */
-
-s_object *        /* return a named list */
-RS_DBI_connectionInfo(Con_Handle *conHandle)
-{
-  S_EVALUATOR
-  
-  RS_DBI_connection  *con;
-  s_object *output;
-  Sint     i;
-  Sint  n = (Sint) 8;
-  char *conDesc[] = {"host", "user", "dbname", "conType",
-		     "serverVersion", "protocolVersion",
-		     "threadId", "rsHandle"};
-  Stype conType[] = {CHARACTER_TYPE, CHARACTER_TYPE, CHARACTER_TYPE,
-		      CHARACTER_TYPE, CHARACTER_TYPE, INTEGER_TYPE,
-		      INTEGER_TYPE, INTEGER_TYPE};
-  Sint  conLen[]  = {1, 1, 1, 1, 1, 1, 1, -1};
-
-  con = RS_DBI_getConnection(conHandle);
-  conLen[7] = con->num_res;   /* number of resultSets opened */
-
-  output = RS_DBI_createNamedList(conDesc, conType, conLen, n);
-#ifndef USING_R
-  if(IS_LIST(output))
-    output = AS_LIST(output);
-  else
-    RS_DBI_errorMessage(
-          "internal error in RS_DBI_connectionInfo: could not alloc named list",
-	  RS_DBI_ERROR);
-#endif
-  /* dummy */
-  SET_LST_CHR_EL(output,0,0,C_S_CPY("NA"));        /* host */
-  SET_LST_CHR_EL(output,1,0,C_S_CPY("NA"));        /* dbname */
-  SET_LST_CHR_EL(output,2,0,C_S_CPY("NA"));        /* user */
-  SET_LST_CHR_EL(output,3,0,C_S_CPY("NA"));        /* conType */
-  SET_LST_CHR_EL(output,4,0,C_S_CPY("NA"));        /* serverVersion */
-
-  LST_INT_EL(output,5,0) = (Sint) -1;            /* protocolVersion */
-  LST_INT_EL(output,6,0) = (Sint) -1;            /* threadId */
-
-  for(i=0; i < con->num_res; i++)
-    LST_INT_EL(output,7,(Sint) i) = con->resultSetIds[i];
-
-  return output;
-}
-
-s_object *       /* return a named list */
-RS_DBI_resultSetInfo(Res_Handle *rsHandle)
-{
-  S_EVALUATOR
-
-  RS_DBI_resultSet       *result;
-  s_object  *output, *flds;
-  Sint  n = (Sint) 6;
-  char  *rsDesc[] = {"statement", "isSelect", "rowsAffected",
-		     "rowCount", "completed", "fields"};
-  Stype rsType[]  = {CHARACTER_TYPE, INTEGER_TYPE, INTEGER_TYPE,
-		     INTEGER_TYPE,   INTEGER_TYPE, LIST_TYPE};
-  Sint  rsLen[]   = {1, 1, 1, 1, 1, 1};
-
-  result = RS_DBI_getResultSet(rsHandle);
-  if(result->fields)
-    flds = RS_DBI_copyfields(result->fields);
-  else
-    flds = S_NULL_ENTRY;
-
-  output = RS_DBI_createNamedList(rsDesc, rsType, rsLen, n);
-#ifndef USING_R
-  if(IS_LIST(output))
-    output = AS_LIST(output);
-  else
-    RS_DBI_errorMessage(
-          "internal error in RS_DBI_resultSetInfo: could not alloc named list",
-	  RS_DBI_ERROR);
-#endif
-  SET_LST_CHR_EL(output,0,0,C_S_CPY(result->statement));
-  LST_INT_EL(output,1,0) = result->isSelect;
-  LST_INT_EL(output,2,0) = result->rowsAffected;
-  LST_INT_EL(output,3,0) = result->rowCount;
-  LST_INT_EL(output,4,0) = result->completed;
-  SET_ELEMENT(LST_EL(output, 5), (Sint) 0, flds);
-
-  return output;
-}
-
-s_object *    /* named list */
-RS_DBI_getFieldDescriptions(RS_DBI_fields *flds)
-{
-  S_EVALUATOR
-
-  s_object *S_fields;
-  Sint  n = (Sint) 7;
-  Sint  lengths[7];
-  char  *desc[]={"name", "Sclass", "type", "len", "precision",
-		"scale","nullOK"};
-  Stype types[] = {CHARACTER_TYPE, INTEGER_TYPE, INTEGER_TYPE,
-		   INTEGER_TYPE, INTEGER_TYPE, INTEGER_TYPE,
-		   LOGICAL_TYPE};
-  Sint   i, j;
-  int    num_fields;
-
-  num_fields = flds->num_fields;
-  for(j = 0; j < n; j++) 
-    lengths[j] = (Sint) num_fields;
-  S_fields =  RS_DBI_createNamedList(desc, types, lengths, n);
-#ifndef USING_R
-  if(IS_LIST(S_fields))
-    S_fields = AS_LIST(S_fields);
-  else
-    RS_DBI_errorMessage(
-          "internal error in RS_DBI_getFieldDescription: could not alloc named list",
-          RS_DBI_ERROR);
-#endif
-  /* copy contentes from flds into an R/S list */
-  for(i = 0; i < (Sint) num_fields; i++){
-    SET_LST_CHR_EL(S_fields,0,i,C_S_CPY(flds->name[i]));
-    LST_INT_EL(S_fields,1,i) = (Sint) flds->Sclass[i];
-    LST_INT_EL(S_fields,2,i) = (Sint) flds->type[i];
-    LST_INT_EL(S_fields,3,i) = (Sint) flds->length[i];
-    LST_INT_EL(S_fields,4,i) = (Sint) flds->precision[i];
-    LST_INT_EL(S_fields,5,i) = (Sint) flds->scale[i];
-    LST_INT_EL(S_fields,6,i) = (Sint) flds->nullOk[i];
-  }
-
-  return(S_fields);
 }
 
 /* given a type id return its human-readable name.
@@ -1274,10 +990,17 @@ const struct data_types RS_dataTypeTable[] = {
     { "any",		ANYSXP	   },
     { "expression",	EXPRSXP	   },
     { "list",		VECSXP	   },
+    { "externalptr",	EXTPTRSXP  },
+#ifdef BYTECODE
+    { "bytecode",	BCODESXP   },
+#endif
+    { "weakref",	WEAKREFSXP },
+    { "raw",		RAWSXP },
+    { "S4",		S4SXP },
     /* aliases : */
     { "numeric",	REALSXP	   },
     { "name",		SYMSXP	   },
-    { (char *)0,	-1	   }
+    { (char *)NULL,	-1	   }
 #else
     { "logical",	LGL	  },
     { "integer",	INT	  },

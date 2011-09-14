@@ -9,7 +9,7 @@
    and "dbname".
 }
 \usage{
-oraParseConParams(username="", password="", dbname=ifelse(usingR(), Sys.getenv("ORACLE_SID"), getenv("ORACLE_SID")))
+oraParseConParams(username="", password="", dbname=ifelse(is.R(), Sys.getenv("ORACLE_SID"), getenv("ORACLE_SID")))
 }
 \arguments{
   \item{username}{a character string of the form "username/passwd@dbname".

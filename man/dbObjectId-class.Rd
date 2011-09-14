@@ -23,7 +23,6 @@
     \item{coerce}{\code{signature(from = "dbObjectId", to = "numeric")}: ... }
     \item{coerce}{\code{signature(from = "dbObjectId", to = "character")}: ... }
     \item{format}{\code{signature(x = "dbObjectId")}: ... }
-    \item{print}{\code{signature(x = "dbObjectId")}: ... }
     \item{show}{\code{signature(object = "dbObjectId")}: ... }
   }
 }

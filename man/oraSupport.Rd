@@ -49,7 +49,7 @@
 
    ## OraConnection-related
    oraNewConnection(drv, username="", password="", 
-      dbname = if(usingR()) Sys.getenv("ORACLE_SID") else getenv("ORACLE_SID"),
+      dbname = if(is.R()) Sys.getenv("ORACLE_SID") else getenv("ORACLE_SID"),
       max.results = 1)
    oraCloneConnection(drv, ...)
    oraConnectionInfo(obj, what)
