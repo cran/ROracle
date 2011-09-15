@@ -1,6 +1,6 @@
 /* R and S-Plus Database Interface to Oracle */
 /* 
- * $Id: RS-Oracle.pc st_server_demukhin_r/2 2011/07/27 13:16:05 paboyoun Exp $ 
+ * $Id: RS-Oracle.pc st_server_demukhin_r/3 2011/08/25 18:17:03 paboyoun Exp $ 
  *
  * vim:syntax=c 
  */
@@ -89,6 +89,7 @@
  *
  */
 
+EXEC SQL INCLUDE ctype.h;
 EXEC SQL INCLUDE RS-Oracle.h;
 
 /* Create the dbmanager (singleton) object */

@@ -15,7 +15,7 @@ exportMethods(coerce, dbCallProc, dbClearResult, dbColumnInfo, dbCommit,
               dbListConnections, dbListFields, dbListResults, dbListTables,
               dbPrepareStatement, dbReadTable, dbRemoveTable, dbRollback,
               dbSendQuery, dbUnloadDriver, dbWriteTable, fetch, format,
-              isSQLKeyword, make.db.names, print, show, SQLKeywords, summary)
+              isSQLKeyword, make.db.names, show, SQLKeywords, summary)
 
 exportPattern("^[^\\.]")
 

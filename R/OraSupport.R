@@ -30,10 +30,10 @@ function(max.con=10, fetch.default.rec = 500, force.reload=FALSE)
 ## Returns an object of class "OraDriver".  
 ## Note: This class is a singleton.
 {
-   if(fetch.default.rec<=0)
+   if(fetch.default.rec <= 0L)
       stop("default num of records per fetch must be positive")
-   config.params <- as(c(max.con, fetch.default.rec), "integer")
-   reload <- as(force.reload, "logical")[1]
+   config.params <- as.integer(c(max.con, fetch.default.rec))
+   reload <- as.logical(force.reload)[1L]
    id <- .Call("RS_Ora_init", config.params, reload, PACKAGE = .OraPkgName)
    new("OraDriver", Id = id)
 }
@@ -46,14 +46,14 @@ function(drv, ...)
 
 "oraNewConnection"<- 
 function(drv, username="", password="", 
-   dbname = if(usingR()) Sys.getenv("ORACLE_SID") else getenv("ORACLE_SID"),
+   dbname = if(is.R()) Sys.getenv("ORACLE_SID") else getenv("ORACLE_SID"),
    max.results=1)
 {
    con.params <- oraParseConParams(username, password, dbname)
    drvId <- as(drv, "integer")
-   max.results <- as(max.results, "integer")
-   .OraMaxResults <- 1
-   if(max.results>.OraMaxResults){
+   max.results <- as.integer(max.results)
+   .OraMaxResults <- 1L
+   if(max.results > .OraMaxResults){
       warning(paste("can only have up to", .OraMaxResults, 
          "results per connection"))
       max.results <- .OraMaxResults
@@ -66,46 +66,46 @@ function(drv, username="", password="",
 "oraCloneConnection" <- 
 function(drv, ...)
 {
-   id <- .Call("RS_Ora_cloneConnection", as(drv,"integer"), PACKAGE=.OraPkgName)
+   id <- .Call("RS_Ora_cloneConnection", as(drv, "integer"), PACKAGE=.OraPkgName)
    new("OraConnection", Id = id)
 }
 
 "oraParseConParams" <-
 function(username="", password="", 
-   dbname=ifelse(usingR(), Sys.getenv("ORACLE_SID"), getenv("ORACLE_SID")))
+   dbname=ifelse(is.R(), Sys.getenv("ORACLE_SID"), getenv("ORACLE_SID")))
 {
 ## split a connection string into the tuple (username, password, dbname),
 ## possibly overriding with supplied params (handles Oracle's usr/pwd@dbname)
    msg <- "invalid connection string user/password@dbname"
    posAt <- regexpr("@", username)
    posSlash <- regexpr("/", username)
-   if(posAt>0){  ## extract dbname 
-      if(posSlash<0) 
+   if(posAt > 0L){  ## extract dbname 
+      if(posSlash < 0L) 
          stop(paste(msg, "(must supply password)"))
-      dbn <- substring(username, first = posAt+1)
-      username <- substring(username, first = 1, last=posAt-1)
-      if(dbname=="") dbname <- dbn
+      dbn <- substring(username, first = posAt + 1L)
+      username <- substring(username, first = 1L, last = posAt - 1L)
+      if(dbname == "") dbname <- dbn
    }
-   if(posSlash>0){
-      pwd <- substring(username, first = posSlash+1)
-      username <- substring(username, first = 1, last = posSlash-1)
-      if(password=="") password <- pwd
+   if(posSlash > 0L){
+      pwd <- substring(username, first = posSlash + 1L)
+      username <- substring(username, first = 1L, last = posSlash - 1L)
+      if(password == "") password <- pwd
    }
-   if(username=="" && password=="")
+   if(username == "" && password == "")
       username <- "/"
-   if(username=="")
+   if(username == "")
       stop(paste(msg, "(must supply username)"))
    c(username, password, dbname)
 }
 
 "oraCloseConnection" <- 
 function(con, ..., force = FALSE)
-## close connection (force=T to close its pending result sets, if any)
+## close connection (force=TRUE to close its pending result sets, if any)
 {
    if(!isIdCurrent(con))
       return(TRUE)
    rs <- dbListResults(con)
-   if(length(rs)>0){    ## any open result sets?
+   if(length(rs) > 0L){    ## any open result sets?
       done <- sapply(rs, dbHasCompleted)
       if(all(done) || force){
          cl <- sapply(rs, dbClearResult)   ## safe to close result sets
@@ -162,7 +162,7 @@ function(con, statement, ora.buf.size = 500)
    rc <- try({
            ps <- oraPrepareStatement(con, statement, bind=NULL)
            rs <- oraExecStatement(ps, ora.buf.size =
-                    as(ora.buf.size,"integer"))
+                    as.integer(ora.buf.size))
    })
    if(inherits(rc, ErrorClass)){
       if(!is.null(ps) && !isIdCurrent(ps)) dbClearResult(ps)
@@ -179,7 +179,7 @@ function(con, statement, ...)
 ## in the case of non-select statements!
    if(!isIdCurrent(con))
       stop(paste("expired", class(con), deparse(substitute(con))))
-   if(length(dbListResults(con))>0){
+   if(length(dbListResults(con)) > 0L){
       new.con <- dbConnect(con)
       on.exit(dbDisconnect(new.con))
       rs <- oraExecDirect(new.con, statement, ...)
@@ -188,11 +188,11 @@ function(con, statement, ...)
    ## bug 471975 in the README file for product Pro*C/C++ RELEASE 9.2.0)
    ## (note that we don't look for comments before 'select')
    hack <- grep("^[ \\t]*select ", tolower(dbGetInfo(rs)$statement))
-   if(dbHasCompleted(rs) || length(hack)==0){
+   if(dbHasCompleted(rs) || length(hack) == 0L){
       dbClearResult(rs)
       return(invisible(rs))
    }
-   out <- oraFetch(rs, n = -1)
+   out <- oraFetch(rs, n = -1L)
    if(dbHasCompleted(rs))
       dbClearResult(rs)
    else 
@@ -219,19 +219,19 @@ function(res, n=0, ..., ora.buf.size=-1)
       warning("no more records to fetch")
       return(NULL)
    }
-   n <- as(n, "integer")
+   n <- as.integer(n)
    rsId <- as(res, "integer")
    rel <- .Call("RS_Ora_fetch", rsId, nrec = n, 
-              ora.buf.size = as(ora.buf.size, "integer"), 
+              ora.buf.size = as.integer(ora.buf.size), 
               PACKAGE = .OraPkgName)
-   if(length(rel)==0)
+   if(length(rel) == 0L)
       return(NULL)
    ## we don't want to coerce character data to factors
-   cnt <- dbGetInfo(res, what = "rowCount")[[1]]
-   nrec <- length(rel[[1]])
-   indx <- seq(from = cnt - nrec + 1, length = nrec)
+   cnt <- dbGetInfo(res, what = "rowCount")[[1L]]
+   nrec <- length(rel[[1L]])
+   indx <- seq(from = cnt - nrec + 1L, length = nrec)
    attr(rel, "row.names") <- as.character(indx)
-   if(usingR())
+   if(is.R())
       class(rel) <- "data.frame"
    else
       oldClass(rel) <- "data.frame"   ## Splus
@@ -275,7 +275,7 @@ function(con, name, ...)
 {
    sql <- paste("select COLUMN_NAME from ALL_TAB_COLUMNS ",
                 "where TABLE_NAME = '", name, "'", sep = "")
-   oraQuickSQL(con, sql)[,1]
+   oraQuickSQL(con, sql)[,1L]
 }
 
 "oraDescribeDriver" <-
@@ -322,10 +322,7 @@ function(obj, what)
    info$managerId <- new("OraDriver", Id = drvId)
    if(!missing(what))
       info <- info[what]
-   if(FALSE && length(info)==1)
-      info[[1]]
-   else
-      info
+   info
 }
 
 "oraDescribeConnection" <- 
@@ -340,7 +337,7 @@ function(obj, verbose = FALSE, ...)
    if(verbose){
       cat("  Oracle Server version: \n")
       con <- as(obj, "OraConnection")
-      srvVersion <- oraQuickSQL(con, "select * from V$VERSION")[[1]]
+      srvVersion <- oraQuickSQL(con, "select * from V$VERSION")[[1L]]
       for(v in srvVersion)
          cat(paste("    ", v, sep=""), "\n")
    }
@@ -371,10 +368,7 @@ function(obj, what)
    info$resultSetIds <- rs
    if(!missing(what))
       info <- info[what]
-   if(FALSE && length(info)==1)
-      info[[1]]
-   else
-      info
+   info
 }
 
 "oraResultInfo" <- 
@@ -388,7 +382,7 @@ function(obj, what)
    info <- .Call("RS_Ora_resultSetInfo", id, PACKAGE = .OraPkgName)
    ## turn fields into a data.frame
    ## TODO: should move this to the C code.
-   flds <- info$fields[[1]]
+   flds <- info$fields[[1L]]
    if(!is.null(flds)){
       flds$Sclass <- .Call("RS_DBI_SclassNames", flds$Sclass, 
                         PACKAGE = .OraPkgName)
@@ -400,10 +394,7 @@ function(obj, what)
    }
    if(!missing(what))
      info <- info[what]
-   if(FALSE && length(info)==1)
-     info[[1]]
-   else
-     info
+   info
 }
 
 "oraDescribeResult" <- 
@@ -419,7 +410,7 @@ function(obj, verbose = FALSE, ...)
   flds <- dbListFields(obj)
   if(verbose && !is.null(flds)){
     cat("  Fields:\n")  
-    print(dbGetInfo(obj, "fields")[[1]])
+    print(dbGetInfo(obj, "fields")[[1L]])
   }
   invisible(NULL)
 }
@@ -431,10 +422,7 @@ function(obj, what, ...)
    info$boundParams <- oraBoundParamsInfo(obj)
    if(!missing(what))
      info <- info[what]
-   if(FALSE && length(info)==1)
-     info[[1]]
-   else
-     info
+   info
 }
 
 "oraBoundParamsInfo" <- 
@@ -449,7 +437,7 @@ function(obj)
       info$Sclass <- .Call("RS_DBI_SclassNames", info$Sclass, 
                         PACKAGE = .OraPkgName)
       ## no factors
-      info <- structure(info, row.names = paste(seq(along=info[[1]])),
+      info <- structure(info, row.names = paste(seq(along=info[[1L]])),
                             class = "data.frame")
    }
    info
@@ -472,18 +460,18 @@ function(obj, verbose = FALSE, ...)
 ## at most batch rows (but it is still slowww)
 {  
    N <- nrow(value)
-   if(N<1){
+   if(N < 1L){
       warning("no rows in data.frame")
       return(NULL)
    }
    if(missing(batch) || is.null(batch))
-      batch <- 10000
-   else if(batch<=0) 
+      batch <- 10000L
+   else if(batch <= 0L) 
       batch <- N
-   from <- 1 
+   from <- 1L
    to <- min(batch, N)
    while(from<=N){
-      if(usingR())
+      if(is.R())
          write.table(value[from:to,, drop=FALSE], file = file, append = TRUE, 
                quote = TRUE, sep=",", na = .Ora.NA.string, 
                row.names=FALSE, col.names=FALSE, eol = '\n', ...)
@@ -491,8 +479,8 @@ function(obj, verbose = FALSE, ...)
          write.table(value[from:to,, drop=FALSE], file = file, append = TRUE, 
                quote.string = TRUE, sep=",", na = .Ora.NA.string, 
                dimnames.write=FALSE, end.of.row = '\n', ...)
-      from <- to+1
-      to <- min(to+batch, N)
+      from <- to + 1L
+      to <- min(to + batch, N)
    }
    invisible(NULL)
 }
@@ -509,28 +497,24 @@ function(obj, ...)
 {
    rs.class <- data.class(obj)
    rs.mode <- storage.mode(obj)
-   if(rs.class=="numeric"){
-      sql.type <- if(rs.mode=="integer") "integer" else  "double precision"
+   if(rs.class == "numeric"){
+      sql.type <- if(rs.mode == "integer") "integer" else "double precision"
    } 
    else {
       "OraCharType" <- function(x){
          n <- unique(nchar(as.character(x)))
-         if (length(n) > 1)
-            n <- 2^(ceiling(log2(max(n)))+1) ## add padding
-         else if (n==0)
+         if (length(n) > 1L)
+            n <- 2^(ceiling(log2(max(n))) + 1) ## add padding
+         else if (n == 0L)
             n <- 2
-         if(n>4000)
+         if(n > 4000L)
             "long"
          else
-            paste("varchar2(",n,")", sep="")
+            paste("varchar2(", n, ")", sep="")
       }
       sql.type <- switch(rs.class, 
                          logical = "smallint",
-                         character = OraCharType(obj), 
-                         factor = OraCharType(obj), 
-                         ordered =OraCharType(obj),
-                         OraCharType(obj)
-                         )
+                         OraCharType(obj))
    }
    sql.type
 }
@@ -550,23 +534,23 @@ function(con, name, row.names = "row_names", check.names = TRUE, ...)
    ## should we set the row.names of the output data.frame?
    nms <- names(out)
    j <- switch(mode(row.names),
-           "character" = if(row.names=="") 0 else
+           "character" = if(row.names == "") 0L else
                match(tolower(row.names), tolower(nms), 
-                     nomatch = if(missing(row.names)) 0 else -1),
+                     nomatch = if(missing(row.names)) 0L else -1L),
            "numeric", "logical" = row.names,
-           "NULL" = 0,
-           0)
-   if(as.numeric(j)==0) 
+           "NULL" = 0L,
+           0L)
+   if(j == 0L) 
       return(out)
    if(is.logical(j)) ## Must be TRUE
-      j <- match(row.names, tolower(nms), nomatch=0) 
-   if(j<1 || j>ncol(out)){
+      j <- match(row.names, tolower(nms), nomatch = 0L) 
+   if(j < 1L || j > ncol(out)){
       warning("row.names not set on output data.frame (non-existing field)")
       return(out)
    }
    rnms <- as.character(out[,j])
    if(all(!duplicated(rnms))){
-      out <- out[,-j, drop = FALSE]
+      out <- out[, -j, drop = FALSE]
       row.names(out) <- rnms
    } else warning("row.names not set on output (duplicate elements in field)")
    out
@@ -591,7 +575,7 @@ function(con, name, value, field.oraTypes, row.names = TRUE,
       value <- as.data.frame(value)
    if(row.names && !is.null(row.names(value))){
       value <- cbind(row.names(value), value)  ## can't use row.names= here
-      names(value)[1] <- "row.names"
+      names(value)[1L] <- "row.names"
    }
    if(missing(field.oraTypes) || is.null(field.oraTypes)){
       ## the following mapping should be coming from some kind of table
@@ -601,8 +585,8 @@ function(con, name, value, field.oraTypes, row.names = TRUE,
    names(field.oraTypes) <- make.db.names.default(names(field.oraTypes), 
                              keywords = .OraSQLKeywords,
                              allow.keywords=FALSE)
-   if(length(dbListResults(con))!=0){ ## do we need to clone the connection?
-      new.con <- dbConnect(con)       ## there's pending work, so clone
+   if(length(dbListResults(con)) != 0L){ ## do we need to clone the connection?
+      new.con <- dbConnect(con)          ## there's pending work, so clone
       on.exit(dbDisconnect(new.con))
    } 
    else 

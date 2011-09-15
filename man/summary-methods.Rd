@@ -13,7 +13,6 @@
 \alias{coerce,OraConnection,OraDriver-method}
 \alias{coerce,OraResult,OraConnection-method}
 \alias{format,dbObjectId-method}
-\alias{print,dbObjectId-method}
 \alias{show,dbObjectId-method}
 \alias{summary,OraObject-method}
 \alias{summary,OraDriver-method}
@@ -34,7 +33,7 @@
    }
 \item{from}{object to be coerced}
 \item{to}{coercion class}
-\item{x}{object to \code{format} or \code{print} or \code{show}}
+\item{x}{object to \code{format} or \code{show}}
 }
 }
 \keyword{methods}

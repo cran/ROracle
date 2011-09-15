@@ -1,17 +1,17 @@
 Package: ROracle
-Version: 0.5-11
+Version: 0.5-12
 Title: Oracle database interface for R
 Author: David A. James and Jake Luciani
-Maintainer: David A. James <daj025@gmail.com>
+Maintainer: Patrick Aboyoun <patrick.aboyoun@oracle.com>
 Description: Oracle database interface (DBI) driver for R. This is a
         DBI-compliant Oracle driver based on the ProC/C++ embedded SQL.
         It implements the DBI version 0.1-8 plus one extension.
 LazyLoad: yes
 Depends: R (>= 2.3.0), methods, DBI (>= 0.1-11)
 Imports: utils
-License: LGPL (>= 2.0)
+License: LGPL (>= 2)
 URL: http://stat.bell-labs.com/RS-DBI http://www.omegahat.org
 Collate: S4R.R zzz.R dbObjectId.R Oracle.R OraSupport.R
-Packaged: 2011-07-28 15:02:03 UTC; paboyoun
+Packaged: 2011-09-14 23:42:24 UTC; paboyoun
 Repository: CRAN
-Date/Publication: 2011-07-28 18:08:35
+Date/Publication: 2011-09-15 05:57:00

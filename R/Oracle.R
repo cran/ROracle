@@ -23,7 +23,7 @@
 
 .OraPkgName <- "ROracle"  
 .OraPkgRCS  <- "$Id: Oracle.R st_server_demukhin_r/1 2011/07/22 22:11:36 vsashika Exp $"
-.OraPkgVersion <- "0.5-9" #package.description(.OraPkgName, fields = "Version")
+.OraPkgVersion <- "0.5-12" #package.description(.OraPkgName, fields = "Version")
 .Ora.NA.string <- ""         ## char that Oracle maps to NULL
 
 setOldClass("data.frame") ## to appease setMethod's signature warnings...
@@ -65,7 +65,7 @@ setClass("OraDriver", representation("DBIDriver", "OraObject"))
 
 ## coerce (extract) any OraObject into a OraDriver
 setAs("OraObject", "OraDriver", 
-   def = function(from) new("OraDriver", Id = as(from, "integer")[1])
+   def = function(from) new("OraDriver", Id = as(from, "integer")[1L])
 )
 
 "Oracle" <- 
@@ -84,7 +84,7 @@ setMethod("dbGetInfo", "OraDriver",
 )
 
 setMethod("dbListConnections", "OraDriver",
-   def = function(drv, ...) dbGetInfo(drv, "connectionIds")[[1]]
+   def = function(drv, ...) dbGetInfo(drv, "connectionIds")[[1L]]
 )
 
 setMethod("summary", "OraDriver", 
@@ -140,7 +140,7 @@ setMethod("dbGetInfo", "OraConnection",
 )
 
 setMethod("dbListResults", "OraConnection",
-   def = function(conn, ...) dbGetInfo(conn, "resultSetIds")[[1]]
+   def = function(conn, ...) dbGetInfo(conn, "resultSetIds")[[1L]]
 )
 
 setMethod("summary", "OraConnection",
@@ -150,7 +150,7 @@ setMethod("summary", "OraConnection",
 ## convenience methods 
 setMethod("dbListTables", "OraConnection",
    def = function(conn, ...){
-      tbls <- oraQuickSQL(conn, "select table_name from all_tables")[,1]
+      tbls <- oraQuickSQL(conn, "select table_name from all_tables")[,1L]
       if(is.null(tbls)) 
          tbls <- character()
       tbls
@@ -175,7 +175,7 @@ setMethod("dbExistsTable",
    signature(conn="OraConnection", name="character"),
    def = function(conn, name, ...){
       ## TODO: find out the appropriate query to the Oracle metadata
-      match(tolower(name), tolower(dbListTables(conn)), nomatch=0)>0
+      match(tolower(name), tolower(dbListTables(conn)), nomatch = 0L)>0L
    },
    valueClass = "logical"
 )
@@ -230,8 +230,7 @@ setAs("OraConnection", "OraResult",
 )
 
 setMethod("dbClearResult", "OraResult",
-   def = function(res, ...) oraCloseResult(res, ...)
-   ,
+   def = function(res, ...) oraCloseResult(res, ...),
    valueClass = "logical"
 )
 
@@ -248,7 +247,7 @@ setMethod("fetch", signature(res="OraResult", n="numeric"),
 setMethod("fetch", 
    signature(res="OraResult", n="missing"),
    def = function(res, n, ...){
-      out <-  oraFetch(res, n=0, ...)
+      out <-  oraFetch(res, n = 0L, ...)
       if(is.null(out))
          out <- data.frame(out)
       out
@@ -262,7 +261,7 @@ setMethod("dbGetInfo", "OraResult",
 
 setMethod("dbGetStatement", "OraResult",
    def = function(res, ...){
-      st <-  dbGetInfo(res, "statement")[[1]]
+      st <-  dbGetInfo(res, "statement")[[1L]]
       if(is.null(st))
          st <- character()
       st
@@ -287,17 +286,17 @@ setMethod("dbColumnInfo", "OraResult",
 )
 
 setMethod("dbGetRowsAffected", "OraResult",
-   def = function(res, ...) dbGetInfo(res, "rowsAffected")[[1]],
+   def = function(res, ...) dbGetInfo(res, "rowsAffected")[[1L]],
    valueClass = "numeric"
 )
 
 setMethod("dbGetRowCount", "OraResult",
-   def = function(res, ...) dbGetInfo(res, "rowCount")[[1]],
+   def = function(res, ...) dbGetInfo(res, "rowCount")[[1L]],
    valueClass = "numeric"
 )
 
 setMethod("dbHasCompleted", "OraResult",
-   def = function(res, ...) dbGetInfo(res, "completed")[[1]] == 1,
+   def = function(res, ...) dbGetInfo(res, "completed")[[1L]] == 1L,
    valueClass = "logical"
 )
 

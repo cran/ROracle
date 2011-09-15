@@ -1,7 +1,7 @@
 #ifndef _RS_DBI_H
 #define _RS_DBI_H 1
 /*  
- *  $Id: RS-DBI.h st_server_demukhin_r/1 2011/07/22 22:11:38 vsashika Exp $
+ *  $Id: RS-DBI.h st_server_demukhin_r/2 2011/08/29 11:07:20 paboyoun Exp $
  *
  * Copyright (C) 1999-2002 The Omega Project for Statistical Computing.
  *
@@ -173,7 +173,6 @@ Mgr_Handle     *RS_DBI_allocManager(const char *drvName, Sint max_con,
 void            RS_DBI_freeManager(Mgr_Handle *mgrHandle);
 RS_DBI_manager *RS_DBI_getManager(Db_Handle *handle);
 Mgr_Handle     *RS_DBI_asMgrHandle(Sint pid);   
-s_object       *RS_DBI_managerInfo(Mgr_Handle *mgrHandle);
 
 /* dbConnection */
 Con_Handle        *RS_DBI_allocConnection(Mgr_Handle *mgrHandle, 
@@ -181,14 +180,12 @@ Con_Handle        *RS_DBI_allocConnection(Mgr_Handle *mgrHandle,
 void               RS_DBI_freeConnection(Con_Handle *conHandle);
 RS_DBI_connection *RS_DBI_getConnection(Db_Handle *handle);
 Con_Handle        *RS_DBI_asConHandle(Sint mgrId, Sint conId);
-s_object          *RS_DBI_connectionInfo(Con_Handle *con_Handle);
 
 /* dbResultSet */
 Res_Handle        *RS_DBI_allocResultSet(Con_Handle *conHandle);
 void               RS_DBI_freeResultSet(Res_Handle *rsHandle);
 RS_DBI_resultSet  *RS_DBI_getResultSet(Res_Handle *rsHandle);
 Res_Handle        *RS_DBI_asResHandle(Sint pid, Sint conId, Sint resId);
-s_object          *RS_DBI_resultSetInfo(Res_Handle *rsHandle);
 
 /* utility funs */
 s_object *RS_DBI_validHandle(Db_Handle *handle); /* callable from S/R */
@@ -205,12 +202,10 @@ int       is_validHandle(Db_Handle *handle, HANDLE_TYPE handleType);
  */
 Sint  RS_DBI_newEntry(Sint *table, Sint length);
 Sint  RS_DBI_lookup(Sint *table, Sint length, Sint obj_id);
-Sint  RS_DBI_listEntries(Sint *table, Sint length, Sint *entries);
 void  RS_DBI_freeEntry(Sint *table, Sint indx);
 
 /* description of the fields in a result set */
 RS_DBI_fields *RS_DBI_allocFields(int num_fields);
-s_object      *RS_DBI_getFieldDescriptions(RS_DBI_fields *flds);
 void           RS_DBI_freeFields(RS_DBI_fields *flds);
 
 /* we (re)allocate the actual output list in here (with the help of
@@ -221,17 +216,12 @@ void  RS_DBI_allocOutput(s_object *output,
 			RS_DBI_fields *flds,
 			Sint num_rec,
 			Sint expand);
-void RS_DBI_makeDataFrame(s_object *data);
 
 /* TODO: We need to elevate RS_DBI_errorMessage to either
  * dbManager and/or dbConnection methods.  I still need to 
  * go back and re-code the error-handling throughout, darn!
  */
 void  RS_DBI_errorMessage(char *msg, DBI_EXCEPTION exceptionType);
-void  RS_DBI_setException(Db_Handle *handle, 
-			  DBI_EXCEPTION exceptionType,
-			  int errorNum, 
-			  const char *errorMsg);
 /* utility funs (copy strings, convert from R/S types to string, etc.*/
 char     *RS_DBI_copyString(const char *str);
 char     *RS_DBI_nCopyString(const char *str, size_t len, int del_blanks);
@@ -254,7 +244,7 @@ s_object *RS_DBI_createNamedList(char  **names,
 				 Stype *types,
 				 Sint  *lengths,
 				 Sint  n);
-s_object *RS_DBI_copyFields(RS_DBI_fields *flds);
+s_object *RS_DBI_copyfields(RS_DBI_fields *flds);
 
 void RS_na_set(void *ptr, Stype type);
 int  RS_is_na(void *ptr, Stype type);
