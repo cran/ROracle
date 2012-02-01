@@ -1,4 +1,3 @@
-% $Id: dbSendQuery-methods.Rd st_server_demukhin_r/1 2011/07/22 22:11:33 vsashika Exp $
 \name{dbSendQuery-methods}
 \docType{methods}
 \alias{dbSendQuery-methods}
@@ -10,12 +9,16 @@
 \alias{dbClearResult,OraResult-method}
 \alias{dbGetException,OraConnection-method}
 \alias{dbGetException,OraResult-method}
+\alias{execute}
+\alias{execute-methods}
+\alias{execute,OraResult-method}
 \title{
   Execute a statement on a given database connection
 }
 \description{
    These methods are straight-forward implementations of the corresponding
-   generic functions.
+   generic functions except for the \code{execute} method which is an
+   ROracle specific DBI extension.
 }
 \section{Methods}{\describe{
 \item{conn}{
@@ -23,13 +26,9 @@
   }
 \item{statement}{a character vector of length 1 with the SQL statement.}
 \item{res}{an \code{OraResult} object.}
+\item{data}{a data.frame specifying bind data}
 \item{\dots }{additional parameters.}
 }
-}
-\references{
-  See the Database Interface definition document
-  \code{DBI.pdf} in the base directory of this package
-  or \url{http://stat.bell-labs.com/RS-DBI}.
 }
 \seealso{
   \code{\link{Oracle}},
@@ -42,12 +41,12 @@
 }
 \examples{\dontrun{
 drv <- dbDriver("Oracle")
-con <- dbConnect(drv, "usr", "password", "sid")
-res <- dbSendQuery(con, "SELECT * from liv25")
+con <- dbConnect(drv, "scott", "tiger")
+res <- dbSendQuery(con, "select * from emp where deptno = :1",
+                   data = data.frame(deptno = 10))
 data <- fetch(res, n = -1)
 }
 }
 \keyword{methods}
 \keyword{interface}
 \keyword{database}
-% vim: syntax=tex

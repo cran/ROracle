@@ -1,17 +1,11 @@
-% $Id: dbListTables-methods.Rd st_server_demukhin_r/1 2011/07/22 22:11:32 vsashika Exp $
-\name{dbListTables-methods}
+\name{dbListConnections-methods}
 \docType{methods}
-\alias{dbListTables-methods}
-\alias{dbListFields-methods}
 \alias{dbListConnections-methods}
 \alias{dbListResults-methods}
-\alias{dbListTables,OraConnection-method}
-\alias{dbListFields,OraConnection,character-method}
-\alias{dbListFields,OraResult,missing-method}
 \alias{dbListConnections,OraDriver-method}
 \alias{dbListResults,OraConnection-method}
 \title{
-  List items from an Oracle DBMS and from objects 
+  List items from Oracle objects 
 }
 \description{
    These methods are straight-forward implementations of the corresponding
@@ -20,15 +14,8 @@
 \section{Methods}{\describe{
   \item{drv}{an \code{OraDriver}.}
   \item{conn}{an \code{OraConnection}.}
-  \item{name}{a character string with the table name.}
   \item{\dots}{currently not used.}
 }
-}
-\references{
-  See the Database Interface definition document
-  \code{DBI.pdf} in the base directory of this package
-  or
-  \url{http://stat.bell-labs.com/RS-DBI}.
 }
 \seealso{
   \code{\link{Oracle}},
@@ -41,13 +28,18 @@
 
 \examples{\dontrun{
 drv <- dbDriver("Oracle")
-# after working awhile...
-for(con in dbListConnections(drv)){
-   dbGetStatement(dbListResults(con))
-}
+con1 <- dbConnect(drv, "scott", "tiger")
+res1 <- dbSendQuery(con1, "select * from emp where deptno = 10")
+res2 <- dbSendQuery(con1, "select * from emp where deptno = 20")
+con2 <- dbConnect(drv, "scott", "tiger")
+res3 <- dbSendQuery(con2, "select * from dept")
+
+## get all active statements
+for(con in dbListConnections(drv))
+  for (res in dbListResults(con))
+    print(dbGetStatement(res))
 }
 }
 \keyword{methods}
 \keyword{interface}
 \keyword{database}
-% vim: syntax=tex

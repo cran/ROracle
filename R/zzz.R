@@ -1,7 +1,30 @@
-## $Id: zzz.R st_server_demukhin_r/2 2011/07/28 10:29:32 paboyoun Exp $
+#
+# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved. 
+#
+#    NAME
+#      zzz.R - ROCI load and unload operations
+#
+#    DESCRIPTION
+#      Load and unload code for ROCI package.
+#
+#    NOTES
+#
+#    MODIFIED   (MM/DD/YY)
+#    demukhin    01/20/12 - cleanup
+#    paboyoun    01/04/12 - minor code cleanup
+#    demukhin    12/02/11 - add support for more methods
+#    demukhin    10/19/11 - Creation
+#
 
-".First.lib" <- ".onLoad" <- 
-function(lib, pkg) 
+.onLoad <- function(libname, pkgname)
 {
-   if(!is.R()) library.dynam(.OraPkgName, pkg, lib)
+  # create ROracle environment
+  assign(".oci.GlobalEnv", new.env(parent = emptyenv()), envir = topenv())
+
+  # create driver singleton
+  hdl <- .Call("rociDrvAlloc", PACKAGE = "ROracle")
+  drv <- new("OraDriver", handle = hdl)
+  assign("driver", drv, envir = .oci.GlobalEnv)
 }
+
+# end of file zzz.R

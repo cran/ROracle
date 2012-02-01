@@ -1,48 +1,73 @@
-% $Id: dbReadTable-methods.Rd st_server_demukhin_r/1 2011/07/22 22:11:33 vsashika Exp $
 \name{dbReadTable-methods}
 \docType{methods}
 \alias{dbReadTable-methods}
 \alias{dbWriteTable-methods}
 \alias{dbExistsTable-methods}
 \alias{dbRemoveTable-methods}
+\alias{dbListTables-methods}
+\alias{dbListFields-methods}
 \alias{dbReadTable,OraConnection,character-method}
 \alias{dbWriteTable,OraConnection,character,data.frame-method}
 \alias{dbExistsTable,OraConnection,character-method}
 \alias{dbRemoveTable,OraConnection,character-method}
+\alias{dbListTables,OraConnection-method}
+\alias{dbListFields,OraConnection,character-method}
 \title{
-  Convenience functions for Importing/Exporting DBMS tables
+  Convenience functions for manipulating DBMS tables
 }
 \description{
-  These functions mimic their R/S-Plus counterpart 
+  These functions mimic their R counterpart 
   \code{get},
   \code{assign},
   \code{exists}, 
-  \code{remove}, and
-  \code{objects},
-  except that they generate code that gets remotely executed
-  in a database engine.  
+  \code{remove},
+  \code{objects}, and
+  \code{names}
+  except that they generate code that gets remotely executed in a database
+  engine.
 }
 \section{Methods}{\describe{
 \item{conn}{
   an \code{OraConnection} database connection object.
   }
 \item{name}{
-  a character string specifying a table name.
+  a case sensitive character string specifying a table name.
+  }
+\item{schema}{
+  a case sensitive character string specifying a schema name (or a
+  vector of character strings for dbListTables).
+  }
+\item{all}{
+  a boolean specifying whether to look at all schemas.
+  }
+\item{full}{
+  a boolean specifying whether to generate schema names. When 'all' is
+  set to TRUE the output is a vector containing schema names followed by
+  the table names. One can do matrix(..., ncol = 2) on the output. This
+  way each row of the matrix will correspond to a table with the first
+  column being a schema name and the second - the tabel name.
   }
 \item{value}{
-  a data.frame (or coercible to data.frame).
+  a data.frame (or coercible to data.frame). Vectors of types
+  \code{logical}, \code{integer}, \code{numeric}, and \code{character}
+  are supported natively; all other vectors must be coercible to
+  \code{character}. \code{logical} and \code{integer} vectors map to
+  INTEGER columns, \code{numeric} to NUMBER (or BINARY_DOUBLE if
+  \code{ora.number} is set to \code{FALSE}), and \code{character} to
+  VARCHAR2(4000).
   }
 \item{row.names}{
-  in the case of \code{dbReadTable}, this argument can be a string or
-  an index specifying the column in the DBMS table to be used as 
-  \code{row.names} in the output data.frame (a \code{NULL}, \code{""}, or 0 
-  specifies that no column should be used as \code{row.names} in the output).
+  in the case of \code{dbReadTable}, this argument can be a string, an
+  index or a logical vector specifying the column in the DBMS table to
+  be used as \code{row.names} in the output data.frame (a \code{NULL}
+  specifies that no column should be used as \code{row.names} in the
+  output). The default is \code{NULL}.
 
   In the case of \code{dbWriteTable}, this argument should be a logical
   specifying whether the \code{row.names} should be output to the
-  output DBMS table; if \code{TRUE}, an extra field whose name will be 
-  whatever the R/S-Plus identifier \code{"row.names"} maps to the DBMS
-  (see \code{\link[DBI]{make.db.names}}).
+  output DBMS table; if \code{TRUE}, an extra column whose name is 
+  \code{"row.names"} will be added to the output. The default is
+  \code{FALSE}.
   }
 \item{overwrite}{
   a logical specifying whether to overwrite an existing table
@@ -52,25 +77,39 @@
   a logical specifying whether to append to an existing table
   in the DBMS.  Its default is \code{FALSE}.
   }
+\item{ora.number}{
+  a logical specifying whether to create a table with NUMBER or
+  BINARY_DOUBLE columns while writing numeric data. The default value
+  is \code{TRUE} - create NUMBER columns.
+  }
+\item{purge}{
+  a logical specifying whether to add PURGE option to the DROP TABLE
+  statement.
+  }
 \item{\dots }{any optional arguments.}
 }
 }
 
 \value{
-   A data.frame in the case of \code{dbReadTable}; otherwise a logical 
-   indicating whether the operation was successful.  
+   A data.frame in the case of \code{dbReadTable}; a vector in the case
+   of \code{dbListTables} and \code{dbListFields}; a logical in the case
+   of \code{dbExistsTable} indicating whether the table exists; otherwise
+   TRUE when the operation was successful or an exception.
 }
 \note{
    Note that the data.frame returned by \code{dbReadTable} only has
-   primitive data, e.g., it does not coerce character data to factors.
+   primitive data, e.g., it does not coerce character data to
+   factors. This is similar to the output produced by \code{fetch} and
+   \code{dbGetQuery}.
 
-   Oracle table names are \emph{not} case sensitive, e.g., table
-   names \code{ABC} and \code{abc} are considered equal.
-}
-\references{
-   See the Database Interface definition document
-   \code{DBI.pdf} in the base directory of this package
-   or \url{http://stat.bell-labs.com/RS-DBI}.
+   Table, schema, and column names are case sensitive, e.g., table
+   names \code{ABC} and \code{abc} are not the same. All database schema
+   object names should not include double quotes as they are enclosed in
+   double quotes when the corresponding SQL statement is generated.
+
+   \code{dbWriteTable} always auto commits a current transaction as well
+   as the data it inserts, i.e. it acts as a DDL statement even if
+   appends rows to an already existing table.
 }
 \seealso{
   \code{\link{Oracle}},
@@ -80,24 +119,30 @@
   \code{\link[DBI]{dbGetQuery}},
   \code{\link[DBI]{fetch}},
   \code{\link[DBI]{dbCommit}},
-  \code{\link[DBI]{dbGetInfo}},
-  \code{\link[DBI]{dbListTables}},
-  \code{\link[DBI]{dbReadTable}}.
+  \code{\link[DBI]{dbGetInfo}}.
 }
 \examples{\dontrun{
-conn <- dbConnect("Oracle", "user/password@SID")
-if(dbExistsTable(con, "fuel_frame")){
-   dbRemoveTable(conn, "fuel_frame")
-   dbWriteTable(conn, "fuel_frame", fuel.frame)
-}
-if(dbExistsTable(conn, "RESULTS")){
-   dbWriteTable(conn, "RESULTS", results2000, append = T)
-else
-   dbWriteTable(conn, "RESULTS", results2000)
-}
+con <- dbConnect(Oracle(), "scott", "tiger")
+if (dbExistsTable(con, "FOO", "SCOTT"))
+   dbRemoveTable(con, "FOO")
+
+foo <- dbReadTable(con, "EMP")
+row.names(foo) <- foo$EMPNO
+foo <- foo[,-1]
+
+dbWriteTable(con, "FOO", foo, row.names = TRUE)
+dbWriteTable(con, "FOO", foo, row.names = TRUE, overwrite = TRUE)
+dbReadTable(con, "FOO", row.names = 1)
+
+dbGetQuery(con, "delete from foo")
+dbWriteTable(con, "FOO", foo, row.names = TRUE, append = TRUE)
+dbReadTable(con, "FOO", row.names = 1)
+dbRemoveTable(con, "FOO")
+
+dbListTables(con)
+dbListFields(con, "EMP")
 }
 }
 \keyword{methods}
 \keyword{interface}
 \keyword{database}
-% vim: syntax=tex

@@ -1,4 +1,3 @@
-% $Id: dbCommit-methods.Rd st_server_demukhin_r/1 2011/07/22 22:11:31 vsashika Exp $
 \name{dbCommit-methods}
 \docType{methods}
 \alias{dbCommit-methods}
@@ -18,12 +17,6 @@
 \item{\dots }{currently unused.}
 }
 }
-\references{
-  See the Database Interface definition document
-  \code{DBI.pdf} in the base directory of this package
-  or
-  \url{http://stat.bell-labs.com/RS-DBI}.
-}
 \seealso{
    \code{\link{Oracle}},
    \code{\link[DBI]{dbConnect}},
@@ -36,16 +29,18 @@
 }
 \examples{\dontrun{
 drv <- dbDriver("Oracle")
-con <- dbConnect(drv, "user/password@SID")
-rs <- dbSendQuery(con, 
-      "delete * from PURGE as p where p.wavelength<0.03")
-if(dbGetInfo(rs, what = "rowsAffected") > 250){
+con <- dbConnect(drv, "scott", "tiger")
+dbReadTable(con, "EMP")
+rs <- dbSendQuery(con, "delete from emp where deptno = 10")
+dbReadTable(con, "EMP")
+if(dbGetInfo(rs, what = "rowsAffected") > 1)
+{
   warning("dubious deletion -- rolling back transaction")
   dbRollback(con)
 }
+dbReadTable(con, "EMP")
 }
 }
 \keyword{methods}
 \keyword{interface}
 \keyword{database}
-% vim: syntax=tex

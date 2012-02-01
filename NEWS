@@ -1,3 +1,11 @@
+Version 1.1-1 (2012-02-01)
+
+* Pass ownership and maintanace of ROracle to the Oracle R team.
+
+* Drop Splus support.
+
+* Totally reimplemented from the ground up using OCI.
+
 Version 0.5-12
 
 * Code and cleanup.
