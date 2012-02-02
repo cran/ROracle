@@ -1,0 +1,90 @@
+#
+# find Instant Client installation
+#
+if [ $R_ARCH = '/x64' ]; then
+  oci_client_lib="c:/instantclient/x64/instantclient_11_2"
+  oci_client_inc="c:/instantclient/x64/instantclient_11_2/sdk/include"
+else
+  oci_client_lib="c:/instantclient/i386/instantclient_11_2"
+  oci_client_inc="c:/instantclient/i386/instantclient_11_2/sdk/include"
+fi
+echo "looking for Instant Client" ${oci_client_lib}
+
+#
+# select library path from an environment variable
+# or from a standard location.
+#
+if [ -n "${OCI_LIB64}" -a $R_ARCH = '/x64' ] ; then
+  ROCI_LIB=${OCI_LIB64}
+else
+  if [ -n "${OCI_LIB32}" -a $R_ARCH = '/i386' ] ; then
+    ROCI_LIB=${OCI_LIB32}
+  else
+    if [ -d "$oci_client_lib" ] ; then
+      ROCI_LIB=${oci_client_lib}
+    else
+      if [ $R_ARCH = '/x64' ]; then
+        oci_lib_var="OCI_LIB64"
+      else
+        oci_lib_var="OCI_LIB32"
+      fi
+      echo "ERROR: cannot find Instant Client." >&2
+      echo "       Please set" ${oci_lib_var} "to specify its location." >&2
+      exit 1
+    fi
+  fi
+fi
+if [ ! -d "${ROCI_LIB}" ] ; then
+  echo "ERROR: " ${ROCI_LIB} " directory does not exist." >&2
+  exit 1
+fi
+echo "found Instant Client" ${ROCI_LIB} 
+
+#
+# select include path from an environment variable
+# or from a standard location.
+#
+if [ -n "${OCI_INC}" ] ; then
+  ROCI_INC=${OCI_INC}
+else
+  if [ -d "$oci_client_inc" ] ; then
+    ROCI_INC=${oci_client_inc}
+  else
+    if [ -d "${ROCI_LIB}/sdk/include" ] ; then
+      ROCI_INC="${ROCI_LIB}/sdk/include"
+    else
+      echo "ERROR: cannot find Instant Client SDK." >&2
+      echo "       Please set OCI_INC to specify its location." >&2
+      exit 1
+    fi
+  fi
+fi
+echo "found Instant Client SDK" ${ROCI_INC} 
+
+#
+# copy OCI libraries
+#
+echo "copying from" ${ROCI_LIB}
+cp ${ROCI_LIB}/oci.dll ./src
+cp ${ROCI_LIB}/orannzsbb11.dll ./src
+cp ${ROCI_LIB}/oraociei11.dll ./src
+
+#
+# patch 64bit include headers
+#
+echo "copying from" ${ROCI_INC}
+cp ${ROCI_INC}/nzerror.h ./src/oci
+cp ${ROCI_INC}/nzt.h ./src/oci
+cp ${ROCI_INC}/oci.h ./src/oci
+cp ${ROCI_INC}/oci1.h ./src/oci
+cp ${ROCI_INC}/oci8dp.h ./src/oci
+cp ${ROCI_INC}/ociap.h ./src/oci
+cp ${ROCI_INC}/ociapr.h ./src/oci
+cp ${ROCI_INC}/ocidfn.h ./src/oci
+cp ${ROCI_INC}/ociextp.h ./src/oci
+cp ${ROCI_INC}/ocixmldb.h ./src/oci
+cp ${ROCI_INC}/ocixstream.h ./src/oci
+cp ${ROCI_INC}/ori.h ./src/oci
+cp ${ROCI_INC}/orl.h ./src/oci
+cp ${ROCI_INC}/oro.h ./src/oci
+cp ${ROCI_INC}/ort.h ./src/oci

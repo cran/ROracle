@@ -1,4 +1,3 @@
-% $Id: dbDriver-methods.Rd st_server_demukhin_r/1 2011/07/22 22:11:31 vsashika Exp $
 \name{dbDriver-methods}
 \docType{methods}
 \alias{dbDriver-methods}
@@ -25,12 +24,6 @@
   }
 }
 }
-\references{
-  See the Database Interface definition document
-  \code{DBI.pdf} in the base directory of this package
-  or
-  \url{http://stat.bell-labs.com/RS-DBI}.
-}
 \seealso{
   \code{\link{Oracle}},
   \code{\link[DBI]{dbConnect}},
@@ -43,22 +36,16 @@
   \code{\link[DBI]{dbReadTable}}.
 }
 \examples{\dontrun{
-# create an Oracle instance and set 10000 of rows per fetch.
-m <- dbDriver("Oracle", fetch.default.records=10000)
+# create an Oracle instance
+drv <- dbDriver("Oracle")
 
-con <- dbConnect(m, username="usr", password = "pwd",
-           dbname = "iptraffic")
-rs <- dbSubmitQuery(con, 
-         "select * from HTTP_ACCESS where IP_ADDRESS = '127.0.0.1'")
-df <- fetch(rs, n = 50)
-df2 <- fetch(rs, n = -1)
-dbClearResult(rs)
-
-pcon <- dbConnect(p, "user", "password", "dbname")
-dbListTables(pcon)
+con <- dbConnect(drv, "scott", "tiger")
+res <- dbSendQuery(con, "select * from emp")
+fetch(res, n = 5)
+fetch(res)
+dbClearResult(res)
 }
 }
 \keyword{methods}
 \keyword{interface}
 \keyword{database}
-% vim: syntax=tex

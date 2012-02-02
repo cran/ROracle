@@ -1,58 +1,50 @@
-% $Id: OraResult-class.Rd st_server_demukhin_r/1 2011/07/22 22:11:35 vsashika Exp $
 \name{OraResult-class}
 \docType{class}
 \alias{OraResult-class}
 \title{Class OraResult}
 \description{
-   Oracle's query results class.  This classes encapsulates the
-   result of an SQL statement (either \code{select} or not).
+  An Oracle query results class.  This class encapsulates the result of
+  a SQL statement.
 }
 \section{Generators}{
    The main generator is \code{\link[DBI]{dbSendQuery}}.
 }
 \section{Extends}{
 Class \code{"DBIResult"}, directly.
-Class \code{"OraObject"}, directly.
-Class \code{"DBIObject"}, by class "DBIResult".
-Class \code{"dbObjectId"}, by class "OraObject".
+Class \code{"DBIObject"}, by class \code{"DBIResult"}, distance 2.
 }
 \section{Methods}{
   \describe{
-    \item{coerce}{\code{signature(from = "OraConnection", to = "OraResult")}: ... }
     \item{dbClearResult}{\code{signature(res = "OraResult")}: ... }
     \item{dbColumnInfo}{\code{signature(res = "OraResult")}: ... }
-    \item{dbGetException}{\code{signature(conn = "OraResult")}: ... }
     \item{dbGetInfo}{\code{signature(dbObj = "OraResult")}: ... }
+    \item{dbGetStatement}{\code{signature(res = "OraResult")}: ... }
     \item{dbGetRowCount}{\code{signature(res = "OraResult")}: ... }
     \item{dbGetRowsAffected}{\code{signature(res = "OraResult")}: ... }
-    \item{dbGetStatement}{\code{signature(res = "OraResult")}: ... }
     \item{dbHasCompleted}{\code{signature(res = "OraResult")}: ... }
-    \item{dbListFields}{\code{signature(conn = "OraResult", name = "missing")}: ... }
     \item{fetch}{\code{signature(res = "OraResult", n = "numeric")}: ... }
     \item{fetch}{\code{signature(res = "OraResult", n = "missing")}: ... }
+    \item{execute}{\code{signature(res = "OraResult")}: ...}
     \item{summary}{\code{signature(object = "OraResult")}: ... }
+    \item{show}{\code{signature(object = "OraResult")} }
   }
 }
-\references{
-  See the Database Interface definition document
-  \code{DBI.pdf} in the base directory of this package
-  or \url{http://stat.bell-labs.com/RS-DBI}.
-}
-
 \seealso{
  DBI classes:
- \code{\link{OraObject-class}}
  \code{\link{OraDriver-class}}
  \code{\link{OraConnection-class}}
  \code{\link{OraResult-class}}
 }
-
 \examples{\dontrun{
 ora <- dbDriver("Oracle")
-con <- dbConnect(ora, "user/password@dbname")
+con <- dbConnect(ora, "scott", "tiger")
+res <- dbSendQuery(con, "select * from emp")
+fetch(res, n = 2)
+fetch(res)
+dbColumnInfo(res)
+dbClearResult(res)
 }
 }
 \keyword{database}
 \keyword{interface}
 \keyword{classes}
-% vim: syntax=tex

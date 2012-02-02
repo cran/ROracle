@@ -1,18 +1,14 @@
-% $Id: dbGetInfo-methods.Rd st_server_demukhin_r/1 2011/07/22 22:11:32 vsashika Exp $
 \name{dbGetInfo-methods}
 \docType{methods}
-\alias{dbGetInfo}
-\alias{dbGetDBIVersion-methods}
+\alias{dbGetInfo-methods}
 \alias{dbGetStatement-methods}
 \alias{dbGetRowCount-methods}
 \alias{dbGetRowsAffected-methods}
 \alias{dbColumnInfo-methods}
 \alias{dbHasCompleted-methods}
-\alias{dbGetInfo,OraObject-method}
-\alias{dbGetInfo,OraDriver-method}        % BUG: this is not needed
-\alias{dbGetInfo,OraConnection-method}        % BUG: this is not needed
-\alias{dbGetInfo,OraResult-method}        % BUG: this is not needed
-\alias{dbGetInfo,OraPreparedStatement-method}        % BUG: this is not needed
+\alias{dbGetInfo,OraDriver-method}
+\alias{dbGetInfo,OraConnection-method}
+\alias{dbGetInfo,OraResult-method}
 \alias{dbGetStatement,OraResult-method}
 \alias{dbGetRowCount,OraResult-method}
 \alias{dbGetRowsAffected,OraResult-method}
@@ -27,17 +23,13 @@
 }
 \section{Methods}{\describe{
 \item{dbObj}{
-  any object that implements some functionality in the R/S-Plus
+  any object that implements some functionality in the R
   interface to databases (a driver, a connection or a result set).
-  }
+}
 \item{res}{ an \code{OraResult}.}
+\item{what}{ an element of the output list.}
 \item{\dots}{currently not being used.}
 }
-}
-\references{
-  See the Database Interface definition document
-  \code{DBI.pdf} in the base directory of this package
-  or \url{http://stat.bell-labs.com/RS-DBI}.
 }
 \seealso{
   \code{\link{Oracle}},
@@ -53,16 +45,15 @@
 }
 \examples{\dontrun{
 drv <- dbDriver("Oracle")
-con <- dbConnect(drv, "user/passwd@dbname")
+con <- dbConnect(drv, "scott", "tiger")
 
-dbListTables(con)
-
-rs <- dbSendQuery(con, query.sql)
+rs <- dbSendQuery(con, "select * from emp")
 dbGetStatement(rs)
 dbHasCompleted(rs)
+dbGetInfo(rs)
 
-info <- dbGetInfo(rs)
-names(dbGetInfo(drv))  
+# DBIDriver info
+names(dbGetInfo(drv))
 
 # DBIConnection info
 names(dbGetInfo(con))
@@ -74,4 +65,3 @@ names(dbGetInfo(rs))
 \keyword{methods}
 \keyword{interface}
 \keyword{database}
-% vim: syntax=tex

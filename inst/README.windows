@@ -1,7 +1,0 @@
-For details on how to compile ROracle under windows see the file
-src/Makefile.win -- it pretty much documents requirements, etc.
-
-To run the Windows binary packge ROracle_<version>.zip
-you'll need the client software from Oracle.  You must have the
-$ORACLE_HOME/bin in your path in order for R to find the Oracle's
-runtime libraries.

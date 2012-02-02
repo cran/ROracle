@@ -2,20 +2,39 @@ useDynLib(ROracle)
 
 import(methods)
 import(DBI)
-importFrom(utils, write.table)
 
+exportClasses(
+  OraDriver, OraConnection, OraResult)
 
-exportClasses(DBIPreparedStatement, dbObjectId, OraConnection, OraDriver,
-              OraObject, OraPreparedStatement, OraResult)
+exportMethods(
+  ## General
+  dbGetInfo, summary, show,
 
-exportMethods(coerce, dbCallProc, dbClearResult, dbColumnInfo, dbCommit,
-              dbConnect, dbDataType, dbDisconnect, dbExecStatement,
-              dbExistsTable, dbGetException, dbGetInfo, dbGetQuery,
-              dbGetRowCount, dbGetRowsAffected, dbGetStatement, dbHasCompleted,
-              dbListConnections, dbListFields, dbListResults, dbListTables,
-              dbPrepareStatement, dbReadTable, dbRemoveTable, dbRollback,
-              dbSendQuery, dbUnloadDriver, dbWriteTable, fetch, format,
-              isSQLKeyword, make.db.names, show, SQLKeywords, summary)
+  ## DBIDriver
+  dbUnloadDriver, dbListConnections,
 
-exportPattern("^[^\\.]")
+  ## DBIConnection
+  dbConnect, dbDisconnect, dbSendQuery, dbGetQuery, dbGetException,
+  dbListResults,
 
+  ## DBIConnection: Convenience
+  dbListTables, dbReadTable, dbWriteTable, dbExistsTable, dbRemoveTable,
+  dbListFields,
+
+  ## DBIConnection: Transaction management
+  dbCommit, dbRollback,
+
+  ## DBIConnection: Stored procedures
+  dbCallProc,
+
+  ## DBIResult
+  fetch, dbClearResult, dbColumnInfo, dbGetStatement, dbHasCompleted,
+  dbGetRowsAffected, dbGetRowCount,
+
+  ## DBIResult: Data conversion
+  dbSetDataMappings,
+
+  ## DBIResult: DBI extensions
+  execute)
+
+export(Oracle)

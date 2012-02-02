@@ -1,10 +1,9 @@
-% $Id: dbSetDataMappings-methods.Rd st_server_demukhin_r/1 2011/07/22 22:11:33 vsashika Exp $
 \name{dbSetDataMappings-methods}
 \docType{methods}
 \alias{dbSetDataMappings-methods}
 \alias{dbSetDataMappings,OraResult,data.frame-method}
 \title{
-  Set data mappings between Oracle and R/S-Plus
+  Set data mappings between Oracle and R
 }
 \description{
   Not yet implemented
@@ -22,11 +21,6 @@
   }
 }
 }
-\references{
-  See the Database Interface definition document
-  \code{DBI.pdf} in the base directory of this package
-  or \url{http://stat.bell-labs.com/RS-DBI}.
-}
 \seealso{
   \code{\link{Oracle}},
   \code{\link[DBI]{dbSendQuery}},
@@ -42,12 +36,11 @@ res <- dbSendQuery(con, statement)
 flds <- dbColumnInfo(res)
 flds[3, "Sclass"] <- makeImage
 
-dbSetDataMappings(rs, flds)
+dbSetDataMappings(res, flds)
 
-im <- fetch(rs, n = -1)
+im <- fetch(res, n = -1)
 }
 }
 \keyword{methods}
 \keyword{interface}
 \keyword{database}
-% vim: syntax=tex

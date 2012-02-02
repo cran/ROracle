@@ -1,10 +1,8 @@
-% $Id: fetch-methods.Rd st_server_demukhin_r/1 2011/07/22 22:11:33 vsashika Exp $
 \name{fetch-methods}
 \docType{methods}
 \alias{fetch-methods}
 \alias{fetch,OraResult,numeric-method}
 \alias{fetch,OraResult,missing-method}
-%\alias{fetch,OraResult-method}
 \title{
   Fetch records from a previously executed query
 }
@@ -19,23 +17,14 @@
   }
 \item{n}{
   maximum number of records to retrieve per fetch.
-  Use \code{n = -1} to retrieve all pending records;
-  use a value of \code{n = 0} for fetching the default number 
-  of rows \code{fetch.default.rec} defined in the 
-  \code{\link{Oracle}} initialization invocation.
+  Use \code{n = -1} to retrieve all pending records.
   }
 \item{\dots }{currently not used.}
 }
 }
 \details{
   The \code{ROracle} implementations retrieves only \code{n} records,
-  and if \code{n} is missing it only returns up to \code{fetch.default.rec}
-  as specified in the call to \code{\link{Oracle}} (500 by default).
-}
-\references{
-  See the Database Interface definition document
-  \code{DBI.pdf} in the base directory of this package
-  or \url{http://stat.bell-labs.com/RS-DBI}.
+  and if \code{n} is missing it returns all records.
 }
 \seealso{
   \code{\link{Oracle}},
@@ -49,14 +38,11 @@
 }
 \examples{\dontrun{
 drv <- dbDriver("Oracle")
-con <- dbConnect(drv, "user/password@SID")
-res <- dbSendQuery(con, statement = paste(
-                      "SELECT w.laser_id, w.wavelength, p.cut_off",
-                      "FROM WL w, PURGE P", 
-                      "WHERE w.laser_id = p.laser_id",
-                      "ORDER BY w.laser_id"))
-# we now fetch the first 100 records from the resultSet into a data.frame
-data1 <- fetch(res, n = 100)   
+con <- dbConnect(drv, "scott", "tiger")
+res <- dbSendQuery(con, "select * from emp")
+
+# we now fetch the first 10 records from the resultSet into a data.frame
+data1 <- fetch(res, n = 10)   
 dim(data1)
 
 dbHasCompleted(res)
@@ -68,4 +54,3 @@ data2 <- fetch(res, n = -1)
 \keyword{methods}
 \keyword{interface}
 \keyword{database}
-% vim: syntax=tex

@@ -1,0 +1,125 @@
+1. Introduction
+===============
+
+  ROracle has been built and tested with R versions 2.12 through 2.13 and with
+  Oracle Instant Client and Oracle Database Client versions 10.2 through 11.2
+  both 32 and 64-bit running Linux and Windows.
+
+2. Requirements
+===============
+
+  Linux
+  -----
+
+  For compiling on Linux, ROracle needs only the Oracle Database Client part
+  of the Oracle Database distribution (the Oracle home type of installation)
+  or an Oracle Instant Client, you don't need the full Oracle Database
+  installation. If using an Instant Client you will need either a Basic or
+  Basic Lite packages as well as the SDK package. Either an RPM or a ZIP
+  package can be used. The installation has been simplified for RPM packages
+  of Instant Client 11.2.
+
+  Windows
+  -------
+
+  For compiling on Windows, ROracle needs an Oracle Instant Client 11.2. You
+  will need either a Basic or Basic Lite packages as well as the SDK
+  package. When building on 64-bit platform both 32 and 64-bit packages can
+  be built. If both are needed you will need to download both 32 and 64-bit
+  versions of Instant Client. 
+
+  Instant Client
+  --------------
+
+  For more information on Oracle Instant Client see http://www.oracle.com/
+  technetwork/database/features/instant-client/index-100365.html.
+
+3. Installation
+===============
+
+  Linux - Instant Client
+  ----------------------
+
+  For compiling ROracle it needs to find Oracle Client libraries and header
+  files. The easiest way is to install Instant Client 11.2 from an RPM both
+  the Basic and the SDK packages. It places the files in standart locations
+  that ROracle configure script can find. If that is the case all that is left
+  to be done is ensuring that LD_LIBRARY_PATH includes the libraries. For
+  example, on a 32-bit system it will be installed into
+  /usr/lib/oracle/11.2/client/lib and on a a 64-bit system into
+  /usr/lib/oracle/11.2/client64/lib. So you can do
+
+  export LD_LIBRARY_PATH=/usr/lib/oracle/11.2/client64/lib:$LD_LIBRARY_PATH
+  R CMD INSTALL ROracle_1.1-1.tar.gz
+ 
+  When installing Instant Client from a ZIP package you will still need to set
+  LD_LIBRARY_PATH but additionally you will need to specify the location of
+  Oracle Client libraries and header files via either an environment variable
+  OCI_LIB or a configure option --with-oci-lib. For example, if using an
+  environemnt variable
+
+  export OCI_LIB=/scratch/instantclient_11_2
+  export LD_LIBRARY_PATH=/scratch/instantclient_11_2:$LD_LIBRARY_PATH
+  R CMD INSTALL ROracle_1.1-1.tar.gz
+
+  Or if using a --with-oci-lib configure option
+
+  export OCI_LIB=/scratch/instantclient_11_2
+  R CMD INSTALL --configure-args='--with-oci-lib=/scratch/instantclient_11_2' ROracle_1.1-1.tar.gz
+
+  Both methods assume that Basic and SDK packages were unzipped into the same
+  directory and Oracle Client headers are locatead under $OCI_LIB/sdk/include. 
+  If this is not the case then either the OCI_INC environment variable or the
+  --with-oci-inc configure option can be used to specify the path to header
+  files.  
+
+  Linux - Oracle Client (Oracle home installation)
+  ------------------------------------------------
+
+  As in the previous section LD_LIBRARY_PATH should be set to include the path
+  to Oracle Client libraries. Additionally, ORACLE_HOME should be set. Then
+  the ROracle package can be installed by running
+
+  R CMD INSTALL ROracle_1.1-1.tar.gz
+
+  Windows
+  -------
+
+  When building on Windows the easiest approach is to set up the following
+  directory structure
+
+  c:/instantclient/x64
+  c:/instantclient/i386
+
+  Download and unzip 32-bit Instant Client 11.2 Basic and SDK packages into
+  c:/instantclient/i386 and 64-bit into c:/instantclient/x64. Then to build
+  both 32-bit and 64-bit versions
+
+  R CMD INSTALL --build --merge-multiarch ROracle_1.1-1.tar.gz
+
+  Or to build only one version
+
+  R CMD INSTALL --build ROracle_1.1-1.tar.gz
+
+  If a different directory structure is used then environment variables can be
+  used to specify the location of libraries and header files. OCI_LIB32 to
+  specify the location of 32-bit libraries and OCI_LIB64 for 64-bit libraries.
+  If header files are not located under sdk/include subdirectory (as in the
+  directory structure above) $OCI_INC environment variable can be used to set
+  the location of header files.
+
+4. Troubleshooting:
+-------------------
+
+  If you see an error about openning an Oracle Client library libclntsh.so
+  when issuing the library(ROracle) command, you probably did not add the path
+  to Oracle Client libraries to LD_LIBRARY_PATH environment variable.
+
+  > library(ROracle)
+  Loading required package: DBI
+  Error in dyn.load(file, DLLpath = DLLpath, ...) : 
+    unable to load shared object '.../library/ROracle/libs/ROracle.so':
+  libclntsh.so.11.1: cannot open shared object file: No such file or directory
+  Error: package/namespace load failed for 'ROracle'
+
+  See the Installation section above for details on setting LD_LIBRARY_PATH.

@@ -1,4 +1,3 @@
-% $Id: dbCallProc-methods.Rd st_server_demukhin_r/1 2011/07/22 22:11:31 vsashika Exp $
 \name{dbCallProc-methods}
 \docType{methods}
 \alias{dbCallProc-methods}
@@ -18,11 +17,6 @@
   }
 }
 }
-\references{
-  See the Database Interface definition document
-  \code{DBI.pdf} in the base directory of this package
-  or \url{http://stat.bell-labs.com/RS-DBI}.
-}
 \seealso{
    \code{\link{Oracle}},
    \code{\link[DBI]{dbConnect}},
@@ -36,4 +30,3 @@
 \keyword{methods}
 \keyword{interface}
 \keyword{database}
-% vim: syntax=tex

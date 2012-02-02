@@ -1,0 +1,2 @@
+PKG_CPPFLAGS=-I./oci
+PKG_LIBS=-L. -loci
