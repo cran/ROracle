@@ -10,6 +10,7 @@
 #    NOTES
 #
 #    MODIFIED   (MM/DD/YY)
+#    paboyoun    03/22/12 - fix typo
 #    demukhin    01/20/12 - cleanup
 #    paboyoun    01/04/12 - minor code cleanup
 #    demukhin    12/08/11 - more OraConnection and OraResult methods
@@ -178,8 +179,7 @@
     if (!is.null(schema))
       stop("cannot specify 'schema' when 'all' is TRUE")
 
-    qry <- paste('select owner, table_name',
-                   'from all_tables')
+    qry <- "select owner, table_name from all_tables"
     res <- .oci.GetQuery(con, qry)
   }
   else if (!is.null(schema))
@@ -196,8 +196,7 @@
   }
   else
   {
-    qry <- paste('select user, table_name',
-                   'from user_tables')
+    qry <- "select user, table_name from user_tables"
     res <- .oci.GetQuery(con, qry)
   }
 
@@ -229,8 +228,7 @@
     tab <- sprintf('"%s"."%s"', schema, name)
 
   # read table
-  qry <- paste('select *',
-                 'from', tab)
+  qry <- sprintf("select * from %s", tab)
   res <- .oci.GetQuery(con, qry)
 
   # add row.names
@@ -244,9 +242,9 @@
       row.names <- as.character(row.names)
 
     row.names <- match(row.names, cols, nomatch = 0)
-    if (length(row.names) != 1)
+    if (length(row.names) != 1L)
       stop("'row.names' must be a single column")
-    if (row.names < 1 || row.names > length(cols))
+    if (row.names < 1L || row.names > length(cols))
       stop("'row.names' not found")
 
     names.col <- as.character(res[, row.names])
@@ -341,18 +339,13 @@
   # check for existence
   if (!is.null(schema))
   {
-    qry <- paste('select 1',
-                   'from all_tables',
-                  'where table_name = :1',
-                    'and owner = :2')
+    qry <- "select 1 from all_tables where table_name = :1 and owner = :2"
     res <- .oci.GetQuery(con, qry,
                          data = data.frame(name = name, schema = schema))
   }
   else
   {
-    qry <- paste('select 1',
-                   'from user_tables',
-                  'where table_name = :1')
+    qry <- "select 1 from user_tables where table_name = :1"
     res <- .oci.GetQuery(con, qry,
                          data = data.frame(name = name))
   }
@@ -455,7 +448,7 @@
   cat("Statement:           ", info$statement,    "\n")
   cat("Rows affected:       ", info$rowsAffected, "\n")
   cat("Row count:           ", info$rowCount,     "\n")
-  cat("Select stament:      ", info$isSelect,     "\n")
+  cat("Select statement:    ", info$isSelect,     "\n")
   cat("Statement completed: ", info$completed,    "\n")
   invisible(info)
 }
