@@ -73,6 +73,11 @@ All rights reserved. */
    NOTES
 
    MODIFIED   (MM/DD/YY)
+   demukhin    03/29/12 - bug 13904056: wrong result in dbWriteTable with NAs
+   demukhin    03/23/12 - bug 13880813: when NUMBER is an integer
+   paboyoun    03/20/12 - simplify protect stack management and
+                          creation of length 1 vectors
+   schakrab    02/28/12 - enable oracle wallet in ROracle
    demukhin    01/20/12 - cleanup
    paboyoun    01/12/12 - add support for writing logical columns
    paboyoun    01/10/12 - temporary fix to handle DATE data type
@@ -110,6 +115,7 @@ All rights reserved. */
 #define ROCI_DRV_NAME       "Oracle (OCI)"
 #define ROCI_DRV_MAJOR       1
 #define ROCI_DRV_MINOR       1
+#define ROCI_DRV_UPDATE      2
 
 /* ROCI internal Oracle types */
 #define ROCI_VARCHAR2        1
@@ -132,8 +138,7 @@ All rights reserved. */
 #define ROCI_TIME_TZ        18                   /* TIMESTAMP WITH TIME ZONE */
 #define ROCI_INTER_YM       19                     /* INTERVAL YEAR TO MONTH */
 #define ROCI_INTER_DS       20                     /* INTERVAL DAY TO SECOND */
-#define ROCI_UROWID         21
-#define ROCI_TIME_LTZ       22             /* TIMESTAMP WITH LOCAL TIME ZONE */
+#define ROCI_TIME_LTZ       21             /* TIMESTAMP WITH LOCAL TIME ZONE */
 
 /* ROCI internal Oracle types NaMes */
 #define ROCI_VARCHAR2_NM    "VARCHAR2"
@@ -156,7 +161,6 @@ All rights reserved. */
 #define ROCI_TIME_TZ_NM     "TIMESTAMP WITH TIME ZONE"
 #define ROCI_INTER_YM_NM    "INTERVAL YEAR TO MONTH"
 #define ROCI_INTER_DS_NM    "INTERVAL DAY TO SECOND"
-#define ROCI_UROWID_NM      "UROWID"
 #define ROCI_TIME_LTZ_NM    "TIMESTAMP WITH LOCAL TIME ZONE"
 
 /* ROCI R classes */
@@ -338,12 +342,11 @@ static const rociITyp rociITypTab[] =
   {ROCI_CLOB_NM,     ROCI_R_CHR, SQLT_CLOB,    sizeof(OCILobLocator *)},
   {ROCI_BLOB_NM,     0,          0,            0},
   {ROCI_BFILE_NM,    0,          0,            0},
-  {ROCI_TIME_NM,     0,          0,            0},
-  {ROCI_TIME_TZ_NM,  0,          0,            0},
-  {ROCI_INTER_YM_NM, 0,          0,            0},
-  {ROCI_INTER_DS_NM, 0,          0,            0},
-  {ROCI_UROWID_NM,   0,          0,            0},
-  {ROCI_TIME_LTZ_NM, 0,          0,            0}
+  {ROCI_TIME_NM,     ROCI_R_CHR, SQLT_STR,     0},
+  {ROCI_TIME_TZ_NM,  ROCI_R_CHR, SQLT_STR,     0},
+  {ROCI_INTER_YM_NM, ROCI_R_CHR, SQLT_STR,     0},
+  {ROCI_INTER_DS_NM, ROCI_R_CHR, SQLT_STR,     0},
+  {ROCI_TIME_LTZ_NM, ROCI_R_CHR, SQLT_STR,     0}
 };
 
 /* ROCI R TYPe TABle */
@@ -536,60 +539,41 @@ SEXP rociDrvInfo(SEXP ptrDrv)
   char      version[64];
   SEXP      info;
   SEXP      names;
-  SEXP      vec;
 
   /* allocate output list */
   PROTECT(info = allocVector(VECSXP, 6));
 
   /* allocate list element names */
-  PROTECT(names = allocVector(STRSXP, 6));
-  setAttrib(info, R_NamesSymbol, names);
-  UNPROTECT(1);
+  names = allocVector(STRSXP, 6);
+  setAttrib(info, R_NamesSymbol, names);                   /* protects names */
 
   /* driverName */
-  PROTECT(vec = allocVector(STRSXP, 1));
-  SET_STRING_ELT(vec, 0, mkChar(ROCI_DRV_NAME));
-  SET_VECTOR_ELT(info, 0, vec);
+  SET_VECTOR_ELT(info,  0, mkString(ROCI_DRV_NAME));
   SET_STRING_ELT(names, 0, mkChar("driverName"));
-  UNPROTECT(1);
 
   /* driverVersion */
-  snprintf(version, sizeof(version), "%d.%d",
-           ROCI_DRV_MAJOR, ROCI_DRV_MINOR);
-  PROTECT(vec = allocVector(STRSXP, 1));
-  SET_STRING_ELT(vec, 0, mkChar(version));
-  SET_VECTOR_ELT(info, 1, vec);
+  snprintf(version, sizeof(version), "%d.%d-%d",
+           ROCI_DRV_MAJOR, ROCI_DRV_MINOR, ROCI_DRV_UPDATE);
+  SET_VECTOR_ELT(info,  1, mkString(version));
   SET_STRING_ELT(names, 1, mkChar("driverVersion"));
-  UNPROTECT(1);
 
   /* clientVersion */
-  PROTECT(vec = allocVector(STRSXP, 1));
-  SET_STRING_ELT(vec, 0, mkChar(drv->verClient_rociDrv));
-  SET_VECTOR_ELT(info, 2, vec);
+  SET_VECTOR_ELT(info,  2, mkString(drv->verClient_rociDrv));
   SET_STRING_ELT(names, 2, mkChar("clientVersion"));
-  UNPROTECT(1);
 
   /* conTotal */
-  PROTECT(vec = allocVector(INTSXP, 1));
-  INTEGER(vec)[0] = drv->tot_rociDrv;
-  SET_VECTOR_ELT(info, 3, vec);
+  SET_VECTOR_ELT(info,  3, ScalarInteger(drv->tot_rociDrv));
   SET_STRING_ELT(names, 3, mkChar("conTotal"));
-  UNPROTECT(1);
 
   /* conOpen */
-  PROTECT(vec = allocVector(INTSXP, 1));
-  INTEGER(vec)[0] = drv->num_rociDrv;
-  SET_VECTOR_ELT(info, 4, vec);
+  SET_VECTOR_ELT(info,  4, ScalarInteger(drv->num_rociDrv));
   SET_STRING_ELT(names, 4, mkChar("conOpen"));
-  UNPROTECT(1);
 
   /* connections */
-  PROTECT(vec = rociDrvInfoConnections(drv));
-  SET_VECTOR_ELT(info, 5, vec);
+  SET_VECTOR_ELT(info,  5, rociDrvInfoConnections(drv));
   SET_STRING_ELT(names, 5, mkChar("connections"));
-  UNPROTECT(1);
 
-  /* release info list and element names vector */
+  /* release info list */
   UNPROTECT(1);
 
   ROCI_TRACE("driver described");
@@ -633,7 +617,10 @@ SEXP rociConInit(SEXP ptrDrv, SEXP params)
   int           conID;
   SEXP          hdlCon;
   ub4           ver;
-
+  /* is oracle wallet being used for authentication?
+     for oracle wallet authentication, user needs to pass empty
+     strings for username and password */
+  boolean       wallet = (!strcmp(user, "") && !strcmp(pass, ""));
   /* get connection ID */
   conID = rociNewConID(drv);
 
@@ -669,7 +656,8 @@ SEXP rociConInit(SEXP ptrDrv, SEXP params)
   /* start user session */
   rociCheckCon(con, "rociConInit", 4,
     OCISessionGet(envhp, errhp, &svchp, authp, (OraText *)cstr, strlen(cstr),
-                  NULL, 0, NULL, NULL, NULL, OCI_DEFAULT));
+                  NULL, 0, NULL, NULL, NULL, 
+                  (wallet)? OCI_SESSGET_CREDEXT:OCI_DEFAULT));
   con->svc_rociCon = svchp;
 
   /* get session handle */
@@ -692,9 +680,7 @@ SEXP rociConInit(SEXP ptrDrv, SEXP params)
   con->max_rociCon = ROCI_RES_DEF;
 
   /* allocate connection handle */
-  PROTECT(hdlCon = allocVector(INTSXP, 1));
-  INTEGER(hdlCon)[0] = conID;
-  UNPROTECT(1);
+  hdlCon = ScalarInteger(conID);
 
   /* mark connection as valid */
   con->valid_rociCon = TRUE;
@@ -717,31 +703,23 @@ SEXP rociConError(SEXP ptrDrv, SEXP hdlCon)
   rociCon  *con = drv->con_rociDrv[conID];
   SEXP      info;
   SEXP      names;
-  SEXP      vec;
 
   /* allocate output list */
   PROTECT(info = allocVector(VECSXP, 2));
 
   /* allocate list element names */
-  PROTECT(names = allocVector(STRSXP, 2));
-  setAttrib(info, R_NamesSymbol, names);
-  UNPROTECT(1);
+  names = allocVector(STRSXP, 2);
+  setAttrib(info, R_NamesSymbol, names);                   /* protects names */
 
   /* errorNum */
-  PROTECT(vec = allocVector(INTSXP, 1));
-  INTEGER(vec)[0] = (int)con->errNum_rociCon;
-  SET_VECTOR_ELT(info, 0, vec);
+  SET_VECTOR_ELT(info,  0, ScalarInteger((int)con->errNum_rociCon));
   SET_STRING_ELT(names, 0, mkChar("errorNum"));
-  UNPROTECT(1);
 
   /* errorMsg */
-  PROTECT(vec = allocVector(STRSXP, 1));
-  SET_STRING_ELT(vec, 0, mkChar((char *)con->errMsg_rociCon));
-  SET_VECTOR_ELT(info, 1, vec);
+  SET_VECTOR_ELT(info,  1, mkString((char *)con->errMsg_rociCon));
   SET_STRING_ELT(names, 1, mkChar("errorMsg"));
-  UNPROTECT(1);
 
-  /* release info list and element names vector */
+  /* release info list */
   UNPROTECT(1);
 
   /* reset connection error */
@@ -762,58 +740,39 @@ SEXP rociConInfo(SEXP ptrDrv, SEXP hdlCon)
   rociCon  *con = drv->con_rociDrv[conID];
   SEXP      info;
   SEXP      names;
-  SEXP      vec;
 
   /* allocate output list */
   PROTECT(info = allocVector(VECSXP, 6));
 
   /* allocate list element names */
-  PROTECT(names = allocVector(STRSXP, 6));
-  setAttrib(info, R_NamesSymbol, names);
-  UNPROTECT(1);
+  names = allocVector(STRSXP, 6);
+  setAttrib(info, R_NamesSymbol, names);                   /* protects names */
 
   /* username */
-  PROTECT(vec = allocVector(STRSXP, 1));
-  SET_STRING_ELT(vec, 0, mkChar(con->user_rociCon));
-  SET_VECTOR_ELT(info, 0, vec);
+  SET_VECTOR_ELT(info,  0, mkString(con->user_rociCon));
   SET_STRING_ELT(names, 0, mkChar("username"));
-  UNPROTECT(1);
 
   /* dbname */
-  PROTECT(vec = allocVector(STRSXP, 1));
-  SET_STRING_ELT(vec, 0, mkChar(con->cstr_rociCon));
-  SET_VECTOR_ELT(info, 1, vec);
+  SET_VECTOR_ELT(info,  1, mkString(con->cstr_rociCon));
   SET_STRING_ELT(names, 1, mkChar("dbname"));
-  UNPROTECT(1);
 
   /* serverVersion */
-  PROTECT(vec = allocVector(STRSXP, 1));
-  SET_STRING_ELT(vec, 0, mkChar(con->verServer_rociCon));
-  SET_VECTOR_ELT(info, 2, vec);
+  SET_VECTOR_ELT(info,  2, mkString(con->verServer_rociCon));
   SET_STRING_ELT(names, 2, mkChar("serverVersion"));
-  UNPROTECT(1);
 
   /* resTotal */
-  PROTECT(vec = allocVector(INTSXP, 1));
-  INTEGER(vec)[0] = con->tot_rociCon;
-  SET_VECTOR_ELT(info, 3, vec);
+  SET_VECTOR_ELT(info,  3, ScalarInteger(con->tot_rociCon));
   SET_STRING_ELT(names, 3, mkChar("resTotal"));
-  UNPROTECT(1);
 
   /* resOpen */
-  PROTECT(vec = allocVector(INTSXP, 1));
-  INTEGER(vec)[0] = con->num_rociCon;
-  SET_VECTOR_ELT(info, 4, vec);
+  SET_VECTOR_ELT(info,  4, ScalarInteger(con->num_rociCon));
   SET_STRING_ELT(names, 4, mkChar("resOpen"));
-  UNPROTECT(1);
 
   /* results */
-  PROTECT(vec = rociConInfoResults(drv, conID));
-  SET_VECTOR_ELT(info, 5, vec);
+  SET_VECTOR_ELT(info,  5, rociConInfoResults(drv, conID));
   SET_STRING_ELT(names, 5, mkChar("results"));
-  UNPROTECT(1);
 
-  /* release info list and element names vector */
+  /* release info list */
   UNPROTECT(1);
 
   ROCI_TRACE("connection described");
@@ -901,10 +860,9 @@ SEXP rociResInit(SEXP ptrDrv, SEXP hdlCon, SEXP statement, SEXP data)
     rociResDefine(res);
 
   /* allocate result handle */
-  PROTECT(hdlRes = allocVector(INTSXP, 2));
+  hdlRes = allocVector(INTSXP, 2);
   INTEGER(hdlRes)[0] = conID;
   INTEGER(hdlRes)[1] = resID;
-  UNPROTECT(1);
 
   /* mark result as valid */
   res->valid_rociRes = TRUE;
@@ -1004,57 +962,41 @@ SEXP rociResInfo(SEXP ptrDrv, SEXP hdlRes)
   rociRes  *res = con->res_rociCon[resID];
   SEXP      info;
   SEXP      names;
-  SEXP      vec;
 
   /* allocate output list */
   PROTECT(info = allocVector(VECSXP, 6));
 
   /* allocate list element names */
-  PROTECT(names = allocVector(STRSXP, 6));
-  setAttrib(info, R_NamesSymbol, names);
-  UNPROTECT(1);
+  names = allocVector(STRSXP, 6);
+  setAttrib(info, R_NamesSymbol, names);                   /* protects names */
 
   /* statement */
-  PROTECT(vec = rociResInfoStmt(res));
-  SET_VECTOR_ELT(info, 0, vec);
+  SET_VECTOR_ELT(info,  0, rociResInfoStmt(res));
   SET_STRING_ELT(names, 0, mkChar("statement"));
-  UNPROTECT(1);
 
   /* isSelect */
-  PROTECT(vec = allocVector(LGLSXP, 1));
-  LOGICAL(vec)[0] = (res->styp_rociRes == OCI_STMT_SELECT);
-  SET_VECTOR_ELT(info, 1, vec);
+  SET_VECTOR_ELT(info,  1,
+                 ScalarLogical(res->styp_rociRes == OCI_STMT_SELECT));
   SET_STRING_ELT(names, 1, mkChar("isSelect"));
-  UNPROTECT(1);
 
   /* rowsAffected */
-  PROTECT(vec = allocVector(INTSXP, 1));
-  INTEGER(vec)[0] = 0;
-  SET_VECTOR_ELT(info, 2, vec);
+  SET_VECTOR_ELT(info,  2, ScalarInteger(0));
   SET_STRING_ELT(names, 2, mkChar("rowsAffected"));
-  UNPROTECT(1);
 
   /* rowCount */
-  PROTECT(vec = allocVector(INTSXP, 1));
-  INTEGER(vec)[0] = 0;
-  SET_VECTOR_ELT(info, 3, vec);
+  SET_VECTOR_ELT(info,  3, ScalarInteger(0));
   SET_STRING_ELT(names, 3, mkChar("rowCount"));
-  UNPROTECT(1);
 
   /* completed */
-  PROTECT(vec = allocVector(LGLSXP, 1));
-  LOGICAL(vec)[0] = (res->state_rociRes == CLOSE_rociState);
-  SET_VECTOR_ELT(info, 4, vec);
+  SET_VECTOR_ELT(info,  4,
+                 ScalarLogical(res->state_rociRes == CLOSE_rociState));
   SET_STRING_ELT(names, 4, mkChar("completed"));
-  UNPROTECT(1);
 
   /* fields */
-  PROTECT(vec = rociResInfoFields(res));
-  SET_VECTOR_ELT(info, 5, vec);
+  SET_VECTOR_ELT(info,  5, rociResInfoFields(res));
   SET_STRING_ELT(names, 5, mkChar("fields"));
-  UNPROTECT(1);
 
-  /* release info list and element names vector */
+  /* release info list */
   UNPROTECT(1);
 
   ROCI_TRACE("result described");
@@ -1116,15 +1058,12 @@ static SEXP rociDrvInfoConnections(rociDrv *drv)
   int   vecID = 0;
 
   /* allocate output vector */
-  PROTECT(vec = allocVector(INTSXP, drv->num_rociDrv));
+  vec = allocVector(INTSXP, drv->num_rociDrv);
 
   /* set valid connection IDs */ 
   for (conID = 0; conID < drv->max_rociDrv; conID++)
     if (drv->con_rociDrv[conID] && drv->con_rociDrv[conID]->valid_rociCon)
       INTEGER(vec)[vecID++] = conID;
-
-  /* release output vector */
-  UNPROTECT(1);
 
   return vec;
 } /* end rociDrvInfoConnections */
@@ -1225,11 +1164,10 @@ static SEXP rociConInfoResults(rociDrv *drv, int conID)
   for (resID = 0; resID < con->max_rociCon; resID++)
     if (con->res_rociCon[resID] && con->res_rociCon[resID]->valid_rociRes)
     {
-      PROTECT(vec = allocVector(INTSXP, 2));
+      vec = allocVector(INTSXP, 2);
       INTEGER(vec)[0] = conID;
       INTEGER(vec)[1] = resID;
-      SET_VECTOR_ELT(list, lstID++, vec);
-      UNPROTECT(1);
+      SET_VECTOR_ELT(list, lstID++, vec);                    /* protects vec */
     }
 
   /* release output list */
@@ -1513,6 +1451,7 @@ static void rociResBindCopy(rociRes *res, SEXP data, int beg, int end)
     /* copy vector */
     for (i = beg; i < end; i++)
     {
+      *ind = OCI_IND_NOTNULL;
       if (isReal(elem))
       {
         if (ISNA(REAL(elem)[i]))
@@ -1618,7 +1557,7 @@ static void rociResDefine(rociRes *res)
         OCIAttrGet(colhd, OCI_DTYPE_PARAM, &colsca, NULL,
                    OCI_ATTR_SCALE, errhp));
 
-      if (colpre != 0 && colsca == 0)
+      if (colpre > 0 && colpre < 10 && colsca == 0)
         res->typ_rociRes[cid] = ROCI_INTEGER;
     }
 
@@ -1636,9 +1575,7 @@ static void rociResDefine(rociRes *res)
     {
       rociCheckCon(con, "rociResDefine", 6,
         OCIAttrGet(colhd, OCI_DTYPE_PARAM, &collen, NULL,
-                   OCI_ATTR_DATA_SIZE, errhp));
-      if (collen == 7) /* FIXME: assume DATE (SQLT_DAT) type */
-        collen = 4000;
+                   OCI_ATTR_DISP_SIZE, errhp));
       siz = (size_t)(collen + 1);              /* adjust for NULL terminator */
     }
     res->siz_rociRes[cid] = (sb4)siz;
@@ -1765,9 +1702,8 @@ static void rociResExpand(rociRes *res)
   for (cid = 0; cid < ncol; cid++)
   {
     SEXP vec = VECTOR_ELT(res->list_rociRes, cid);
-    PROTECT(vec = lengthgets(vec, res->nrow_rociRes));
-    SET_VECTOR_ELT(res->list_rociRes, cid, vec);
-    UNPROTECT(1);
+    vec = lengthgets(vec, res->nrow_rociRes);
+    SET_VECTOR_ELT(res->list_rociRes, cid, vec);             /* protects vec */
   }
 } /* end rociResExpand */
 
@@ -1918,9 +1854,8 @@ static void rociResTrim(rociRes *res)
   for (cid = 0; cid < ncol; cid++)
   {
     SEXP vec = VECTOR_ELT(res->list_rociRes, cid);
-    PROTECT(vec = lengthgets(vec, res->rows_rociRes));
-    SET_VECTOR_ELT(res->list_rociRes, cid, vec);
-    UNPROTECT(1);
+    vec = lengthgets(vec, res->rows_rociRes);
+    SET_VECTOR_ELT(res->list_rociRes, cid, vec);             /* protects vec */
   }
 } /* end rociResTrim */
 
@@ -2019,16 +1954,14 @@ static SEXP rociResInfoFields(rociRes *res)
   PROTECT(list = allocVector(VECSXP, 7));
 
   /* allocate and set names */
-  PROTECT(names = allocVector(STRSXP, 7));
-  setAttrib(list, R_NamesSymbol, names);
-  UNPROTECT(1);
+  names = allocVector(STRSXP, 7);
+  setAttrib(list, R_NamesSymbol, names);                   /* protects names */
 
   /* allocate and set row names */
-  PROTECT(row_names = allocVector(INTSXP, 2));
+  row_names = allocVector(INTSXP, 2);
   INTEGER(row_names)[0] = NA_INTEGER;
   INTEGER(row_names)[1] = res->ncol_rociRes;
-  setAttrib(list, R_RowNamesSymbol, row_names);
-  UNPROTECT(1);
+  setAttrib(list, R_RowNamesSymbol, row_names);        /* protects row_names */
 
   /* set class to data frame */
   setAttrib(list, R_ClassSymbol, mkString("data.frame"));
@@ -2247,67 +2180,64 @@ static ub1 rociTypeInt(ub2 ctyp)
 
   switch (ctyp)
   {
-  case   1:                                           /* VARCHAR2, NVARCHAR2 */
+  case SQLT_CHR:                                      /* VARCHAR2, NVARCHAR2 */
     ityp = ROCI_VARCHAR2;
     break;
-  case   2:
+  case SQLT_NUM:
     ityp = ROCI_NUMBER;
    break;
-  case   8:
+  case SQLT_LNG:
     ityp = ROCI_LONG;
     break;
-  case  12:
+  case SQLT_DAT:
     ityp = ROCI_DATE;
     break;
-  case  23:
+  case SQLT_BIN:
     ityp = ROCI_RAW;
     break;
-  case  24:
+  case SQLT_LBI:
     ityp = ROCI_LONG_RAW;
     break;
-  case  96:
+  case SQLT_AFC:
     ityp = ROCI_CHAR;
     break;
-  case 100:
+  case SQLT_IBFLOAT:
     ityp = ROCI_BFLOAT;                                      /* BINARY_FLOAT */
     break;
-  case 101:
+  case SQLT_IBDOUBLE:
     ityp = ROCI_BDOUBLE;                                    /* BINARY_DOUBLE */
     break;
-  case 104:
+  case SQLT_RDD:
     ityp = ROCI_ROWID;
     break;
-  case 108:                     /* USER-DEFINED TYPE (OBJECT, VARRAY, TABLE) */
+  case SQLT_NTY:                /* USER-DEFINED TYPE (OBJECT, VARRAY, TABLE) */
     ityp = ROCI_UDT;
     break;
-  case 111:
+  case SQLT_REF:
     ityp = ROCI_REF;
     break;
-  case 112:
+  case SQLT_CLOB:
     ityp = ROCI_CLOB;
     break;
-  case 113:
+  case SQLT_BLOB:
     ityp = ROCI_BLOB;
     break;
-  case 114:
+  case SQLT_BFILEE:
     ityp = ROCI_BFILE;
     break;
-  case 180:                                                     /* TIMESTAMP */
+  case SQLT_TIMESTAMP:
     ityp = ROCI_TIME;
     break;
-  case 181:                                      /* TIMESTAMP WITH TIME ZONE */
+  case SQLT_TIMESTAMP_TZ:
     ityp = ROCI_TIME_TZ;
     break;
-  case 182:                                        /* INTERVAL YEAR TO MONTH */
+  case SQLT_INTERVAL_YM:
     ityp = ROCI_INTER_YM;
     break;
-  case 183:                                        /* INTERVAL DAY TO SECOND */
+  case SQLT_INTERVAL_DS:
     ityp = ROCI_INTER_DS;
     break;
-  case 208:
-    ityp = ROCI_UROWID;
-    break;
-  case 231:                                /* TIMESTAMP WITH LOCAL TIME ZONE */
+  case SQLT_TIMESTAMP_LTZ:
     ityp = ROCI_TIME_LTZ;
     break;
   default:

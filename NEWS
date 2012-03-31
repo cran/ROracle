@@ -1,3 +1,13 @@
+Version 1.1-2 (2012-03-29)
+
+* add support for Oracle Wallet (connect with blank username and password)
+
+* bug 13880813: incorrectly classifying NUMBER columns as integer
+
+* bug 13904056: wrong result in dbWriteTable when insterting NAs
+
+* add support for datetime and interval types (selects)
+
 Version 1.1-1 (2012-02-01)
 
 * Pass ownership and maintanace of ROracle to the Oracle R team.

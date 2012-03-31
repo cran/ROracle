@@ -1,15 +1,15 @@
-d3dfb4fc30b2a2ad5f5cf94cfa63b184 *DESCRIPTION
+3b6785f922b358baf3c1f5e44d4fccbd *DESCRIPTION
 2e03d0f6fee8aa56f4357bb7702e06b1 *INSTALL
 cd4ab47bc09aea02c678762f025b3d55 *NAMESPACE
-df92e2aeb7013361b5964cd2e91aa7b0 *NEWS
+9ef55d3e096023e238a5db801f0e4ed5 *NEWS
 b3a3fd178cda2bf921d88abc11c0c79a *R/dbi.R
-d1edd908bf0ab4d9ab98c35f3c61212c *R/oci.R
+8efd2142a1ac98c9d6eafb2f0232193d *R/oci.R
 354778a44e248ea0c11e5e09870050ce *R/zzz.R
 c3cded853a2388ad53569a7105d1c1e3 *cleanup
 767cab58ad9d6b2a0b22f902f53da982 *configure
 7c675c892abc7654fa2266faa1959197 *configure.ac
 cef0cc58fb94357d1a9d9786639682e3 *configure.win
-03c3d27bbe1836342400cdcdb7ba8b72 *inst/Copyrights
+805075ca641ada645549e9a7edb94a99 *inst/Copyrights
 4c8b31054980f943d80f4f47386adc3e *inst/THANKS
 a871fc9fe122f4918c0a9fea40194805 *man/OraConnection-class.Rd
 6d625f369b69226b3c355dc4110f3255 *man/OraDriver-class.Rd
@@ -17,7 +17,7 @@ a871fc9fe122f4918c0a9fea40194805 *man/OraConnection-class.Rd
 c02c886ab816025ee38ae3ab990a810a *man/Oracle.Rd
 9951f1ac020cdbd3cb2651a10831d099 *man/dbCallProc-methods.Rd
 72dd53139c3e62c37325140438586dc8 *man/dbCommit-methods.Rd
-23f659edfeb51f4b59604a5979aad8af *man/dbConnect-methods.Rd
+0a1a94e8d1003c069c5204cf4264099f *man/dbConnect-methods.Rd
 074aff178fc571a936f600fd77d460d8 *man/dbDriver-methods.Rd
 585be753d58464a9e67e4f6af81ff6ab *man/dbGetInfo-methods.Rd
 be9964aed0848fb9939e9553894307a4 *man/dbListConnections-methods.Rd
@@ -29,4 +29,4 @@ fb284e6df567d01782235a7effa2d719 *man/fetch-methods.Rd
 543aa2bf445671680b39a998d36e33d2 *src/Makevars.in
 0c01ac64cf4753d3e4694fa136c4f713 *src/Makevars.win
 dd90e5748e9ef66e153d218102bc27fd *src/oci/oratypes.h
-3277f8cad12c82dcb240ae8146afbb7f *src/roci.c
+10f12eb2588034e481ffa0c1c1883038 *src/roci.c
