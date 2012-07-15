@@ -10,7 +10,19 @@
 #    NOTES
 #
 #    MODIFIED   (MM/DD/YY)
+#    jfeldhau    06/18/12 - ROracle support for TimesTen.
+#    paboyoun    06/04/12 - add data.frame support for list of raw vectors
+#    rpingte     05/24/12 - Date time and raw support
+#    rkanodia    05/13/12 - LOB prefetch
+#    rkanodia    05/12/12 - Statement caching
+#    demukhin    05/10/12 - translation changes
+#    rpingte     04/23/12 - add interrupt enable
+#    rpingte     04/21/12 - add prefetch & array fetch options
+#    rkanodia    04/16/12 - Fixing review comments
+#    demukhin    04/09/12 - translation
 #    paboyoun    03/22/12 - fix typo
+#    rkanodia    03/05/12 - obs2 bugfix (13843807)
+#    rkanodia    03/05/12 - obs1_bugfix (13843805)
 #    demukhin    01/20/12 - cleanup
 #    paboyoun    01/04/12 - minor code cleanup
 #    demukhin    12/08/11 - more OraConnection and OraResult methods
@@ -23,10 +35,10 @@
 ##  (*) OraDriver                                                            ##
 ###############################################################################
 
-.oci.Driver <- function()
+.oci.Driver <- function(interruptible = FALSE)
 {
   drv <- .oci.drv()
-  .Call("rociDrvInit", drv@handle, PACKAGE = "ROracle")
+  .Call("rociDrvInit", drv@handle, interruptible, PACKAGE = "ROracle")
   drv
 }
 
@@ -56,6 +68,7 @@
   cat("Client version:        ", info$clientVersion, "\n")
   cat("Connections processed: ", info$conTotal,      "\n")
   cat("Open connections:      ", info$conOpen,       "\n")
+  cat("Interruptible:         ", info$interruptible, "\n")
   invisible(info)
 }
 
@@ -63,7 +76,11 @@
 ##  (*) OraConnection                                                        ##
 ###############################################################################
 
-.oci.Connect <- function(username = "", password = "", dbname = "")
+# 25 -> RO_BULK_READ in rooci.h
+# 0 ->  Default statement cache size
+# 1024 -> Default lob prefetch size
+.oci.Connect <- function(username = "", password = "", dbname = "",
+                         prefetch, bulk_read, stmt_cache, lob_prefetch)
 {
   # validate
   username <- as.character(username)
@@ -76,11 +93,56 @@
   if (length(dbname) != 1L)
     stop("'dbname' must be a single string")
 
+  if (!missing(prefetch))
+  {
+    prefetch <- as.logical(prefetch)
+    if (length(prefetch) != 1L)
+      stop(gettextf("argument '%s' must be single logical value", "prefetch"))
+  }
+  else
+    prefetch = FALSE
+
+  if (!missing(bulk_read))
+  {
+    bulk_read <- as.integer(bulk_read)
+    if (length(bulk_read) != 1L)
+      stop(gettextf("argument '%s' must be single integer", "bulk_read"))
+    if (bulk_read < 1L)
+      stop(gettextf("argument '%s' must be greater than 0", "bulk_read")) 
+  }
+  else
+    bulk_read = 25L
+
+  if (!missing(stmt_cache))
+  {
+    stmt_cache <- as.integer(stmt_cache)
+    if (length(stmt_cache) != 1L)
+      stop(gettextf("argument '%s' must be single integer", "stmt_cache"))
+    if (stmt_cache < 0L)
+      stop(gettextf("argument '%s' must be positive integer", "stmt_cache"))
+  }
+  else
+    stmt_cache = 0L
+  
+  if (!missing(lob_prefetch))
+  {
+    lob_prefetch <- as.integer(lob_prefetch)
+    if (length(lob_prefetch) != 1L)
+      stop(gettextf("argument '%s' must be single integer", "lob_prefetch"))
+    if (lob_prefetch < 0L)
+      stop(gettextf("argument '%s' must be positive integer", "lob_prefetch"))
+  }
+  else
+    lob_prefetch = 1024L
+
   # connect
   drv <- .oci.drv()
   params <- c(username, password, dbname)
-  hdl <- .Call("rociConInit", drv@handle, params, PACKAGE = "ROracle")
-  new("OraConnection", handle = hdl)
+  hdl <- .Call("rociConInit", drv@handle, params, prefetch, bulk_read,
+               stmt_cache, lob_prefetch, PACKAGE = "ROracle")
+  timesten <- (.Call("rociConInfo", drv@handle, hdl, 
+                      PACKAGE = "ROracle")$serverType == "TimesTen IMDB")
+  new("OraConnection", handle = hdl, timesten = timesten)
 }
 
 .oci.Disconnect <- function(con)
@@ -90,41 +152,101 @@
   TRUE
 }
 
-.oci.SendQuery <- function(con, stmt, data = NULL)
+# 25 -> RO_BULK_READ in rooci.h
+.oci.SendQuery <- function(con, stmt, data = NULL, prefetch,
+                           bulk_read, lob_prefetch)
 {
+  #validate
+  if (!missing(prefetch))
+  {
+    prefetch <- as.logical(prefetch)
+    if (length(prefetch) != 1L)
+      stop(gettextf("argument '%s' must be single logical value", "prefetch"))
+  }
+  else
+    prefetch = FALSE
+
+  if (!missing(bulk_read))
+  {
+    bulk_read <- as.integer(bulk_read)
+    if (length(bulk_read) != 1L)
+      stop(gettextf("argument '%s' must be single integer", "bulk_read"))
+    if (bulk_read < 1L)
+      stop(gettextf("argument '%s' must be greater than 0", "bulk_read")) 
+  }
+  else
+    bulk_read = 25L
+
+  if (!missing(lob_prefetch))
+  {
+    lob_prefetch <- as.integer(lob_prefetch)
+    if (length(lob_prefetch) != 1L)
+      stop(gettextf("argument '%s' must be single integer", "lob_prefetch"))
+    if (lob_prefetch < 0L)
+      stop(gettextf("argument '%s' must be positive integer", "lob_prefetch"))
+  }
+  else
+    lob_prefetch = 1024L
+
   stmt <- as.character(stmt)
   if (length(stmt) != 1L)
     stop("'statement' must be a single string")
 
   if (!is.null(data))
-  {
-    data <- as.data.frame(data)
-    data <- data.frame(lapply(data, .oci.dbCoerce), check.names = FALSE,
-                       stringsAsFactors = FALSE)
-  }
+    data <- .oci.data.frame(data)
 
   drv <- .oci.drv()
-  hdl <- .Call("rociResInit", drv@handle, con@handle, stmt, data,
-               PACKAGE = "ROracle")
+  hdl <- .Call("rociResInit", drv@handle, con@handle, stmt, data, prefetch,
+               bulk_read, lob_prefetch, PACKAGE = "ROracle")
   new("OraResult", handle = hdl)
 }
 
-.oci.GetQuery <- function(con, stmt, data = NULL)
+# 25 -> RO_BULK_READ in rooci.h
+.oci.GetQuery <- function(con, stmt, data = NULL, prefetch,
+                          bulk_read, lob_prefetch)
 {
+  #validate
+  if (!missing(prefetch))
+  {
+    prefetch <- as.logical(prefetch)
+    if (length(prefetch) != 1L)
+      stop(gettextf("argument '%s' must be single logical value", "prefetch"))
+  }
+  else
+    prefetch = FALSE
+
+  if (!missing(bulk_read))
+  {
+    bulk_read <- as.integer(bulk_read)
+    if (length(bulk_read) != 1L)
+      stop(gettextf("argument '%s' must be single integer", "bulk_read"))
+    if (bulk_read < 1L)
+      stop(gettextf("argument '%s' must be greater than 0", "bulk_read")) 
+  }
+  else
+    bulk_read = 25L
+
+  if (!missing(lob_prefetch))
+  {
+    lob_prefetch <- as.integer(lob_prefetch)
+    if (length(lob_prefetch) != 1L)
+      stop(gettextf("argument '%s' must be single integer", "lob_prefetch"))
+    if (lob_prefetch < 0L)
+      stop(gettextf("argument '%s' must be positive integer", "lob_prefetch"))
+  }
+  else
+    lob_prefetch = 1024L
+
   stmt <- as.character(stmt)
   if (length(stmt) != 1L)
     stop("'statement' must be a single string")
 
   if (!is.null(data))
-  {
-    data <- as.data.frame(data)
-    data <- data.frame(lapply(data, .oci.dbCoerce), check.names = FALSE,
-                       stringsAsFactors = FALSE)
-  }
+    data <- .oci.data.frame(data)
 
   drv <- .oci.drv()
   hdl <- .Call("rociResInit", drv@handle, con@handle, stmt, data,
-               PACKAGE = "ROracle")
+               prefetch, bulk_read, lob_prefetch, PACKAGE = "ROracle")
   res <- try(
   {
     info <- .Call("rociResInfo", drv@handle, hdl, PACKAGE = "ROracle")
@@ -159,11 +281,16 @@
 .oci.ConnectionSummary <- function(con)
 {
   info <- .oci.ConnectionInfo(con)
-  cat("User name:         ", info$username,      "\n")
-  cat("Connect string:    ", info$dbname,        "\n")
-  cat("Server version:    ", info$serverVersion, "\n")
-  cat("Results processed: ", info$resTotal,      "\n")
-  cat("Open results:      ", info$resOpen,       "\n")
+  cat("User name:            ", info$username,      "\n")
+  cat("Connect string:       ", info$dbname,        "\n")
+  cat("Server version:       ", info$serverVersion, "\n")
+  cat("Server type:          ", info$serverType,    "\n")
+  cat("Results processed:    ", info$resTotal,      "\n")
+  cat("OCI prefetch:         ", info$prefetch,      "\n")
+  cat("Bulk read:            ", info$bulk_read,     "\n")
+  cat("Statement cache size: ", info$stmt_cache,    "\n")
+  cat("LOB prefetch size:    ", info$lob_prefetch,  "\n")
+  cat("Open results:         ", info$resOpen,       "\n")
   invisible(info)
 }
 
@@ -179,7 +306,10 @@
     if (!is.null(schema))
       stop("cannot specify 'schema' when 'all' is TRUE")
 
-    qry <- "select owner, table_name from all_tables"
+    #Bug 13843807 : Modify query to list views also
+    qry <- "select owner, object_name \
+                from all_objects where object_type = 'TABLE' \
+                or object_type = 'VIEW'"
     res <- .oci.GetQuery(con, qry)
   }
   else if (!is.null(schema))
@@ -188,15 +318,21 @@
     schema <- as.character(schema)
 
     bnd <- paste(':', seq_along(schema), sep = '', collapse = ',')
-    qry <- paste('select owner, table_name',
-                   'from all_tables',
-                  'where owner in (', bnd, ')')
+    #Bug 13843807 : Modify query to list views also
+    qry <- paste("select owner, object_name",
+                    "from all_objects",
+                    "where owner in (", bnd, ")",
+                    " and (object_type = 'TABLE'",
+                    " or object_type = 'VIEW')")
     res <- .oci.GetQuery(con, qry,
                          data = data.frame(matrix(schema, nrow = 1L)))
   }
   else
   {
-    qry <- "select user, table_name from user_tables"
+    #Bug 13843807 : Modify query to list views also
+    qry <- "select user, object_name from \
+                    user_objects where (object_type = 'TABLE' \ 
+                    or object_type = 'VIEW')"
     res <- .oci.GetQuery(con, qry)
   }
 
@@ -228,7 +364,8 @@
     tab <- sprintf('"%s"."%s"', schema, name)
 
   # read table
-  qry <- sprintf("select * from %s", tab)
+  qry <- paste('select *',
+                 'from', tab)
   res <- .oci.GetQuery(con, qry)
 
   # add row.names
@@ -264,7 +401,7 @@
 
   # validate overwite and append
   if (overwrite && append)
-    stop("overwrite and append cannot both be TRUE")
+    stop("'overwrite' and 'append' cannot both be TRUE")
 
   # validate name
   name <- as.character(name)
@@ -272,18 +409,18 @@
     stop("'name' must be a single string")
 
   # add row.names column
-  if(row.names && !is.null(row.names(value)))
+  if (row.names && !is.null(row.names(value)))
   {
     value <- cbind(row.names(value), value)
     names(value)[1L] <- "row.names"
   }
 
   # coerce data
-  value <- data.frame(lapply(value, .oci.dbCoerce), check.names = FALSE,
-                      stringsAsFactors = FALSE)
+  value <- .oci.data.frame(value)
 
   # get column names and types
-  ctypes <- sapply(value, .oci.dbType, ora.number = ora.number)
+  ctypes <- sapply(value, .oci.dbType, ora.number = ora.number, 
+                   timesten = con@timesten)
   cnames <- sprintf('"%s"', names(value))
 
   # create table
@@ -339,13 +476,18 @@
   # check for existence
   if (!is.null(schema))
   {
-    qry <- "select 1 from all_tables where table_name = :1 and owner = :2"
+# Bug 13843805 : Changed table name from all_tables to all_objects
+    qry <- "select 1 from all_objects \
+                  where (object_name = :1 and owner = :2) \
+                  and (object_type = 'TABLE' or object_type = 'VIEW')"
     res <- .oci.GetQuery(con, qry,
                          data = data.frame(name = name, schema = schema))
   }
   else
   {
-    qry <- "select 1 from user_tables where table_name = :1"
+# Bug 13843805 : Changed table name from user_tables to user_objects
+    qry <- "select 1 from user_objects where object_name = :1 \
+                   and (object_type = 'TABLE' or object_type = 'VIEW')"
     res <- .oci.GetQuery(con, qry,
                          data = data.frame(name = name))
   }
@@ -361,7 +503,18 @@
 
   # remove
   parm <- if (purge) "purge" else ""
-  stmt <- sprintf('drop table "%s" %s', name, parm)
+
+  #Bug 13843809 : Modify query to find out that given
+  # name is table or view
+  qry <- "select object_type from all_objects \
+                    where object_name = :1 and object_type = 'VIEW'"
+  res <- .oci.GetQuery(con, qry,  data = data.frame(name = name))
+
+  if (nrow(res) == 1L)
+      stmt <- sprintf('drop view "%s"', name)
+  else
+      stmt <- sprintf('drop table "%s" %s', name, parm)
+
   .oci.GetQuery(con, stmt)
   TRUE
 }
@@ -381,23 +534,48 @@
       stop("'schema' must be a single string")
   }
 
+  #Bug 13843805 : Check table exist or not. 
+  #               If table does not exist then throw error
+  validTab = .oci.ExistsTable(con,name, schema)
+  if (!validTab)
+    stop(gettextf('table "%s" does not exist', name))
+
   # get column names
   if (!is.null(schema))
   {
-    qry <- paste('select column_name',
-                   'from all_tab_columns',
-                  'where table_name = :1',
-                    'and owner = :2',
-                  'order by column_id')
+    if (con@timesten)
+    {
+      qry <- paste('select rtrim (columns.colname) as column_name ',
+                   'from sys.tables, sys.columns ',
+                   'where tables.tblid = columns.id ',
+                   'and tables.tblname = :1 ',
+                   'and tables.owner = :2 ',
+                   'order by columns.colnum')     
+    }
+    else
+    {
+      qry <- "select column_name from all_tab_columns \
+                    where table_name = :1 and owner = :2 \
+                    order by column_id"
+    }
     res <- .oci.GetQuery(con, qry,
                          data = data.frame(name = name, schema = schema))
   }
   else
   {
-    qry <- paste('select column_name',
-                   'from user_tab_columns',
-                  'where table_name = :1',
-                  'order by column_id')
+    if (con@timesten)
+    {
+      qry <- paste('select rtrim (columns.colname) as column_name ',
+                   'from sys.tables, sys.columns ',
+                   'where tables.tblid = columns.id ',
+                   'and tables.tblname = :1 ',
+                   'order by columns.colnum')     
+    }
+    else
+    {
+      qry <- "select column_name from user_tab_columns \
+                    where table_name = :1 order by column_id"
+    }
     res <- .oci.GetQuery(con, qry,
                          data = data.frame(name = name))
   }
@@ -408,9 +586,17 @@
 ##  (*) OraConnection: Transaction management                                ##
 ###############################################################################
 
-.oci.Commit   <- function(con) .oci.GetQuery(con, "commit")
+.oci.Commit   <- function(con)
+{
+  .Call("rociConCommit", con@handle, PACKAGE = "ROracle")
+  TRUE
+}
 
-.oci.Rollback <- function(con) .oci.GetQuery(con, "rollback")
+.oci.Rollback <- function(con)
+{
+  .Call("rociConRollback", con@handle, PACKAGE = "ROracle")  
+  TRUE
+}
 
 ###############################################################################
 ##  (*) OraResult                                                            ##
@@ -421,7 +607,7 @@
   drv <- .oci.drv()
   inf <- .Call("rociResInfo", drv@handle, res@handle, PACKAGE = "ROracle")
   if (inf$completed)
-    stop("no more data")
+    stop("no more data to fetch")
 
   .Call("rociResFetch", drv@handle, res@handle, n, PACKAGE = "ROracle")
 }
@@ -450,6 +636,9 @@
   cat("Row count:           ", info$rowCount,     "\n")
   cat("Select statement:    ", info$isSelect,     "\n")
   cat("Statement completed: ", info$completed,    "\n")
+  cat("OCI prefetch:        ", info$prefetch,     "\n")
+  cat("Bulk read:           ", info$bulk_read,    "\n")
+  cat("LOB prefetch size:   ", info$lob_prefetch, "\n")
   invisible(info)
 }
 
@@ -460,11 +649,7 @@
 .oci.execute <- function(res, data = NULL)
 {
   if (!is.null(data))
-  {
-    data <- as.data.frame(data)
-    data <- data.frame(lapply(data, .oci.dbCoerce), check.names = FALSE,
-                       stringsAsFactors = FALSE)
-  }
+    data <- .oci.data.frame(data)
 
   drv <- .oci.drv()
   .Call("rociResExec", drv@handle, res@handle, data, PACKAGE = "ROracle")
@@ -478,30 +663,67 @@
 
 .oci.dbCoerce <- function(obj)
 {
-  ## use is() to avoid is.* function overloads
-  ##
-  if (is(obj, "logical") || is(obj, "integer") || is(obj, "numeric") ||
-      is(obj, "character"))
+  if (inherits(obj, c("logical", "integer", "numeric", "character",
+                      "POSIXct")) ||
+      (is.list(obj) && all(unlist(lapply(obj, is.raw), use.names = FALSE))))
     obj
   else
     as.character(obj)
 }
 
-.oci.dbType <- function(obj, ora.number = FALSE)
+.oci.data.frame <- function(obj)
 {
-  ## use is() to avoid is.* function overloads
-  ##
-  if (is(obj, "logical") || is(obj, "integer"))
-    "integer"
-  else if (is(obj, "numeric"))
+  if (!is.data.frame(obj))
+    obj <- as.data.frame(obj)
+  nr <- nrow(obj)
+  structure(lapply(obj, .oci.dbCoerce),
+            row.names = .set_row_names(nr),
+            class = "data.frame")
+}
+
+.oci.dbType <- function(obj, ora.number = FALSE, timesten = FALSE)
+{
+
+  if (timesten)
   {
-    if (ora.number) "number"
-    else            "binary_double"
+    # TimesTen type map
+    switch(typeof(obj),
+           logical   = if (ora.number) 
+                         "number"
+                       else
+                         "tt_tinyint",
+           integer   = if (ora.number)
+                         "integer"
+                       else
+                         "tt_integer",
+           double  = if (inherits(obj, "POSIXct"))
+                       "timestamp"
+                     else if (ora.number)
+                       "number"
+                     else
+                       "binary_double",
+           character = "varchar2(128) inline",
+           list      = "varbinary(2000)",
+           stop(gettextf("ROracle internal error [%s, %d, %s]",
+                         ".oci.dbType", 1L, class(obj))))    
   }
-  else if (is(obj, "character"))
-    "varchar2(4000)"
   else
-    stop("ROracle internal error [.oci.dbType, 1, ", class(obj), "]")
+  {
+    # Oracle type map
+    switch(typeof(obj),
+           logical   =,
+           integer   = "integer",
+           double  = if (inherits(obj, "POSIXct"))
+                       "timestamp"
+                     else if (ora.number)
+                       "number"
+                     else
+                       "binary_double",
+           character = "varchar2(4000)",
+           list      = "raw(2000)",
+           stop(gettextf("ROracle internal error [%s, %d, %s]",
+                         ".oci.dbType", 1L, class(obj))))
+  }
 }
 
 .oci.CreateTable <- function(con, name, cnames, ctypes)

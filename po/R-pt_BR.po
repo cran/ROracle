@@ -1,0 +1,45 @@
+msgid ""
+msgstr "Project-Id-Version: R 2.13.1\nReport-Msgid-Bugs-To: \nPOT-Creation-Date: 2012-05-11 22:19\nPO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\nLast-Translator: Oracle\nLanguage-Team: Oracle\nLanguage: \nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\n"
+
+
+msgid "'username' must be a single string"
+msgstr "'username' deve ser uma única string"
+
+msgid "'password' must be a single string"
+msgstr "'password' deve ser uma única string"
+
+msgid "'dbname' must be a single string"
+msgstr "'dbname' deve ser uma única string"
+
+msgid "'statement' must be a single string"
+msgstr "'statement' deve ser uma única string"
+
+msgid "cannot specify 'schema' when 'all' is TRUE"
+msgstr "não é possível especificar 'schema' quando 'all' tem o valor TRUE"
+
+msgid "'name' must be a single string"
+msgstr "'name' deve ser uma única string"
+
+msgid "'schema' must be a single string"
+msgstr "'schema' deve ser uma única string"
+
+msgid "'row.names' must be a single column"
+msgstr "'row.names' deve ser uma única coluna"
+
+msgid "'row.names' not found"
+msgstr "argumento 'row.names' não encontrado"
+
+msgid "'overwrite' and 'append' cannot both be TRUE"
+msgstr "os argumentos 'overwrite' e 'append' não podem ter o valor TRUE ao mesmo tempo"
+
+msgid "table or view already exists"
+msgstr "a tabela ou view já existe"
+
+msgid "table \"%s\" does not exist"
+msgstr "a tabela \"%s\" não existe"
+
+msgid "no more data to fetch"
+msgstr "não há mais dados a extrair"
+
+msgid "ROracle internal error [%s, %d, %s]"
+msgstr "Erro interno do ROracle [%s, %d, %s]"

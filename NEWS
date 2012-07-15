@@ -1,16 +1,40 @@
+Version 1.1-3 (2012-07-15)
+
+* add support for Oracle TimesTen In-Memory Database
+
+* Date time (time stamp, date, time stamp with time zone and time stamp with
+  local time zone) now uses POSIXct/POSIXlt
+
+* RAW data type support
+
+* BLOB and BFILE support
+
+* Prefetching support
+
+* soft parameter (bulk_read) to specify number of rows to fetch per
+  execute/fetch operation from DB
+
+* Whether to prefetch LOB data
+
+* Break Ctrl-C handler
+
+* Windows now uses .def file instead of binaries
+
+* Statement caching support 
+
 Version 1.1-2 (2012-03-29)
 
 * add support for Oracle Wallet (connect with blank username and password)
 
 * bug 13880813: incorrectly classifying NUMBER columns as integer
 
-* bug 13904056: wrong result in dbWriteTable when insterting NAs
+* bug 13904056: wrong result in dbWriteTable when inserting NAs
 
 * add support for datetime and interval types (selects)
 
 Version 1.1-1 (2012-02-01)
 
-* Pass ownership and maintanace of ROracle to the Oracle R team.
+* Pass ownership and maintenance of ROracle to the Oracle R team.
 
 * Drop Splus support.
 

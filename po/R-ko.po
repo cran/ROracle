@@ -1,0 +1,45 @@
+msgid ""
+msgstr "Project-Id-Version: R 2.13.1\nReport-Msgid-Bugs-To: \nPOT-Creation-Date: 2012-05-11 22:19\nPO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\nLast-Translator: Oracle\nLanguage-Team: Oracle\nLanguage: \nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\n"
+
+
+msgid "'username' must be a single string"
+msgstr "'username'은 단일 문자열이어야 합니다."
+
+msgid "'password' must be a single string"
+msgstr "'password'는 단일 문자열이어야 합니다."
+
+msgid "'dbname' must be a single string"
+msgstr "'dbname'은 단일 문자열이어야 합니다."
+
+msgid "'statement' must be a single string"
+msgstr "'statement'는 단일 문자열이어야 합니다."
+
+msgid "cannot specify 'schema' when 'all' is TRUE"
+msgstr "'all'이 TRUE일 때 'schema'를 지정할 수 없습니다."
+
+msgid "'name' must be a single string"
+msgstr "'name'은 단일 문자열이어야 합니다."
+
+msgid "'schema' must be a single string"
+msgstr "'schema'는 단일 문자열이어야 합니다."
+
+msgid "'row.names' must be a single column"
+msgstr "'row.names'는 단일 열이어야 합니다."
+
+msgid "'row.names' not found"
+msgstr "'row.names'를 찾을 수 없습니다."
+
+msgid "'overwrite' and 'append' cannot both be TRUE"
+msgstr "'overwrite' 및 'append'가 둘 다 TRUE일 수 없습니다."
+
+msgid "table or view already exists"
+msgstr "테이블 또는 뷰가 존재합니다."
+
+msgid "table \"%s\" does not exist"
+msgstr "\"%s\" 테이블이 존재하지 않습니다."
+
+msgid "no more data to fetch"
+msgstr "인출할 데이터가 더 이상 없습니다."
+
+msgid "ROracle internal error [%s, %d, %s]"
+msgstr "ROracle 내부 오류 [%s, %d, %s]"

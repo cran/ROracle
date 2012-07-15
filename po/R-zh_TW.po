@@ -1,0 +1,45 @@
+msgid ""
+msgstr "Project-Id-Version: R 2.13.1\nReport-Msgid-Bugs-To: \nPOT-Creation-Date: 2012-05-11 22:19\nPO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\nLast-Translator: Oracle\nLanguage-Team: Oracle\nLanguage: \nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\n"
+
+
+msgid "'username' must be a single string"
+msgstr "'username' 必須是單一字串"
+
+msgid "'password' must be a single string"
+msgstr "'password' 必須是單一字串"
+
+msgid "'dbname' must be a single string"
+msgstr "'dbname' 必須是單一字串"
+
+msgid "'statement' must be a single string"
+msgstr "'statement' 必須是單一字串"
+
+msgid "cannot specify 'schema' when 'all' is TRUE"
+msgstr "當 'all' 為 TRUE 時, 無法指定 'schema'"
+
+msgid "'name' must be a single string"
+msgstr "'name' 必須是單一字串"
+
+msgid "'schema' must be a single string"
+msgstr "'schema' 必須是單一字串"
+
+msgid "'row.names' must be a single column"
+msgstr "'row.names' 必須是單一資料欄"
+
+msgid "'row.names' not found"
+msgstr "找不到 'row.names'"
+
+msgid "'overwrite' and 'append' cannot both be TRUE"
+msgstr "'overwrite' 與 'append' 不可兩者皆為 TRUE"
+
+msgid "table or view already exists"
+msgstr "表格或檢視已經存在"
+
+msgid "table \"%s\" does not exist"
+msgstr "表格 \"%s\" 不存在"
+
+msgid "no more data to fetch"
+msgstr "沒有其他資料可擷取"
+
+msgid "ROracle internal error [%s, %d, %s]"
+msgstr "ROracle 內部錯誤 [%s, %d, %s]"

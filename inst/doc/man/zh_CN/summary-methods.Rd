@@ -1,0 +1,20 @@
+\name{summary-methods}
+\docType{methods}
+\alias{summary-methods}
+\alias{show-methods}
+\alias{show,OraDriver-method}
+\alias{show,OraConnection-method}
+\alias{show,OraResult-method}
+\alias{summary,OraDriver-method}
+\alias{summary,OraConnection-method}
+\alias{summary,OraResult-method}
+\title{
+汇总 Oracle 对象
+}
+\description{
+这些方法是相应泛型函数的
+   简单实现。
+}
+\keyword{methods}
+\keyword{database}
+\keyword{interface}

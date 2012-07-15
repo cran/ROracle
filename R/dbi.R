@@ -10,6 +10,9 @@
 #    NOTES
 #
 #    MODIFIED   (MM/DD/YY)
+#    jfeldhau    06/19/12 - ROracle support for TimesTen.
+#    rpingte     04/25/12 - use externalptr for connection and result set
+#    rpingte     04/23/12 - add interrupt enable to driver
 #    demukhin    01/20/12 - cleanup
 #    paboyoun    01/04/12 - minor code cleanup
 #    demukhin    12/08/11 - more OraConnection and OraResult methods
@@ -26,7 +29,7 @@ setClass("OraDriver",
   contains = "DBIDriver"
 )
 
-Oracle <- function() .oci.Driver()
+Oracle <- function(interruptible = FALSE) .oci.Driver(interruptible)
 
 setMethod("dbUnloadDriver",
 signature(drv = "OraDriver"),
@@ -62,7 +65,8 @@ function (object)
 ##
 setClass("OraConnection",
   representation(
-    handle = "integer"),
+    handle = "externalptr",
+    timesten = "logical"),
   contains = "DBIConnection"
 )
 
@@ -174,7 +178,7 @@ function(conn, ...) .NotYetImplemented()
 ##
 setClass("OraResult",
   representation(
-    handle = "integer"),
+    handle = "externalptr"),
   contains = "DBIResult"
 )
 
