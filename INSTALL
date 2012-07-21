@@ -27,6 +27,14 @@
   package. When building on 64-bit platform both 32 and 64-bit packages can
   be built. If both are needed you will need to download both 32 and 64-bit
   versions of Instant Client. 
+  
+  TimesTen
+  --------
+  
+  For TimesTen connection support, ROracle should be compiled using the Oracle
+  Instant Client included in the local TimesTen installation directory. For 
+  more information on TimesTen see http://www.oracle.com/technetwork/database/
+  timesten/documentation/.
 
   Instant Client
   --------------
@@ -42,7 +50,7 @@
 
   For compiling ROracle it needs to find Oracle Client libraries and header
   files. The easiest way is to install Instant Client 11.2 from an RPM both
-  the Basic and the SDK packages. It places the files in standart locations
+  the Basic and the SDK packages. It places the files in standard locations
   that ROracle configure script can find. If that is the case all that is left
   to be done is ensuring that LD_LIBRARY_PATH includes the libraries. For
   example, on a 32-bit system it will be installed into
@@ -50,7 +58,7 @@
   /usr/lib/oracle/11.2/client64/lib. So you can do
 
   export LD_LIBRARY_PATH=/usr/lib/oracle/11.2/client64/lib:$LD_LIBRARY_PATH
-  R CMD INSTALL ROracle_1.1-1.tar.gz
+  R CMD INSTALL ROracle_1.1-3.tar.gz
  
   When installing Instant Client from a ZIP package you will still need to set
   LD_LIBRARY_PATH but additionally you will need to specify the location of
@@ -60,12 +68,12 @@
 
   export OCI_LIB=/scratch/instantclient_11_2
   export LD_LIBRARY_PATH=/scratch/instantclient_11_2:$LD_LIBRARY_PATH
-  R CMD INSTALL ROracle_1.1-1.tar.gz
+  R CMD INSTALL ROracle_1.1-3.tar.gz
 
   Or if using a --with-oci-lib configure option
 
   export OCI_LIB=/scratch/instantclient_11_2
-  R CMD INSTALL --configure-args='--with-oci-lib=/scratch/instantclient_11_2' ROracle_1.1-1.tar.gz
+  R CMD INSTALL --configure-args='--with-oci-lib=/scratch/instantclient_11_2' ROracle_1.1-3.tar.gz
 
   Both methods assume that Basic and SDK packages were unzipped into the same
   directory and Oracle Client headers are locatead under $OCI_LIB/sdk/include. 
@@ -80,7 +88,7 @@
   to Oracle Client libraries. Additionally, ORACLE_HOME should be set. Then
   the ROracle package can be installed by running
 
-  R CMD INSTALL ROracle_1.1-1.tar.gz
+  R CMD INSTALL ROracle_1.1-3.tar.gz
 
   Windows
   -------
@@ -95,11 +103,11 @@
   c:/instantclient/i386 and 64-bit into c:/instantclient/x64. Then to build
   both 32-bit and 64-bit versions
 
-  R CMD INSTALL --build --merge-multiarch ROracle_1.1-1.tar.gz
+  R CMD INSTALL --build --merge-multiarch ROracle_1.1-3.tar.gz
 
   Or to build only one version
 
-  R CMD INSTALL --build ROracle_1.1-1.tar.gz
+  R CMD INSTALL --build ROracle_1.1-3.tar.gz
 
   If a different directory structure is used then environment variables can be
   used to specify the location of libraries and header files. OCI_LIB32 to
@@ -107,11 +115,39 @@
   If header files are not located under sdk/include subdirectory (as in the
   directory structure above) $OCI_INC environment variable can be used to set
   the location of header files.
+  
+  TimesTen
+  --------
+  
+  When building ROracle for TimesTen connection support on Windows or Linux the 
+  Instant Client included in the local TimesTen installation directory should 
+  be used. For example, if TimesTen 64-bit is installed on Windows in the 
+  c:/TimesTen/tt1122_64 directory then the following commands can be used
+  
+  set OCI_LIB64=c:/TimesTen/tt1122_64/ttoracle_home/instantclient_11_2
+  R CMD INSTALL --build ROracle_1.1-3.tar.gz
+  
+  At runtime the directories for both the TimesTen Instant Client shared 
+  libraries and the TimesTen database shared libraries must be present on the
+  system's shared library search path (PATH on Windows or LD_LIBRARY_PATH on 
+  Linux) in order to establish a TimesTen database connection. An easy way to 
+  do this is to run the ttenv script located in the bin directory of the local 
+  TimesTen installation directory.
+  
+  For example, if TimesTen 64-bit is installed on Windows in the 
+  c:/TimesTen/tt1122_64 directory then the following script can be executed
+  to set the system's shared library search path for TimesTen connections
+  
+  c:/TimesTen/tt1122_64/bin/ttenv.bat
+  
+  For more information on TimesTen see http://www.oracle.com/technetwork/
+  database/timesten/documentation/.
+ 
 
 4. Troubleshooting:
 -------------------
 
-  If you see an error about openning an Oracle Client library libclntsh.so
+  If you see an error about opening an Oracle Client library libclntsh.so
   when issuing the library(ROracle) command, you probably did not add the path
   to Oracle Client libraries to LD_LIBRARY_PATH environment variable.
 

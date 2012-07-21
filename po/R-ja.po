@@ -1,0 +1,45 @@
+msgid ""
+msgstr "Project-Id-Version: R 2.13.1\nReport-Msgid-Bugs-To: \nPOT-Creation-Date: 2012-05-11 22:19\nPO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\nLast-Translator: Oracle\nLanguage-Team: Oracle\nLanguage: \nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\n"
+
+
+msgid "'username' must be a single string"
+msgstr "'username'は単一の文字列である必要があります"
+
+msgid "'password' must be a single string"
+msgstr "'password'は単一の文字列である必要があります"
+
+msgid "'dbname' must be a single string"
+msgstr "'dbname'は単一の文字列である必要があります"
+
+msgid "'statement' must be a single string"
+msgstr "'statement'は単一の文字列である必要があります"
+
+msgid "cannot specify 'schema' when 'all' is TRUE"
+msgstr "'all'がTRUEの場合、'schema'を指定できません"
+
+msgid "'name' must be a single string"
+msgstr "'name'は単一の文字列である必要があります"
+
+msgid "'schema' must be a single string"
+msgstr "'schema'は単一の文字列である必要があります"
+
+msgid "'row.names' must be a single column"
+msgstr "'row.names'は単一の列である必要があります"
+
+msgid "'row.names' not found"
+msgstr "'row.names'が見つかりません"
+
+msgid "'overwrite' and 'append' cannot both be TRUE"
+msgstr "'overwrite'および'append'を両方TRUEにすることはできません"
+
+msgid "table or view already exists"
+msgstr "表またはビューがすでに存在します"
+
+msgid "table \"%s\" does not exist"
+msgstr "表\"%s\"は存在しません"
+
+msgid "no more data to fetch"
+msgstr "フェッチするデータがありません"
+
+msgid "ROracle internal error [%s, %d, %s]"
+msgstr "ROracle内部エラー[%s, %d, %s]"

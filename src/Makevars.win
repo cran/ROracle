@@ -1,2 +1,2 @@
 PKG_CPPFLAGS=-I./oci
-PKG_LIBS=-L. -loci
+PKG_LIBS=-L. ocimingw.lib

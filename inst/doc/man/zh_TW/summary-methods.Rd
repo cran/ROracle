@@ -1,0 +1,20 @@
+\name{summary-methods}
+\docType{methods}
+\alias{summary-methods}
+\alias{show-methods}
+\alias{show,OraDriver-method}
+\alias{show,OraConnection-method}
+\alias{show,OraResult-method}
+\alias{summary,OraDriver-method}
+\alias{summary,OraConnection-method}
+\alias{summary,OraResult-method}
+\title{
+摘要 Oracle 物件
+}
+\description{
+這些方法皆為對應一般函數的
+   直接實行.
+}
+\keyword{methods}
+\keyword{database}
+\keyword{interface}
