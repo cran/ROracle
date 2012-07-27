@@ -1,7 +1,7 @@
-1916839db1a67d5d0ed73b2b4725cb9e *DESCRIPTION
-2a527b7babf5b4103f6c0acef1ee6c63 *INSTALL
+5b11b7f6fae7277ab75188f1a346ac3d *DESCRIPTION
+0443fba7a746a13bd26c1bf38d750ff4 *INSTALL
 cd4ab47bc09aea02c678762f025b3d55 *NAMESPACE
-62a804ae6ef7bdb91429d11b5ad20134 *NEWS
+6846b76d4f5eefc63fc55daad60e0ad3 *NEWS
 4db9c8af02e66ae89fe3c80b203446d0 *R/dbi.R
 cfc5736625a5ed65387629b861bb844a *R/oci.R
 354778a44e248ea0c11e5e09870050ce *R/zzz.R
@@ -193,7 +193,7 @@ a43f1b9fc656f60481fc9b8d9be6457a *po/R-zh_TW.po
 cb62dc19c4c8d64eb34bd2ce2f5dd134 *src/Makevars.win
 dd90e5748e9ef66e153d218102bc27fd *src/oci/oratypes.h
 1ab42fadbf36890a9da409dc97dc2f2c *src/ocimingw.def
-77f4b738b4e665f405aec502bd5f687e *src/rodbi.c
+b7bd347fb0b35a8bffe0915c729c4ce7 *src/rodbi.c
 b2ddecbef402d9e92ff519b8c195b34b *src/rodbi.h
-e6d57bd707d163f2765bfd00574048ca *src/rooci.c
-04fa5c2afb935bb93ee7b7509337c652 *src/rooci.h
+bcc2e3e4d7b73c2a477a471d69b66cde *src/rooci.c
+ef0c748c24b75fca7eb9b00eaf8b26bd *src/rooci.h

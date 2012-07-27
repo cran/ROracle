@@ -11,6 +11,7 @@ All rights reserved. */
    NOTES
 
    MODIFIED   (MM/DD/YY)
+   rkanodia    07/26/12 - corrected buffer length to get server version
    rkanodia    07/01/12 - block statement caching without prefetch 
    rpingte     06/21/12 - UTC changes
    rpingte     06/21/12 - convert utf-8 sql to env handle character set
@@ -544,7 +545,7 @@ sword roociGetConInfo(roociCon *pcon, text **user, ub4 *userLen,
   if (verServer)
   {
     rc = OCIServerRelease(pcon->svc_roociCon, pcon->err_roociCon, verServer,
-                          1, OCI_HTYPE_SVCCTX, &ver);
+                          ROOCI_VERSION_LEN, OCI_HTYPE_SVCCTX, &ver);
     if (rc == OCI_ERROR)
       return rc;
   

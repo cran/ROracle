@@ -38,7 +38,7 @@ All rights reserved. */
 # include <oci.h>
 #endif
 
-#define ROOCI_ERR_LEN              OCI_ERROR_MAXMSG_SIZE2    /* rodbi ERRor */
+#define ROOCI_ERR_LEN              3072                      /* rodbi ERRor */
                                                            /* buffer LENgth */
 #define ROOCI_VERSION_LEN          64        /* rodbi Version Number Length */
 #define ROOCI_MAX_IDENTIFIER_LEN   30       /* max length of db identifiers */

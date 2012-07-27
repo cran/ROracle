@@ -68,6 +68,9 @@ All rights reserved. */
    NOTES
 
    MODIFIED   (MM/DD/YY)
+   rkanodia    07/27/12 - updated driver version
+   rpingte     07/27/12 - fix error check
+   qinwan      07/22/12 - add rawToStrhexCall
    rkanodia    07/01/12 - block statement caching without prefetch
    rpingte     06/21/12 - convert utf-8 sql to env handle character set
    jfeldhau    06/18/12 - ROracle support for TimesTen.
@@ -185,7 +188,7 @@ while (0)
 #define RODBI_DRV_NAME       "Oracle (OCI)"
 #define RODBI_DRV_MAJOR       1
 #define RODBI_DRV_MINOR       1
-#define RODBI_DRV_UPDATE      2
+#define RODBI_DRV_UPDATE      4
 
 /* RODBI R classes */
 #define RODBI_R_LOG           1                                  /* LOGICAL */
@@ -360,13 +363,14 @@ const rodbiITyp rodbiITypTab[] =
 };
 
 /* RODBI CHECK error using DRiVer handle */
-#define RODBI_CHECK_DRV(drv, fun, pos, free_drv, status)               \
+#define RODBI_CHECK_DRV(drv, fun, pos, free_drv, function_to_invoke)   \
 do                                                                     \
 {                                                                      \
-  if ((status) != OCI_SUCCESS)                                         \
+  sword  rc;                                                           \
+  if ((rc = (function_to_invoke)) != OCI_SUCCESS)                      \
   {                                                                    \
     text   errMsg[ROOCI_ERR_LEN];                                      \
-    rodbiCheck((drv), NULL, (fun), (pos), (status), errMsg,            \
+    rodbiCheck((drv), NULL, (fun), (pos), rc, errMsg,                  \
                sizeof(errMsg));                                        \
     if (free_drv)                                                      \
     {                                                                  \
@@ -379,13 +383,14 @@ do                                                                     \
 while (0)
 
 /* RODBI CHECK error using Connection handle */
-#define RODBI_CHECK_CON(con, fun, pos, free_con, status)               \
+#define RODBI_CHECK_CON(con, fun, pos, free_con, function_to_invoke)   \
 do                                                                     \
 {                                                                      \
-  if ((status) != OCI_SUCCESS)                                         \
+  sword  rc;                                                           \
+  if ((rc = (function_to_invoke)) != OCI_SUCCESS)                      \
   {                                                                    \
     text   errMsg[ROOCI_ERR_LEN];                                      \
-    rodbiCheck((con)->drv_rodbiCon, con, (fun), (pos), (status),       \
+    rodbiCheck((con)->drv_rodbiCon, con, (fun), (pos), rc,             \
                errMsg, sizeof(errMsg));                                \
     if (free_con)                                                      \
     {                                                                  \
@@ -398,14 +403,15 @@ do                                                                     \
 }                                                                      \
 while (0)
 
-#define RODBI_CHECK_RES(res, fun, pos, free_res, status)               \
+#define RODBI_CHECK_RES(res, fun, pos, free_res, function_to_invoke)   \
 do                                                                     \
 {                                                                      \
-  if ((status) != OCI_SUCCESS)                                         \
+  sword  rc;                                                           \
+  if ((rc = (function_to_invoke)) != OCI_SUCCESS)                      \
   {                                                                    \
     text   errMsg[ROOCI_ERR_LEN];                                      \
     rodbiCheck((res)->con_rodbiRes->drv_rodbiCon, (res)->con_rodbiRes, \
-               (fun), (pos), (status), errMsg, sizeof(errMsg));        \
+               (fun), (pos), rc, errMsg, sizeof(errMsg));              \
     if (free_res)                                                      \
     {                                                                  \
       roociResFree(&((res)->con_rodbiRes->con_rodbiCon),               \
@@ -2472,6 +2478,33 @@ ub1 rodbiTypeInt(ub2 ctyp, sb2 precision, sb1 scale, ub2 size,
   return ityp;
 } /* end rodbiTypeInt */
 
+
+/* ---------------------------- rawVecToListCall ------------------------------ */
+SEXP rawVecToListCall(SEXP val, SEXP chunksz) {
+
+  const int CHUNKSZ = *(INTEGER(chunksz));
+  R_len_t k, idx=0, seglen, rawlen=LENGTH(val);
+  Rbyte * valraw;
+  Rbyte * valout;
+  PROTECT_INDEX px;
+  SEXP out;
+
+  valraw = RAW(val);
+  PROTECT_WITH_INDEX(out = allocVector(VECSXP, rawlen>0 ? (rawlen-1)/CHUNKSZ+1 : 0), &px);
+  for (k=0; k < rawlen; k+=CHUNKSZ) {
+    seglen =  k+CHUNKSZ <= rawlen ? CHUNKSZ : rawlen-k;
+    SET_VECTOR_ELT(out, idx, allocVector(RAWSXP, seglen));
+    valout = RAW(VECTOR_ELT(out, idx));
+    memcpy(valout, valraw+k, seglen);
+    idx++;
+  }
+
+  UNPROTECT(1);
+  return out;
+
+} /* end of rawVecToListCall */
+
+
 /* ---------------------------- strhexToRawCall ------------------------------ */
 
 SEXP strhexToRawCall(SEXP str) {
@@ -2510,5 +2543,42 @@ SEXP strhexToRawCall(SEXP str) {
   UNPROTECT(1);
   return(out);
 } /* end of strhexToRawCall */
+
+/* ---------------------------- rawToStrhexCall ------------------------------ */
+
+SEXP rawToStrhexCall(SEXP val, SEXP chunksz) {
+
+  const int CHUNKSZ = *(INTEGER(chunksz));
+  const unsigned char char0 = '0';
+  const unsigned char charA = 'A';
+  unsigned char  * p;
+  Rbyte * v;
+  unsigned char v1, v2;
+  R_len_t i=0, k, num=0, seglen, rawlen=LENGTH(val);
+  SEXP out;
+
+  PROTECT(out = NEW_STRING(rawlen>0 ? (rawlen-1)/CHUNKSZ+1 : 0));
+
+  v = RAW(val);
+  p = (unsigned char *)malloc(CHUNKSZ*2+1);
+
+  for (k=0; k < rawlen; k++) {
+    v1 = v[k]>>4;
+    v2 = v[k]&0x0F;
+    p[i*2] = v1>=10 ? v1-10+charA : v1+char0;
+    p[i*2+1] = v2>=10 ? v2-10+charA : v2+char0;
+    i++;
+    if (i==CHUNKSZ || k == rawlen-1) {
+      p[i*2] = '\0';
+      SET_STRING_ELT(out, num++, mkChar(p));
+      i=0;
+    }
+  }
+
+  free(p);
+  UNPROTECT(1);
+
+  return(out);
+} /* end of rawToStrhexCall */
 
 /* end of file rodbi.c */
