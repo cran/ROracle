@@ -68,6 +68,11 @@ All rights reserved. */
    NOTES
 
    MODIFIED   (MM/DD/YY)
+   rkanodia    08/27/12 - [14542319] Updated ROracle version from 1.1-4 to
+                          1.1-5
+   rkanodia    08/08/12 - Removed redundant arguments passed to functions
+                          and removed LOB prefetch support, bug [14508278]
+   qinwan      08/06/12 - remove hexstrtoraw and rawtohexstr call
    rkanodia    07/27/12 - updated driver version
    rpingte     07/27/12 - fix error check
    qinwan      07/22/12 - add rawToStrhexCall
@@ -129,7 +134,6 @@ All rights reserved. */
 #define RODBI_DRV_ERR_CHECKWD     -1                      /* Invalid object */
 #define RODBI_BULK_READ           25               /* rodbi BULK READ count */ 
 #define RODBI_BULK_WRITE         100              /* rodbi BULK WRITE count */
-#define RODBI_LOB_PREFETCH_SIZ  1024             /* rodbi LOB prefetch size */ 
 
 
 /* RODBI FATAL error */
@@ -188,7 +192,7 @@ while (0)
 #define RODBI_DRV_NAME       "Oracle (OCI)"
 #define RODBI_DRV_MAJOR       1
 #define RODBI_DRV_MINOR       1
-#define RODBI_DRV_UPDATE      4
+#define RODBI_DRV_UPDATE      5
 
 /* RODBI R classes */
 #define RODBI_R_LOG           1                                  /* LOGICAL */
@@ -293,7 +297,6 @@ struct rodbiCon
   boolean    ociprefetch_rodbiCon;             /* use OCI's prefetch buffer */
   int        nrows_rodbiCon;      /* No. of rows to allocate in prefetch or */
                                                    /* array fetch operation */
-  ub4        lobPrefetchSiz_rodbiCon;                  /* LOB prefetch size */                                                   
 };
 typedef struct rodbiCon rodbiCon;
 
@@ -320,7 +323,6 @@ struct rodbiRes
   SEXP       name_rodbiRes;                          /* column NAMEs vector */
   SEXP       list_rodbiRes;                                    /* data LIST */
   rodbiState state_rodbiRes;                      /* query processing STATE */
-  ub4        lobPrefetchSiz_rodbiRes;                  /* LOB prefetch size */                                                   
 };
 typedef struct rodbiRes rodbiRes;
 
@@ -338,27 +340,27 @@ typedef struct rodbiITyp rodbiITyp;
 /* rodbi Internal TYPe TABle */
 const rodbiITyp rodbiITypTab[] =
 {
-  {"",                0,           0,            0},
-  {RODBI_VARCHAR2_NM, RODBI_R_CHR, SQLT_STR,     0}, 
-  {RODBI_NUMBER_NM,   RODBI_R_NUM, SQLT_BDOUBLE, sizeof(double)},
-  {RODBI_INTEGER_NM,  RODBI_R_INT, SQLT_INT,     sizeof(int)},
-  {RODBI_LONG_NM,     0,           0,            0},
+  {"",                0,           0,                 0},
+  {RODBI_VARCHAR2_NM, RODBI_R_CHR, SQLT_STR,          0}, 
+  {RODBI_NUMBER_NM,   RODBI_R_NUM, SQLT_BDOUBLE,      sizeof(double)},
+  {RODBI_INTEGER_NM,  RODBI_R_INT, SQLT_INT,          sizeof(int)},
+  {RODBI_LONG_NM,     0,           0,                 0},
   {RODBI_DATE_NM,     RODBI_R_DAT, SQLT_TIMESTAMP_TZ, sizeof(OCIDateTime *)}, 
-  {RODBI_RAW_NM,      RODBI_R_RAW, SQLT_BIN,     0}, 
-  {RODBI_LONG_RAW_NM, 0,           0,            0},
-  {RODBI_ROWID_NM,    RODBI_R_CHR, SQLT_STR,     0}, 
-  {RODBI_CHAR_NM,     RODBI_R_CHR, SQLT_STR,     0}, 
-  {RODBI_BFLOAT_NM,   RODBI_R_NUM, SQLT_BDOUBLE, sizeof(double)},
-  {RODBI_BDOUBLE_NM,  RODBI_R_NUM, SQLT_BDOUBLE, sizeof(double)},
-  {RODBI_UDT_NM,      0,           0,            0},
-  {RODBI_REF_NM,      0,           0,            0},
-  {RODBI_CLOB_NM,     RODBI_R_CHR, SQLT_CLOB,    sizeof(OCILobLocator *)},
-  {RODBI_BLOB_NM,     RODBI_R_RAW, SQLT_BLOB,    sizeof(OCILobLocator *)},
-  {RODBI_BFILE_NM,    RODBI_R_RAW, SQLT_BFILE,   sizeof(OCILobLocator *)},
+  {RODBI_RAW_NM,      RODBI_R_RAW, SQLT_BIN,          0}, 
+  {RODBI_LONG_RAW_NM, 0,           0,                 0},
+  {RODBI_ROWID_NM,    RODBI_R_CHR, SQLT_STR,          0}, 
+  {RODBI_CHAR_NM,     RODBI_R_CHR, SQLT_STR,          0}, 
+  {RODBI_BFLOAT_NM,   RODBI_R_NUM, SQLT_BDOUBLE,      sizeof(double)},
+  {RODBI_BDOUBLE_NM,  RODBI_R_NUM, SQLT_BDOUBLE,      sizeof(double)},
+  {RODBI_UDT_NM,      0,           0,                 0},
+  {RODBI_REF_NM,      0,           0,                 0},
+  {RODBI_CLOB_NM,     RODBI_R_CHR, SQLT_CLOB,         sizeof(OCILobLocator *)},
+  {RODBI_BLOB_NM,     RODBI_R_RAW, SQLT_BLOB,         sizeof(OCILobLocator *)},
+  {RODBI_BFILE_NM,    RODBI_R_RAW, SQLT_BFILE,        sizeof(OCILobLocator *)},
   {RODBI_TIME_NM,     RODBI_R_DAT, SQLT_TIMESTAMP_TZ, sizeof(OCIDateTime *)}, 
   {RODBI_TIME_TZ_NM,  RODBI_R_DAT, SQLT_TIMESTAMP_TZ, sizeof(OCIDateTime *)}, 
-  {RODBI_INTER_YM_NM, RODBI_R_CHR, SQLT_STR,     0},
-  {RODBI_INTER_DS_NM, RODBI_R_CHR, SQLT_STR,     0},
+  {RODBI_INTER_YM_NM, RODBI_R_CHR, SQLT_STR,          0},
+  {RODBI_INTER_DS_NM, RODBI_R_CHR, SQLT_STR,          0},
   {RODBI_TIME_LTZ_NM, RODBI_R_DAT, SQLT_TIMESTAMP_TZ, sizeof(OCIDateTime *)}
 };
 
@@ -394,8 +396,7 @@ do                                                                     \
                errMsg, sizeof(errMsg));                                \
     if (free_con)                                                      \
     {                                                                  \
-      roociTerminateCon(&((con)->drv_rodbiCon->ctx_rodbiDrv),          \
-                        &((con)->con_rodbiCon), 1);                    \
+      roociTerminateCon(&((con)->con_rodbiCon), 1);                    \
       ROOCI_MEM_FREE((con));                                           \
     }                                                                  \
     RODBI_ERROR((const char *)errMsg);                                 \
@@ -414,8 +415,7 @@ do                                                                     \
                (fun), (pos), rc, errMsg, sizeof(errMsg));              \
     if (free_res)                                                      \
     {                                                                  \
-      roociResFree(&((res)->con_rodbiRes->con_rodbiCon),               \
-                   &(res)->res_rodbiRes);                              \
+      roociResFree(&(res)->res_rodbiRes);                              \
       ROOCI_MEM_FREE((res));                                           \
     }                                                                  \
     RODBI_ERROR((const char *)errMsg);                                 \
@@ -428,8 +428,7 @@ do                                                                     \
 {                                                                      \
   if (free_res)                                                        \
   {                                                                    \
-    roociResFree(&((res)->con_rodbiRes->con_rodbiCon),                 \
-                 &(res)->res_rodbiRes);                                \
+    roociResFree(&(res)->res_rodbiRes);                                \
     ROOCI_MEM_FREE((res));                                             \
   }                                                                    \
   RODBI_ERROR((const char *)err_msg);                                  \
@@ -490,10 +489,10 @@ static rodbiCon *rodbiGetCon(SEXP hdlCon);
 
 /* ------------------------- rodbiConInfoResults -------------------------- */
 /* get result set information related to connection */
-static SEXP rodbiConInfoResults(rodbiDrv *drv, SEXP con);
+static SEXP rodbiConInfoResults(SEXP con);
 
 /* ----------------------------- rodbiConTerm ----------------------------- */
-static void rodbiConTerm(rodbiDrv *drv, rodbiCon *con);
+static void rodbiConTerm(rodbiCon *con);
 
 /* -------------------------- rodbiGetRes --------------------------------- */
 /* get result set ID */
@@ -513,8 +512,7 @@ static void rodbiResExecBind(rodbiRes *res, SEXP data, boolean free_res);
 
 /* ------------------------- rodbiResBind --------------------------------- */
 /* bind input data */
-static void rodbiResBind(rodbiCon *con, rodbiRes *res, SEXP data,
-                         boolean free_res);
+static void rodbiResBind(rodbiRes *res, SEXP data, boolean free_res);
 
 /* ------------------------ rodbiResBindCopy ------------------------------ */
 /* bind data */
@@ -559,7 +557,7 @@ static SEXP rodbiResInfoFields(rodbiRes *res);
 
 /* ------------------------------- rodbiResTerm ---------------------------- */
 /* Terminate the result and free memory */
-void rodbiResTerm(rodbiRes  *res);
+static void rodbiResTerm(rodbiRes  *res);
 
 /* --------------------- rodbiCheck --------------------------------------- */
 /* get error message and throw error */
@@ -596,19 +594,19 @@ SEXP rociDrvTerm(SEXP ptrDrv);
 /* ---------------------------- rociConInit ------------------------------- */
 /* initialize connection context */
 SEXP rociConInit(SEXP ptrDrv, SEXP params, SEXP prefetch, SEXP nrows,
-                 SEXP stmtCacheSize, SEXP lobPrefetchSize);
+                 SEXP stmtCacheSize);
 
 /* ---------------------------- rociConError ------------------------------ */
 /* get connection error */
-SEXP rociConError(SEXP ptrDrv, SEXP hdlCon);
+SEXP rociConError(SEXP hdlCon);
 
 /* ---------------------------- rociConInfo ------------------------------- */
 /* get connection info */
-SEXP rociConInfo(SEXP ptrDrv, SEXP hdlCon);
+SEXP rociConInfo(SEXP hdlCon);
 
 /* ---------------------------- rociConTerm ------------------------------- */
 /* clear connection context */
-SEXP rociConTerm(SEXP ptrDrv, SEXP hdlCon);
+SEXP rociConTerm(SEXP hdlCon);
 
 /* ---------------------------- rociConCommit ----------------------------- */
 /* commit connection transaction */
@@ -620,23 +618,23 @@ SEXP rociConRollback(SEXP hdlCon);
 
 /* ---------------------------- rociResInit ------------------------------- */
 /* initialize result set */
-SEXP rociResInit(SEXP ptrDrv, SEXP hdlCon, SEXP statement, SEXP data,
-                 SEXP prefetch, SEXP nrows, SEXP lobPrefetchSize);
+SEXP rociResInit(SEXP hdlCon, SEXP statement, SEXP data,
+                 SEXP prefetch, SEXP nrows);
 
 /* --------------------------- rociResExec -------------------------------- */
 /* execute statement */
-SEXP rociResExec(SEXP ptrDrv, SEXP hdlRes, SEXP data);
+SEXP rociResExec(SEXP hdlRes, SEXP data);
 
 /* --------------------------- rociResFetch ------------------------------- */
 /* fetch result */
-SEXP rociResFetch(SEXP ptrDrv, SEXP hdlRes, SEXP numRec);
+SEXP rociResFetch(SEXP hdlRes, SEXP numRec);
 
 /* --------------------------- rociResInfo -------------------------------- */
-SEXP rociResInfo(SEXP ptrDrv, SEXP hdlRes);
+SEXP rociResInfo(SEXP hdlRes);
 
 /* --------------------------- rociResTerm -------------------------------- */
 /* terminate result set */
-SEXP rociResTerm(SEXP ptrDrv, SEXP hdlRes);
+SEXP rociResTerm(SEXP hdlRes);
 
 /*
  this will call rochkIntFn in a top-level context so it won't longjmp-out 
@@ -788,7 +786,7 @@ SEXP rociDrvTerm(SEXP ptrDrv)
 /* ----------------------------- rociConCreate ---------------------------- */
 
 SEXP rociConInit(SEXP ptrDrv, SEXP params, SEXP prefetch, SEXP nrows, 
-                 SEXP stmtCacheSize, SEXP lobPrefetchSize)
+                 SEXP stmtCacheSize)
 {
   char      *user              = (char *)CHAR(STRING_ELT(params, 0));
   char      *pass              = (char *)CHAR(STRING_ELT(params, 1));
@@ -808,15 +806,11 @@ SEXP rociConInit(SEXP ptrDrv, SEXP params, SEXP prefetch, SEXP nrows,
   
   con->drv_rodbiCon = drv;
 
-  /* set LOB prefetch size */
-  con->lobPrefetchSiz_rodbiCon        = (ub4)INTEGER(lobPrefetchSize)[0];
-
   /* Initialize connection environment */
   RODBI_CHECK_CON(con, __FUNCTION__, 1, FALSE,
                   roociInitializeCon(&drv->ctx_rodbiDrv, &(con->con_rodbiCon),
                                      user, pass, conStr, wallet,
-                                     (ub4)INTEGER(stmtCacheSize)[0], 
-                                     con->lobPrefetchSiz_rodbiCon));
+                                     (ub4)INTEGER(stmtCacheSize)[0])); 
   
   (con->con_rodbiCon).parent_roociCon = con;
   con->ociprefetch_rodbiCon           = (*LOGICAL(prefetch) == TRUE) ? 
@@ -836,10 +830,10 @@ SEXP rociConInit(SEXP ptrDrv, SEXP params, SEXP prefetch, SEXP nrows,
 
 /* ----------------------------- rociConError ----------------------------- */
 
-SEXP rociConError(SEXP ptrDrv, SEXP hdlCon)
+SEXP rociConError(SEXP hdlCon)
 {
-  rodbiDrv    *drv  = rodbiGetDrv(ptrDrv);
   rodbiCon    *con  = rodbiGetCon(hdlCon);
+  rodbiDrv    *drv  = con->drv_rodbiCon;
   SEXP         info = R_NilValue;
   SEXP         names;
   sb4          errNum;
@@ -885,9 +879,8 @@ SEXP rociConError(SEXP ptrDrv, SEXP hdlCon)
 
 /* ------------------------------ rociConInfo ----------------------------- */
 
-SEXP rociConInfo(SEXP ptrDrv, SEXP hdlCon)
+SEXP rociConInfo(SEXP hdlCon)
 {
-  rodbiDrv    *drv              = rodbiGetDrv(ptrDrv);
   rodbiCon    *con              = rodbiGetCon(hdlCon);
   SEXP        info              = R_NilValue;
   SEXP        names;
@@ -902,10 +895,10 @@ SEXP rociConInfo(SEXP ptrDrv, SEXP hdlCon)
     con->err_checked_rodbiCon = FALSE;
 
     /* allocate output list */
-    PROTECT(info = allocVector(VECSXP, 11));
+    PROTECT(info = allocVector(VECSXP, 10));
 
     /* allocate list element names */
-    names = allocVector(STRSXP, 11);
+    names = allocVector(STRSXP, 10);
     setAttrib(info, R_NamesSymbol, names);                /* protects names */
 
     RODBI_CHECK_CON(con, __FUNCTION__, 1, FALSE,
@@ -954,14 +947,9 @@ SEXP rociConInfo(SEXP ptrDrv, SEXP hdlCon)
     SET_VECTOR_ELT(info,  8, ScalarInteger((int)stmt_cache_size));
     SET_STRING_ELT(names, 8, mkChar("stmt_cache"));
     
-    /* lob_prefetch */
-    SET_VECTOR_ELT(info,  9, ScalarInteger(
-                                          (int)con->lobPrefetchSiz_rodbiCon));
-    SET_STRING_ELT(names, 9, mkChar("lob_prefetch"));
-    
     /* results */
-    SET_VECTOR_ELT(info,  10, rodbiConInfoResults(drv, hdlCon));
-    SET_STRING_ELT(names, 10, mkChar("results"));
+    SET_VECTOR_ELT(info,  9, rodbiConInfoResults(hdlCon));
+    SET_STRING_ELT(names, 9, mkChar("results"));
 
     /* release info list */
     UNPROTECT(1);
@@ -976,9 +964,8 @@ SEXP rociConInfo(SEXP ptrDrv, SEXP hdlCon)
 
 /* ------------------------------ rociConTerm ----------------------------- */
 
-SEXP rociConTerm(SEXP ptrDrv, SEXP hdlCon)
+SEXP rociConTerm(SEXP hdlCon)
 {
-  rodbiDrv  *drv = rodbiGetDrv(ptrDrv);
   rodbiCon  *con = rodbiGetCon(hdlCon);
 
   if (con)
@@ -989,7 +976,7 @@ SEXP rociConTerm(SEXP ptrDrv, SEXP hdlCon)
     R_ClearExternalPtr(hdlCon);
 
     /* free connection */
-    rodbiConTerm(drv, con);
+    rodbiConTerm(con);
 
     RODBI_TRACE("connection removed");
   }
@@ -1046,20 +1033,17 @@ SEXP rociConRollback(SEXP hdlCon)
 
 /* ------------------------------ rociResInit ----------------------------- */
 
-SEXP rociResInit(SEXP ptrDrv, SEXP hdlCon, SEXP statement, SEXP data,
-                 SEXP prefetch, SEXP nrows, SEXP lobPrefetchSize)
+SEXP rociResInit(SEXP hdlCon, SEXP statement, SEXP data,
+                 SEXP prefetch, SEXP nrows)
 {
-  rodbiDrv   *drv             = rodbiGetDrv(ptrDrv);
-  rodbiCon   *con;
+  rodbiCon   *con             = rodbiGetCon(hdlCon);
   rodbiRes   *res;
   SEXP        hdlRes;
   boolean     pref;
   int         rows_per_fetch;
   cetype_t    enc;                                 /* encoding of statement */
-  ub1         qry_encoding;
+  ub1         qry_encoding    = CE_NATIVE;
   ub4         stmt_cache_size = 0;
-
-  con = rodbiGetCon(hdlCon);
 
   pref = ((*LOGICAL(prefetch) == TRUE) ? TRUE :
                                         (con->ociprefetch_rodbiCon ? TRUE : 
@@ -1086,12 +1070,6 @@ SEXP rociResInit(SEXP ptrDrv, SEXP hdlCon, SEXP statement, SEXP data,
                                       RODBI_BULK_READ : con->nrows_rodbiCon) :
                                                             INTEGER(nrows)[0];
   
-  res->lobPrefetchSiz_rodbiRes = 
-                     (INTEGER(lobPrefetchSize)[0] == RODBI_LOB_PREFETCH_SIZ) ?
-                   ((con->lobPrefetchSiz_rodbiCon == RODBI_LOB_PREFETCH_SIZ) ?
-                      RODBI_LOB_PREFETCH_SIZ : con->lobPrefetchSiz_rodbiCon) :
-                                             (ub4)INTEGER(lobPrefetchSize)[0];
-
   enc = Rf_getCharCE(STRING_ELT(statement, 0));
   if (enc == CE_NATIVE)
     qry_encoding = ROOCI_QRY_NATIVE;
@@ -1131,7 +1109,7 @@ SEXP rociResInit(SEXP ptrDrv, SEXP hdlCon, SEXP statement, SEXP data,
 
   /* bind data */
   if  ((res->res_rodbiRes).bcnt_roociRes)
-    rodbiResBind(con, res, data, TRUE);
+    rodbiResBind(res, data, TRUE);
 
   /* execute the statement */
   rodbiResExecStmt(res, data, TRUE);
@@ -1140,9 +1118,7 @@ SEXP rociResInit(SEXP ptrDrv, SEXP hdlCon, SEXP statement, SEXP data,
   {
     /* define data */
     RODBI_CHECK_RES(res, __FUNCTION__, 3, TRUE,
-                    roociResDefine(&drv->ctx_rodbiDrv, &con->con_rodbiCon,
-                                   &res->res_rodbiRes, 
-                                   res->lobPrefetchSiz_rodbiRes));
+                    roociResDefine(&res->res_rodbiRes));
   }  
 
   /* allocate result handle */
@@ -1164,9 +1140,8 @@ SEXP rociResInit(SEXP ptrDrv, SEXP hdlCon, SEXP statement, SEXP data,
 
 /* ------------------------------ rociResExec ----------------------------- */
 
-SEXP rociResExec(SEXP ptrDrv, SEXP hdlRes, SEXP data)
+SEXP rociResExec(SEXP hdlRes, SEXP data)
 {
-  rodbiDrv  *drv = rodbiGetDrv(ptrDrv);
   rodbiRes  *res = rodbiGetRes(hdlRes);
   rodbiCon  *con = res->con_rodbiRes;
 
@@ -1182,9 +1157,8 @@ SEXP rociResExec(SEXP ptrDrv, SEXP hdlRes, SEXP data)
 
 /* ----------------------------- rociResFetch ----------------------------- */
 
-SEXP rociResFetch(SEXP ptrDrv, SEXP hdlRes, SEXP numRec)
+SEXP rociResFetch(SEXP hdlRes, SEXP numRec)
 {
-  rodbiDrv    *drv       = rodbiGetDrv(ptrDrv);
   rodbiRes    *res       = rodbiGetRes(hdlRes);
   rodbiCon    *con       = res->con_rodbiRes;
   int          nrow      = INTEGER(numRec)[0];
@@ -1211,9 +1185,8 @@ SEXP rociResFetch(SEXP ptrDrv, SEXP hdlRes, SEXP numRec)
     case FETCH_rodbiState:
         /* fetch data */
         RODBI_CHECK_RES(res, __FUNCTION__, 1, FALSE,
-                        roociFetchData(&(con->con_rodbiCon), 
-                                       &(res->res_rodbiRes),
-                                       &fch_rows, &(res->done_rodbiRes)));
+                        roociFetchData(&(res->res_rodbiRes), &fch_rows, 
+                                       &(res->done_rodbiRes)));
        res->fchNum_rodbiRes = (int)fch_rows;
        /* set state */
        res->fchBeg_rodbiRes = 0;
@@ -1251,9 +1224,8 @@ SEXP rociResFetch(SEXP ptrDrv, SEXP hdlRes, SEXP numRec)
 
 /* ------------------------------ rociResInfo ----------------------------- */
 
-SEXP rociResInfo(SEXP ptrDrv, SEXP hdlRes)
+SEXP rociResInfo(SEXP hdlRes)
 {
-  rodbiDrv    *drv = rodbiGetDrv(ptrDrv);
   rodbiRes    *res = rodbiGetRes(hdlRes);
   rodbiCon    *con = res->con_rodbiRes;
   SEXP         info;
@@ -1262,10 +1234,10 @@ SEXP rociResInfo(SEXP ptrDrv, SEXP hdlRes)
   con->err_checked_rodbiCon = FALSE;
 
   /* allocate output list */
-  PROTECT(info = allocVector(VECSXP, 9));
+  PROTECT(info = allocVector(VECSXP, 8));
 
   /* allocate list element names */
-  names = allocVector(STRSXP, 9);
+  names = allocVector(STRSXP, 8);
   setAttrib(info, R_NamesSymbol, names);                  /* protects names */
 
   /* statement */
@@ -1300,13 +1272,9 @@ SEXP rociResInfo(SEXP ptrDrv, SEXP hdlRes)
   SET_VECTOR_ELT(info,  6, ScalarInteger(res->nrows_rodbiRes));
   SET_STRING_ELT(names, 6, mkChar("bulk_read"));
 
-  /* lob_prefetch */
-  SET_VECTOR_ELT(info,  7, ScalarInteger((int)res->lobPrefetchSiz_rodbiRes));
-  SET_STRING_ELT(names, 7, mkChar("lob_prefetch"));
-
   /* fields */
-  SET_VECTOR_ELT(info,  8, rodbiResInfoFields(res));
-  SET_STRING_ELT(names, 8, mkChar("fields"));
+  SET_VECTOR_ELT(info,  7, rodbiResInfoFields(res));
+  SET_STRING_ELT(names, 7, mkChar("fields"));
 
   /* release info list */
   UNPROTECT(1);
@@ -1318,9 +1286,8 @@ SEXP rociResInfo(SEXP ptrDrv, SEXP hdlRes)
 
 /* ------------------------------- rociResTerm ---------------------------- */
 
-SEXP rociResTerm(SEXP ptrDrv, SEXP hdlRes)
+SEXP rociResTerm(SEXP hdlRes)
 {
-  rodbiDrv  *drv = rodbiGetDrv(ptrDrv);
   rodbiRes  *res = rodbiGetRes(hdlRes);
   rodbiCon  *con;
 
@@ -1414,7 +1381,7 @@ static void rodbiDrvFree(rodbiDrv *drv)
     if (!rodbiAssertCon(con, __FUNCTION__, 1))
       RODBI_ERROR(RODBI_ERR_INVALID_CON);
 
-    rodbiConTerm(drv, con);
+    rodbiConTerm(con);
     con = roociGetNextParentCon(&(drv->ctx_rodbiDrv));
   }
 
@@ -1449,7 +1416,7 @@ static rodbiCon *rodbiGetCon(SEXP hdlCon)
 
 /* -------------------------- rodbiConInfoResults ------------------------- */
 
-static SEXP rodbiConInfoResults(rodbiDrv *drv, SEXP conxp)
+static SEXP rodbiConInfoResults(SEXP conxp)
 {
   rodbiCon   *con  = rodbiGetCon(conxp);
   SEXP        list  = R_NilValue;
@@ -1485,7 +1452,7 @@ static SEXP rodbiConInfoResults(rodbiDrv *drv, SEXP conxp)
 
 /* ----------------------------- rodbiConTerm ----------------------------- */
   
-static void rodbiConTerm(rodbiDrv *drv, rodbiCon *con)
+static void rodbiConTerm(rodbiCon *con)
 { 
   rodbiRes  *res;
 
@@ -1501,8 +1468,7 @@ static void rodbiConTerm(rodbiDrv *drv, rodbiCon *con)
 
   /* free connection */
   RODBI_CHECK_CON(con, __FUNCTION__, 1, FALSE,
-                  roociTerminateCon(&(drv->ctx_rodbiDrv),
-                                    &(con->con_rodbiCon), 1));
+                  roociTerminateCon(&(con->con_rodbiCon), 1));
 
   ROOCI_MEM_FREE(con);
 } /* end rodbiConTerm */
@@ -1543,8 +1509,7 @@ static void rodbiResExecStmt(rodbiRes *res, SEXP data, boolean free_res)
     {
       /* execute statement */
        RODBI_CHECK_RES(res, __FUNCTION__, 1, free_res,
-                       roociStmtExec(&(res->con_rodbiRes->con_rodbiCon), 
-                                     &(res->res_rodbiRes), 1, 
+                       roociStmtExec(&(res->res_rodbiRes), 1, 
                                      res->styp_rodbiRes,
                                      &(res->affrows_rodbiRes)));
        
@@ -1559,8 +1524,6 @@ static void rodbiResExecStmt(rodbiRes *res, SEXP data, boolean free_res)
 
 static void rodbiResExecQuery(rodbiRes *res, SEXP data, boolean free_res)
 {
-  rodbiCon      *con = res->con_rodbiRes;
-
   /* copy bind data */
   if ((res->res_rodbiRes).bmax_roociRes > 1)
     RODBI_ERROR_RES(RODBI_ERR_MANY_ROWS, free_res);
@@ -1569,8 +1532,7 @@ static void rodbiResExecQuery(rodbiRes *res, SEXP data, boolean free_res)
 
   /* execute the statement */
   RODBI_CHECK_RES(res, __FUNCTION__, 1, free_res,
-                  roociStmtExec(&(con->con_rodbiCon), &(res->res_rodbiRes), 0,
-                                res->styp_rodbiRes, 
+                  roociStmtExec(&(res->res_rodbiRes), 0, res->styp_rodbiRes, 
                                 &(res->affrows_rodbiRes)));
 
   /* set state */
@@ -1581,7 +1543,6 @@ static void rodbiResExecQuery(rodbiRes *res, SEXP data, boolean free_res)
 
 static void rodbiResExecBind(rodbiRes *res, SEXP data, boolean free_res)
 {
-  rodbiCon      *con = res->con_rodbiRes;
   int            beg = 0;
   int            end;
   ub4            iters;
@@ -1603,8 +1564,8 @@ static void rodbiResExecBind(rodbiRes *res, SEXP data, boolean free_res)
 
     /* execute the statement */
     RODBI_CHECK_RES(res, __FUNCTION__, 1, free_res,
-                    roociStmtExec(&(con->con_rodbiCon), &(res->res_rodbiRes),
-                                  iters, res->styp_rodbiRes,
+                    roociStmtExec(&(res->res_rodbiRes), iters, 
+                                  res->styp_rodbiRes, 
                                   &(res->affrows_rodbiRes)));
   
     /* next chunk */
@@ -1618,8 +1579,7 @@ static void rodbiResExecBind(rodbiRes *res, SEXP data, boolean free_res)
 
 /* ----------------------------- rodbiResBind ----------------------------- */
 
-static void rodbiResBind(rodbiCon *con, rodbiRes *res, SEXP data,
-                         boolean free_res)
+static void rodbiResBind(rodbiRes *res, SEXP data, boolean free_res)
 {
   int       bid;
 
@@ -1705,12 +1665,9 @@ static void rodbiResBind(rodbiCon *con, rodbiRes *res, SEXP data,
     if ((res->res_rodbiRes).btyp_roociRes[bid] == SQLT_TIMESTAMP_TZ)
     {
       void **tsdt = (void **)((res->res_rodbiRes).bdat_roociRes[bid]);
-
       RODBI_CHECK_RES(res, __FUNCTION__, 1, free_res,
-          OCIArrayDescriptorAlloc(con->drv_rodbiCon->ctx_rodbiDrv.env_roociCtx,
-                                  (void **)tsdt, OCI_DTYPE_TIMESTAMP_TZ,
-                                  (res->res_rodbiRes).bmax_roociRes, 0, NULL));
-     } 
+                      roociAllocTSBindBuf(&(res->res_rodbiRes), tsdt, bid));
+    } 
     
     ROOCI_MEM_ALLOC((res->res_rodbiRes).bind_roociRes[bid],
                     (res->res_rodbiRes).bmax_roociRes, sizeof(sb2));
@@ -1837,8 +1794,8 @@ static void rodbiResBindCopy(rodbiRes *res, SEXP data, int beg, int end,
 
     /* bind data buffers */
     RODBI_CHECK_RES(res, __FUNCTION__, 1, free_res,
-                    roociBindData(&(res->con_rodbiRes->con_rodbiCon),
-                    &(res->res_rodbiRes), (ub4)(bid+1), form_of_use));
+                    roociBindData(&(res->res_rodbiRes), (ub4)(bid+1), 
+                                  form_of_use));
 
   }
 } /* end rodbiResBindCopy */
@@ -1847,7 +1804,6 @@ static void rodbiResBindCopy(rodbiRes *res, SEXP data, int beg, int end,
 
 static void rodbiResAlloc(rodbiRes *res, int nrow)
 {
-  rodbiCon      *con  = res->con_rodbiRes;
   int            ncol = (res->res_rodbiRes).ncol_roociRes;
   ub4            len;
   oratext       *buf;
@@ -1867,8 +1823,7 @@ static void rodbiResAlloc(rodbiRes *res, int nrow)
 
     /* get column name & parameters */
     RODBI_CHECK_RES(res, __FUNCTION__, 1, FALSE,
-                    roociGetColProperties(&(con->con_rodbiCon), 
-                                          &(res->res_rodbiRes), 
+                    roociGetColProperties(&(res->res_rodbiRes), 
                                           (ub4)(cid+1), &len, &buf));
 
     /* set column name */
@@ -2292,7 +2247,7 @@ static SEXP rodbiResInfoFields(rodbiRes *res)
 
 /* ------------------------------- rodbiResTerm ---------------------------- */
 
-void rodbiResTerm(rodbiRes  *res)
+static void rodbiResTerm(rodbiRes  *res)
 {
   rodbiCon  *con = res->con_rodbiRes;
   
@@ -2300,7 +2255,7 @@ void rodbiResTerm(rodbiRes  *res)
 
   /* free result set */
   RODBI_CHECK_RES(res, __FUNCTION__, 1, FALSE,
-                  roociResFree(&(con->con_rodbiCon), &(res->res_rodbiRes)));
+                  roociResFree(&(res->res_rodbiRes)));
   (con->con_rodbiCon).num_roociCon--;
 
   ROOCI_MEM_FREE(res);
@@ -2339,12 +2294,13 @@ static void rodbiCheck(rodbiDrv *drv, rodbiCon *con, const char *fun,
     roociGetError(&(drv->ctx_rodbiDrv), &(con->con_rodbiCon), 
                   &errNum, errMsg);
     /* free connection */
-    roociTerminateCon(&(drv->ctx_rodbiDrv), &(con->con_rodbiCon), 0);
+    roociTerminateCon(&(con->con_rodbiCon), 0);
+    ROOCI_MEM_FREE(con);                                           
     break;
 
   default:
     {
-      msglen = snprintf(errMsg, errMsgLen, RODBI_ERR_INTERNAL,
+      msglen = snprintf((char *)errMsg, errMsgLen, RODBI_ERR_INTERNAL,
                         fun, pos, status);
       if (msglen >= errMsgLen)
         *(errMsg + errMsgLen - 1) = 0;
@@ -2483,7 +2439,7 @@ ub1 rodbiTypeInt(ub2 ctyp, sb2 precision, sb1 scale, ub2 size,
 SEXP rawVecToListCall(SEXP val, SEXP chunksz) {
 
   const int CHUNKSZ = *(INTEGER(chunksz));
-  R_len_t k, idx=0, seglen, rawlen=LENGTH(val);
+  R_len_t k, idx=0, seglen=0, rawlen=LENGTH(val);
   Rbyte * valraw;
   Rbyte * valout;
   PROTECT_INDEX px;
@@ -2503,82 +2459,5 @@ SEXP rawVecToListCall(SEXP val, SEXP chunksz) {
   return out;
 
 } /* end of rawVecToListCall */
-
-
-/* ---------------------------- strhexToRawCall ------------------------------ */
-
-SEXP strhexToRawCall(SEXP str) {
-
-  const unsigned char char0 = '0';
-  const unsigned char charA = 'A';
-  const char *p;
-  Rbyte * v;
-  unsigned char v1, v2;
-  R_len_t i, k, num, idx=0, nstr=LENGTH(str), totalLen=0;
-  SEXP out;
-
-  for (k=0; k < nstr; k++) {
-    num = strlen(CHAR(STRING_ELT(str, k)));
-    if (num%2 == 0)  
-      totalLen += num;
-    else
-      error_return("cannot unserialize ill-formed object");
-  }
-
-  PROTECT(out = NEW_RAW(totalLen/2));
-  v = RAW(out);
-
-  for (k=0; k < nstr; k++) {
-    p = CHAR(STRING_ELT(str, k));
-    num = strlen(p);
-    for (i=0; i < num; i+=2) {
-      v1 = p[i];
-      v2 = p[i+1];
-      v1 = v1>=charA ? v1-charA+10 : v1-char0;
-      v2 = v2>=charA ? v2-charA+10 : v2-char0;
-      v[idx++] =(v1<<4)+v2;
-   }
-  }
-
-  UNPROTECT(1);
-  return(out);
-} /* end of strhexToRawCall */
-
-/* ---------------------------- rawToStrhexCall ------------------------------ */
-
-SEXP rawToStrhexCall(SEXP val, SEXP chunksz) {
-
-  const int CHUNKSZ = *(INTEGER(chunksz));
-  const unsigned char char0 = '0';
-  const unsigned char charA = 'A';
-  unsigned char  * p;
-  Rbyte * v;
-  unsigned char v1, v2;
-  R_len_t i=0, k, num=0, seglen, rawlen=LENGTH(val);
-  SEXP out;
-
-  PROTECT(out = NEW_STRING(rawlen>0 ? (rawlen-1)/CHUNKSZ+1 : 0));
-
-  v = RAW(val);
-  p = (unsigned char *)malloc(CHUNKSZ*2+1);
-
-  for (k=0; k < rawlen; k++) {
-    v1 = v[k]>>4;
-    v2 = v[k]&0x0F;
-    p[i*2] = v1>=10 ? v1-10+charA : v1+char0;
-    p[i*2+1] = v2>=10 ? v2-10+charA : v2+char0;
-    i++;
-    if (i==CHUNKSZ || k == rawlen-1) {
-      p[i*2] = '\0';
-      SET_STRING_ELT(out, num++, mkChar(p));
-      i=0;
-    }
-  }
-
-  free(p);
-  UNPROTECT(1);
-
-  return(out);
-} /* end of rawToStrhexCall */
 
 /* end of file rodbi.c */

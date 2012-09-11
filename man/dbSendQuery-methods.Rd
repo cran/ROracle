@@ -45,10 +45,6 @@
     query result and a larger value will benefit queries that return a large 
     result. Application can tune this value to its need.
   }
-  \item{lob_prefetch}{
-    an integer value indicating the size of lob data that can be prefetched and
-    cached while fetching lob data. Default is 1024L.
-  }
   \item{\dots }{additional parameters.}
 }
 \value{
@@ -128,8 +124,7 @@
                         data2 = data.frame(deptno = 10), bulk_read=10L)
     data2 <- fetch(res3, n = -1)
     res4 <- dbSendQuery(con, "select * from emp where ename = :1",
-                        data3 = data.frame(ename = 'SMITH'), 
-                        lob_prefetch=3000L)
+                        data3 = data.frame(ename = 'SMITH')) 
     data3 <- fetch(res4, n = -1)
   }
 }

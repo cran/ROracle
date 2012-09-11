@@ -65,10 +65,6 @@
     that cursors are ready to be used without the need to parse the statements 
     again. Default is 0L. Statement cache leads to prefetch. 
   }
-  \item{lob_prefetch}{
-    an integer value indicating the size of lob data that can be prefetched and
-    cached while fetching lob data. Default is 1024L.
-  }
   \item{\dots }{
     any optional arguments.
   }
@@ -105,8 +101,6 @@
       stmt_cache is used to enable/disable statement caching feature.
       Its value will denote statement cache size.
 
-      lob_prefetch indicate the size of lob data that can be prefetched and
-      cached while fetching lob data.
     }
     \item{dbDisconnect}{
       This implementation disconnect connection between R and database server.
