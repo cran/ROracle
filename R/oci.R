@@ -10,6 +10,9 @@
 #    NOTES
 #
 #    MODIFIED   (MM/DD/YY)
+#    rkanodia    08/02/12 - Removed redundant arguments passed to functions
+#                           and removed LOB prefetch support bug [145082788888888]
+#    paboyoun    08/01/12 - optimize .oci.data.frame
 #    jfeldhau    06/18/12 - ROracle support for TimesTen.
 #    paboyoun    06/04/12 - add data.frame support for list of raw vectors
 #    rpingte     05/24/12 - Date time and raw support
@@ -78,9 +81,8 @@
 
 # 25 -> RO_BULK_READ in rooci.h
 # 0 ->  Default statement cache size
-# 1024 -> Default lob prefetch size
 .oci.Connect <- function(username = "", password = "", dbname = "",
-                         prefetch, bulk_read, stmt_cache, lob_prefetch)
+                         prefetch, bulk_read, stmt_cache)
 {
   # validate
   username <- as.character(username)
@@ -124,37 +126,24 @@
   else
     stmt_cache = 0L
   
-  if (!missing(lob_prefetch))
-  {
-    lob_prefetch <- as.integer(lob_prefetch)
-    if (length(lob_prefetch) != 1L)
-      stop(gettextf("argument '%s' must be single integer", "lob_prefetch"))
-    if (lob_prefetch < 0L)
-      stop(gettextf("argument '%s' must be positive integer", "lob_prefetch"))
-  }
-  else
-    lob_prefetch = 1024L
-
   # connect
   drv <- .oci.drv()
   params <- c(username, password, dbname)
   hdl <- .Call("rociConInit", drv@handle, params, prefetch, bulk_read,
-               stmt_cache, lob_prefetch, PACKAGE = "ROracle")
-  timesten <- (.Call("rociConInfo", drv@handle, hdl, 
+               stmt_cache, PACKAGE = "ROracle")
+  timesten <- (.Call("rociConInfo", hdl, 
                       PACKAGE = "ROracle")$serverType == "TimesTen IMDB")
   new("OraConnection", handle = hdl, timesten = timesten)
 }
 
 .oci.Disconnect <- function(con)
 {
-  drv <- .oci.drv()
-  .Call("rociConTerm", drv@handle, con@handle, PACKAGE = "ROracle")
+  .Call("rociConTerm", con@handle, PACKAGE = "ROracle")
   TRUE
 }
 
 # 25 -> RO_BULK_READ in rooci.h
-.oci.SendQuery <- function(con, stmt, data = NULL, prefetch,
-                           bulk_read, lob_prefetch)
+.oci.SendQuery <- function(con, stmt, data = NULL, prefetch, bulk_read)
 {
   #validate
   if (!missing(prefetch))
@@ -177,17 +166,6 @@
   else
     bulk_read = 25L
 
-  if (!missing(lob_prefetch))
-  {
-    lob_prefetch <- as.integer(lob_prefetch)
-    if (length(lob_prefetch) != 1L)
-      stop(gettextf("argument '%s' must be single integer", "lob_prefetch"))
-    if (lob_prefetch < 0L)
-      stop(gettextf("argument '%s' must be positive integer", "lob_prefetch"))
-  }
-  else
-    lob_prefetch = 1024L
-
   stmt <- as.character(stmt)
   if (length(stmt) != 1L)
     stop("'statement' must be a single string")
@@ -195,15 +173,13 @@
   if (!is.null(data))
     data <- .oci.data.frame(data)
 
-  drv <- .oci.drv()
-  hdl <- .Call("rociResInit", drv@handle, con@handle, stmt, data, prefetch,
-               bulk_read, lob_prefetch, PACKAGE = "ROracle")
+  hdl <- .Call("rociResInit", con@handle, stmt, data, prefetch,
+               bulk_read, PACKAGE = "ROracle")
   new("OraResult", handle = hdl)
 }
 
 # 25 -> RO_BULK_READ in rooci.h
-.oci.GetQuery <- function(con, stmt, data = NULL, prefetch,
-                          bulk_read, lob_prefetch)
+.oci.GetQuery <- function(con, stmt, data = NULL, prefetch, bulk_read)
 {
   #validate
   if (!missing(prefetch))
@@ -226,17 +202,6 @@
   else
     bulk_read = 25L
 
-  if (!missing(lob_prefetch))
-  {
-    lob_prefetch <- as.integer(lob_prefetch)
-    if (length(lob_prefetch) != 1L)
-      stop(gettextf("argument '%s' must be single integer", "lob_prefetch"))
-    if (lob_prefetch < 0L)
-      stop(gettextf("argument '%s' must be positive integer", "lob_prefetch"))
-  }
-  else
-    lob_prefetch = 1024L
-
   stmt <- as.character(stmt)
   if (length(stmt) != 1L)
     stop("'statement' must be a single string")
@@ -244,18 +209,17 @@
   if (!is.null(data))
     data <- .oci.data.frame(data)
 
-  drv <- .oci.drv()
-  hdl <- .Call("rociResInit", drv@handle, con@handle, stmt, data,
-               prefetch, bulk_read, lob_prefetch, PACKAGE = "ROracle")
+  hdl <- .Call("rociResInit", con@handle, stmt, data,
+               prefetch, bulk_read, PACKAGE = "ROracle")
   res <- try(
   {
-    info <- .Call("rociResInfo", drv@handle, hdl, PACKAGE = "ROracle")
+    info <- .Call("rociResInfo", hdl, PACKAGE = "ROracle")
     if (info["completed"][[1L]])
       TRUE
     else
-      .Call("rociResFetch", drv@handle, hdl, -1L, PACKAGE = "ROracle")
+      .Call("rociResFetch", hdl, -1L, PACKAGE = "ROracle")
   }, silent = TRUE)
-  .Call("rociResTerm", drv@handle, hdl, PACKAGE = "ROracle")
+  .Call("rociResTerm", hdl, PACKAGE = "ROracle")
   if (inherits(res, "try-error"))
     stop(res)
   res
@@ -263,14 +227,12 @@
 
 .oci.GetException <- function(con)
 {
-  drv <- .oci.drv()
-  .Call("rociConError", drv@handle, con@handle, PACKAGE = "ROracle")
+  .Call("rociConError", con@handle, PACKAGE = "ROracle")
 }
 
 .oci.ConnectionInfo <- function(con, what)
 {
-  drv <- .oci.drv()
-  info <- .Call("rociConInfo", drv@handle, con@handle, PACKAGE = "ROracle")
+  info <- .Call("rociConInfo", con@handle, PACKAGE = "ROracle")
   info$results <- lapply(info$results,
                          function(hdl) new("OraResult", handle = hdl))
   if (!missing(what))
@@ -289,7 +251,6 @@
   cat("OCI prefetch:         ", info$prefetch,      "\n")
   cat("Bulk read:            ", info$bulk_read,     "\n")
   cat("Statement cache size: ", info$stmt_cache,    "\n")
-  cat("LOB prefetch size:    ", info$lob_prefetch,  "\n")
   cat("Open results:         ", info$resOpen,       "\n")
   invisible(info)
 }
@@ -604,25 +565,22 @@
 
 .oci.fetch <- function(res, n = -1L)
 {
-  drv <- .oci.drv()
-  inf <- .Call("rociResInfo", drv@handle, res@handle, PACKAGE = "ROracle")
+  inf <- .Call("rociResInfo", res@handle, PACKAGE = "ROracle")
   if (inf$completed)
     stop("no more data to fetch")
 
-  .Call("rociResFetch", drv@handle, res@handle, n, PACKAGE = "ROracle")
+  .Call("rociResFetch", res@handle, n, PACKAGE = "ROracle")
 }
 
 .oci.ClearResult <- function(res)
 {
-  drv <- .oci.drv()
-  .Call("rociResTerm", drv@handle, res@handle, PACKAGE = "ROracle")
+  .Call("rociResTerm", res@handle, PACKAGE = "ROracle")
   TRUE
 }
 
 .oci.ResultInfo <- function(res, what)
 {
-  drv <- .oci.drv()
-  info <- .Call("rociResInfo", drv@handle, res@handle, PACKAGE = "ROracle")
+  info <- .Call("rociResInfo", res@handle, PACKAGE = "ROracle")
   if (!missing(what))
     info <- info[what]
   info
@@ -638,7 +596,6 @@
   cat("Statement completed: ", info$completed,    "\n")
   cat("OCI prefetch:        ", info$prefetch,     "\n")
   cat("Bulk read:           ", info$bulk_read,    "\n")
-  cat("LOB prefetch size:   ", info$lob_prefetch, "\n")
   invisible(info)
 }
 
@@ -651,8 +608,7 @@
   if (!is.null(data))
     data <- .oci.data.frame(data)
 
-  drv <- .oci.drv()
-  .Call("rociResExec", drv@handle, res@handle, data, PACKAGE = "ROracle")
+  .Call("rociResExec", res@handle, data, PACKAGE = "ROracle")
 }
 
 ## ------------------------------------------------------------------------- ##
@@ -661,24 +617,24 @@
 
 .oci.drv <- function() get("driver", envir = .oci.GlobalEnv)
 
-.oci.dbCoerce <- function(obj)
+.oci.dbTypeCheck <- function(obj)
 {
-  if (inherits(obj, c("logical", "integer", "numeric", "character",
-                      "POSIXct")) ||
-      (is.list(obj) && all(unlist(lapply(obj, is.raw), use.names = FALSE))))
-    obj
-  else
-    as.character(obj)
+  (inherits(obj, c("logical", "integer", "numeric", "character",
+                   "POSIXct")) ||
+   (is.list(obj) && all(unlist(lapply(obj, is.raw), use.names = FALSE))))
 }
 
 .oci.data.frame <- function(obj)
 {
   if (!is.data.frame(obj))
     obj <- as.data.frame(obj)
-  nr <- nrow(obj)
-  structure(lapply(obj, .oci.dbCoerce),
-            row.names = .set_row_names(nr),
-            class = "data.frame")
+  for (i in seq_len(ncol(obj)))
+  {
+    col <- obj[[i]]
+    if (!.oci.dbTypeCheck(col))
+      obj[[i]] <- as.character(col)
+  }
+  obj
 }
 
 .oci.dbType <- function(obj, ora.number = FALSE, timesten = FALSE)

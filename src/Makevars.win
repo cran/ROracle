@@ -1,2 +1,6 @@
 PKG_CPPFLAGS=-I./oci
-PKG_LIBS=-L. ocimingw.lib
+ifeq "$(R_ARCH)" "/x64"
+  PKG_LIBS = -L"$(OCI_LIB64)" -loci
+else
+  PKG_LIBS = -L"$(OCI_LIB32)" -loci
+endif

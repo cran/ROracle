@@ -11,6 +11,8 @@ All rights reserved. */
    NOTES
 
    MODIFIED   (MM/DD/YY)
+   rkanodia    08/08/12 - Removed redundant arguments passed to functions
+                          and removed LOB prefetch support, bug [14508278]
    rpingte     06/21/12 - UTC changes
    rpingte     06/21/12 - convert utf-8 sql to env handle character set
    jfeldhau    06/18/12 - ROracle support for TimesTen.
@@ -186,7 +188,7 @@ sword roociInitializeCtx (roociCtx *pctx, boolean interrupt_srv);
 /* Initialize connection oci context */
 sword roociInitializeCon(roociCtx *pctx, roociCon *pcon,
                          char *user, char *pass, char *cstr, boolean bwallet,
-                         ub4 stmt_cache_siz, ub4 lob_prefetch_siz);
+                         ub4 stmt_cache_siz);
 
 /* ----------------------------- roociGetError ---------------------------- */
 /* Retrieve error message and and error number */
@@ -211,7 +213,7 @@ void *roociGetNextParentCon(roociCtx *pctx);
 
 /* ----------------------------- roociTerminateCon ------------------------ */
 /* clear connection context */
-sword roociTerminateCon(roociCtx *pctx, roociCon *pcon, boolean validCon);
+sword roociTerminateCon(roociCon *pcon, boolean validCon);
 
 /* -------------------------- roociCommitCon ------------------------------ */
 /* commit connection transaction */
@@ -234,18 +236,16 @@ sword roociExecTTOpt(roociCon *pcon);
 /* ----------------------------- roociStmtExec ---------------------------- */
 /* Execute statement and 
    get number of rows affected by statement execution */
-sword roociStmtExec(roociCon *pcon, roociRes *pres, ub4 noOfRows,
-                    ub2 styp, int *rows_affected);
+sword roociStmtExec(roociRes *pres, ub4 noOfRows, ub2 styp, 
+                    int *rows_affected);
 
 /* ----------------------------- roociBindData ---------------------------- */
 /* Bind input data for statement execution */
-sword roociBindData(roociCon *pcon, roociRes *pres, ub4 bufPos,
-                    ub1 form_of_use);
+sword roociBindData(roociRes *pres, ub4 bufPos, ub1 form_of_use);
 
 /* ----------------------------- roociResDefine --------------------------- */
 /* Allocate memory and define ouput buffer */
-sword roociResDefine(roociCtx *pctx, roociCon *pcon, roociRes *pres, 
-                     ub4 lobPrefetchSize);
+sword roociResDefine(roociRes *pres);
 
 /* ----------------------------- roociDescCol ----------------------------- */
 /* Desribe result set coulmn properties */
@@ -255,13 +255,13 @@ sword roociDescCol(roociRes *pres, ub4 colId, ub2 *extTyp, oratext **colName,
 
 /* ------------------------------ roociGetColProperties ------------------- */
 /* Get result set column name */
-sword roociGetColProperties(roociCon *pcon, roociRes *pres,                 
-                            ub4 colId, ub4 *len, oratext **buf);
+sword roociGetColProperties(roociRes *pres, ub4 colId, ub4 *len, 
+                            oratext **buf);
 
 /* ------------------------------- roociFetchData ------------------------- */
 /* Fetch output data */
-sword roociFetchData(roociCon *pcon, roociRes *pres,
-                     ub4 *rows_affected, boolean *end_of_fetch);
+sword roociFetchData(roociRes *pres, ub4 *rows_affected, 
+                     boolean *end_of_fetch);
 
 /* ------------------------------ roociReadLOBData ------------------------ */
 /* Read CLOB data */
@@ -294,7 +294,10 @@ void *roociGetNextParentRes(roociCon *pcon);
 
 /* ----------------------------- roociResFree ----------------------------- */
 /* clear result set context */
-sword roociResFree(roociCon *pcon, roociRes *pres);
+sword roociResFree(roociRes *pres);
 
+/* ---------------------------- roociAllocTSBindBuf ----------------------- */
+/* allocate bind buffer for timestamp data */
+sword roociAllocTSBindBuf(roociRes *pres, void **buf, int bid);
 
 #endif /*end of _rooci_H */
