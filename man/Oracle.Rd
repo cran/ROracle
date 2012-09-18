@@ -1,5 +1,6 @@
 \name{Oracle}
 \alias{Oracle}
+\alias{Extproc}
 \title{
   Instantiate an Oracle client from the current \R session
 }
@@ -10,15 +11,20 @@
 }
 \usage{
   Oracle(interruptible = FALSE)
+  Extproc(extproc.ctx = NULL)
 }
 \arguments{
   \item{interruptible}{
     logical indicating whether to allow user interrupts on long-running queries.
   }
+  \item{extproc.ctx}{
+    An external pointer wrapping extproc context.
+  }
 }
 \value{
-  An object \code{OraDriver} whose class extends \code{DBIDriver}. This
-  object is used to create connections, using the function
+  An object of class \code{OraDriver} for \code{Oracle} or
+  \code{ExtDriver} for \code{Extproc} whose class extends \code{DBIDriver}.
+  This object is used to create connections, using the function
   \code{dbConnect}, to one or several Oracle database engines.
 }
 \section{Side Effects}{

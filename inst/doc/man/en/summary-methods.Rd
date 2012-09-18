@@ -1,11 +1,11 @@
 \name{summary-methods}
 \docType{methods}
-\alias{summary-methods}
-\alias{show-methods}
 \alias{show,OraDriver-method}
+\alias{show,ExtDriver-method}
 \alias{show,OraConnection-method}
 \alias{show,OraResult-method}
 \alias{summary,OraDriver-method}
+\alias{summary,ExtDriver-method}
 \alias{summary,OraConnection-method}
 \alias{summary,OraResult-method}
 \title{
@@ -15,16 +15,20 @@
    These methods are straight-forward implementations of the corresponding
    generic functions.
 }
+\usage{
+\S4method{summary}{OraDriver}(object, ...)
+\S4method{summary}{ExtDriver}(object, ...)
+\S4method{summary}{OraConnection}(object, ...)
+\S4method{summary}{OraResult}(object, ...)
+}
 \arguments{
-  \item{obj}{
-    a driver or connection or result set object.
+  \item{object}{
+    a driver, connection or result set object.
   }
+  \item{\dots}{currently unused.}
 }
 \value{
   description of object.
-}
-\details{
-  This describes the object.
 }
 \section{References}{
   For the Oracle Database documentaion see

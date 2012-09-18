@@ -10,6 +10,7 @@
 #    NOTES
 #
 #    MODIFIED   (MM/DD/YY)
+#    demukhin    09/11/12 - add Extproc driver
 #    demukhin    01/20/12 - cleanup
 #    paboyoun    01/04/12 - minor code cleanup
 #    demukhin    12/02/11 - add support for more methods
@@ -24,7 +25,12 @@
   # create driver singleton
   hdl <- .Call("rociDrvAlloc", PACKAGE = "ROracle")
   drv <- new("OraDriver", handle = hdl)
-  assign("driver", drv, envir = .oci.GlobalEnv)
+  assign("ora.driver", drv, envir = .oci.GlobalEnv)
+
+  # create extproc driver singleton
+  hdl <- .Call("rociDrvAlloc", PACKAGE = "ROracle")
+  drv <- new("ExtDriver", handle = hdl)
+  assign("ext.driver", drv, envir = .oci.GlobalEnv)
 }
 
 # end of file zzz.R

@@ -58,7 +58,7 @@
   /usr/lib/oracle/11.2/client64/lib. So you can do
 
   export LD_LIBRARY_PATH=/usr/lib/oracle/11.2/client64/lib:$LD_LIBRARY_PATH
-  R CMD INSTALL ROracle_1.1-5.tar.gz
+  R CMD INSTALL ROracle_1.1-6.tar.gz
  
   When installing Instant Client from a ZIP package you will still need to set
   LD_LIBRARY_PATH but additionally you will need to specify the location of
@@ -68,18 +68,25 @@
 
   export OCI_LIB=/scratch/instantclient_11_2
   export LD_LIBRARY_PATH=/scratch/instantclient_11_2:$LD_LIBRARY_PATH
-  R CMD INSTALL ROracle_1.1-5.tar.gz
+  R CMD INSTALL ROracle_1.1-6.tar.gz
 
   Or if using a --with-oci-lib configure option
 
   export OCI_LIB=/scratch/instantclient_11_2
-  R CMD INSTALL --configure-args='--with-oci-lib=/scratch/instantclient_11_2' ROracle_1.1-5.tar.gz
+  R CMD INSTALL --configure-args='--with-oci-lib=/scratch/instantclient_11_2' ROracle_1.1-6.tar.gz
 
   Both methods assume that Basic and SDK packages were unzipped into the same
   directory and Oracle Client headers are locatead under $OCI_LIB/sdk/include. 
   If this is not the case then either the OCI_INC environment variable or the
   --with-oci-inc configure option can be used to specify the path to header
-  files.  
+  files.
+
+  When extracting Instant Client from a ZIP package, a symbolic link
+  libclntsh.so will not be created. It needs to be created manually before
+  installing ROracle.
+
+  cd instantclient_11_2
+  ln -s libclntsh.so.11.1 libclntsh.so
 
   Linux - Oracle Client (Oracle home installation)
   ------------------------------------------------
@@ -88,7 +95,7 @@
   to Oracle Client libraries. Additionally, ORACLE_HOME should be set. Then
   the ROracle package can be installed by running
 
-  R CMD INSTALL ROracle_1.1-5.tar.gz
+  R CMD INSTALL ROracle_1.1-6.tar.gz
 
   Windows
   -------
@@ -103,11 +110,11 @@
   c:/instantclient/i386 and 64-bit into c:/instantclient/x64. Then to build
   both 32-bit and 64-bit versions
 
-  R CMD INSTALL --build --merge-multiarch ROracle_1.1-5.tar.gz
+  R CMD INSTALL --build --merge-multiarch ROracle_1.1-6.tar.gz
 
   Or to build only one version
 
-  R CMD INSTALL --build ROracle_1.1-5.tar.gz
+  R CMD INSTALL --build ROracle_1.1-6.tar.gz
 
   If a different directory structure is used then environment variables can be
   used to specify the location of libraries and header files. OCI_LIB32 to
@@ -125,7 +132,7 @@
   c:/TimesTen/tt1122_64 directory then the following commands can be used
   
   set OCI_LIB64=c:/TimesTen/tt1122_64/ttoracle_home/instantclient_11_2
-  R CMD INSTALL --build ROracle_1.1-5.tar.gz
+  R CMD INSTALL --build ROracle_1.1-6.tar.gz
   
   At runtime the directories for both the TimesTen Instant Client shared 
   libraries and the TimesTen database shared libraries must be present on the

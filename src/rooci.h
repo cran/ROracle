@@ -11,6 +11,9 @@ All rights reserved. */
    NOTES
 
    MODIFIED   (MM/DD/YY)
+   rpingte     09/21/12 - roociAllocDescBindBuf
+   paboyoun    09/17/12 - add difftime support
+   demukhin    09/05/12 - add Extproc driver
    rkanodia    08/08/12 - Removed redundant arguments passed to functions
                           and removed LOB prefetch support, bug [14508278]
    rpingte     06/21/12 - UTC changes
@@ -109,6 +112,11 @@ struct roociCtx
   boolean           control_c_roociCtx;     /* Handle control C interrupt ? */
   roociConAccess    acc_roociCtx;    /* sequential traversal of connections */
   /* TODO: add mutex when R is thread-safe */
+
+  /* extproc environment fields */
+  boolean           extproc_roociCtx;            /* EXTPROC environment flag */
+  OCISvcCtx        *svc_roociCtx;          /* extproc SerViCe context handle */
+  OCIError         *err_roociCtx;                    /* extproc ERRor handle */
 };
 typedef struct roociCtx roociCtx;
 
@@ -182,7 +190,7 @@ typedef struct roociRes roociRes;
 
 /* ----------------------------- roociInitializeCtx ----------------------- */
 /* Intialize driver oci context */
-sword roociInitializeCtx (roociCtx *pctx, boolean interrupt_srv);
+sword roociInitializeCtx (roociCtx *pctx, void *epx, boolean interrupt_srv);
 
 /* ----------------------------- roociInitializeCon ----------------------- */
 /* Initialize connection oci context */
@@ -280,6 +288,14 @@ sword roociReadDateTimeData(roociRes *pres, OCIDateTime *tstm, double *date,
 /* Write DateTime data */
 sword roociWriteDateTimeData(roociRes *pres, OCIDateTime *tstm, double date);
 
+/* -------------------------- rociReadDiffTimeData ------------------------- */
+/* Read DiffTime data */
+sword roociReadDiffTimeData(roociRes *pres, OCIInterval *tstm, double *time);
+
+/* ------------------------- roociWriteDiffTimeData ------------------------ */
+/* Write DiffTime data */
+sword roociWriteDiffTimeData(roociRes *pres, OCIInterval *tstm, double time);
+
 /* ------------------------------ roociGetResStmt ------------------------- */
 /* Get statement related to result set */
 sword roociGetResStmt(roociRes *pres, oratext **qrybuf, ub4 *qrylen);
@@ -296,8 +312,8 @@ void *roociGetNextParentRes(roociCon *pcon);
 /* clear result set context */
 sword roociResFree(roociRes *pres);
 
-/* ---------------------------- roociAllocTSBindBuf ----------------------- */
-/* allocate bind buffer for timestamp data */
-sword roociAllocTSBindBuf(roociRes *pres, void **buf, int bid);
+/* --------------------------- roociAllocDescBindBuf ----------------------- */
+/* allocate bind buffer for timestamp/interval descriptor data */
+sword roociAllocDescBindBuf(roociRes *pres, void **buf, int bid, ub4 dsc_type);
 
 #endif /*end of _rooci_H */

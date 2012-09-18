@@ -1,9 +1,8 @@
 \name{dbDriver-methods}
 \docType{methods}
-\alias{dbDriver-methods}
-\alias{dbUnloadDriver-methods}
-\alias{dbDriver,character-method}
+\alias{dbUnloadDriver}
 \alias{dbUnloadDriver,OraDriver-method}
+\alias{dbUnloadDriver,ExtDriver-method}
 \title{
   Oracle implementation of the Database Interface (DBI) classes 
   and drivers 
@@ -11,13 +10,14 @@
 \description{
   Oracle driver initialization and closing
 }
+\usage{
+\S4method{dbUnloadDriver}{OraDriver}(drv, ...)
+\S4method{dbUnloadDriver}{ExtDriver}(drv, ...)
+}
 \arguments{
-  \item{drvName}{
-    character name of the driver to instantiate.
-  }
   \item{drv}{
-    an object that inherits from \code{OraDriver} as created by 
-    \code{dbDriver}.
+    an object that inherits from \code{OraDriver} or \code{ExtDriver}
+    as created by \code{dbDriver}.
   }
   \item{...}{
     any other arguments are passed to the driver \code{drvName}.
@@ -25,9 +25,9 @@
 }
 \value{
   \item{dbDriver}{
-    An object \code{OraDriver} whose class extends \code{DBIDriver}. This
-    object is used to create connections, using the function
-    \code{dbConnect}, to one or several Oracle database engines.
+    An object \code{OraDriver} or \code{ExtDriver} whose class extends
+    \code{DBIDriver}. This object is used to create connections, using the
+    function \code{dbConnect}, to one or several Oracle database engines.
   }
   \item{dbUnloadDriver}{
     free all resources occupied by driver object.

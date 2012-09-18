@@ -1,10 +1,10 @@
 \name{dbConnect-methods}
 \docType{methods}
-\alias{dbDisconnect-methods}
-\alias{dbConnect-methods}
-\alias{dbDisconnect,OraConnection-method}
+\alias{dbConnect}
+\alias{dbDisconnect}
 \alias{dbConnect,OraDriver-method}
-\alias{dbConnect,OraConnection-method}
+\alias{dbConnect,ExtDriver-method}
+\alias{dbDisconnect,OraConnection-method}
 \title{
   Create a connection object to an Oracle DBMS
 }
@@ -12,9 +12,15 @@
    These methods are straight-forward implementations of the corresponding
    generic functions.
 }
+\usage{
+\S4method{dbConnect}{OraDriver}(drv, username = "", password = "", dbname = "", prefetch = FALSE,
+          bulk_read = 25L, stmt_cache = 0L, ...)
+\S4method{dbConnect}{ExtDriver}(drv, prefetch = FALSE, bulk_read = 25L, stmt_cache = 0L, ...)
+\S4method{dbDisconnect}{OraConnection}(conn, ...)
+}
 \arguments{
   \item{drv}{
-    an object of class \code{OraDriver}.
+    an object of class \code{OraDriver} or \code{ExtDriver}.
   }
   \item{conn}{
     an \code{OraConnection} object as produced by \code{dbConnect}.
@@ -65,8 +71,8 @@
     that cursors are ready to be used without the need to parse the statements 
     again. Default is 0L. Statement cache leads to prefetch. 
   }
-  \item{\dots }{
-    any optional arguments.
+  \item{\dots}{
+    currently unused.
   }
 }
 \value{
@@ -101,6 +107,10 @@
       stmt_cache is used to enable/disable statement caching feature.
       Its value will denote statement cache size.
 
+      When establishing a connection with \code{ExtDriver} driver none
+      of arguments specifying credenatils are used. A connection in this
+      mode is a sigleton object, that is all calls to \code{dbConnect}
+      return the same connection object.
     }
     \item{dbDisconnect}{
       This implementation disconnect connection between R and database server.
@@ -161,6 +171,19 @@
     ## naming method where SampleDb is a direct driver TimesTen DSN
     con <- dbConnect(drv, username ="scott", password="tiger", 
                      dbname = "localhost/SampleDb:timesten_direct")
+
+    ## run an SQL statement by creating first a resultSet object
+    rs <- dbSendQuery(con, "select * from dual")
+
+    ## we now fetch records from the resultSet into a data.frame
+    data <- fetch(rs)       ## extract all rows
+    dim(data)
+  }
+  \dontrun{
+    ## connect to a extproc (this assumes that the driver has already
+    ## been initialized in the embeeded code by passing an external
+    ## pointer representing extproc context)
+    con <- dbConnect(Extproc())
 
     ## run an SQL statement by creating first a resultSet object
     rs <- dbSendQuery(con, "select * from dual")

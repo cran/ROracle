@@ -1,12 +1,13 @@
 \name{dbGetInfo-methods}
 \docType{methods}
-\alias{dbGetInfo-methods}
-\alias{dbGetStatement-methods}
-\alias{dbGetRowCount-methods}
-\alias{dbGetRowsAffected-methods}
-\alias{dbColumnInfo-methods}
-\alias{dbHasCompleted-methods}
+\alias{dbGetInfo}
+\alias{dbGetStatement}
+\alias{dbGetRowCount}
+\alias{dbGetRowsAffected}
+\alias{dbColumnInfo}
+\alias{dbHasCompleted}
 \alias{dbGetInfo,OraDriver-method}
+\alias{dbGetInfo,ExtDriver-method}
 \alias{dbGetInfo,OraConnection-method}
 \alias{dbGetInfo,OraResult-method}
 \alias{dbGetStatement,OraResult-method}
@@ -21,20 +22,28 @@
    These methods are straight-forward implementations of the corresponding
    generic functions.
 }
+\usage{
+\S4method{dbGetInfo}{OraDriver}(dbObj, ...)
+\S4method{dbGetInfo}{ExtDriver}(dbObj, ...)
+\S4method{dbGetInfo}{OraConnection}(dbObj, what, ...)
+\S4method{dbGetInfo}{OraResult}(dbObj, what, ...)
+\S4method{dbGetStatement}{OraResult}(res, ...)
+\S4method{dbGetRowCount}{OraResult}(res, ...)
+\S4method{dbGetRowsAffected}{OraResult}(res, ...)
+\S4method{dbColumnInfo}{OraResult}(res, ...)
+\S4method{dbHasCompleted}{OraResult}(res, ...)
+}
 \arguments{
   \item{dbObj}{
     any object that implements some functionality in the R
     interface to databases (a driver, a connection or a result set).
   }
-  \item{res}{ an \code{OraResult}.}
-  \item{what}{ an element of the output list.}
-  \item{\dots}{currently not being used.}
+  \item{what}{a character string specifying an element of the output list.}
+  \item{res}{an \code{OraResult}.}
+  \item{\dots}{currently unused.}
 }
 \value{
   information about object.
-}
-\details{
-  This implementation return object summary.
 }
 \section{References}{
   For the Oracle Database documentaion see
