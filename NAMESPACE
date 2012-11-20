@@ -4,7 +4,7 @@ import(methods)
 import(DBI)
 
 exportClasses(
-  OraDriver, OraConnection, OraResult)
+  OraDriver, ExtDriver, OraConnection, OraResult)
 
 exportMethods(
   ## General
@@ -37,4 +37,4 @@ exportMethods(
   ## DBIResult: DBI extensions
   execute)
 
-export(Oracle)
+export(Oracle, Extproc)

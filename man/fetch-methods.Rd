@@ -1,14 +1,16 @@
 \name{fetch-methods}
 \docType{methods}
-\alias{fetch-methods}
-\alias{fetch,OraResult,numeric-method}
-\alias{fetch,OraResult,missing-method}
+\alias{fetch}
+\alias{fetch,OraResult-method}
 \title{
   Fetch records from a previously executed query
 }
 \description{
    This method is a straight-forward implementation of the corresponding
    generic function.
+}
+\usage{
+\S4method{fetch}{OraResult}(res, n = -1, ...)
 }
 \arguments{
   \item{res}{
@@ -18,7 +20,7 @@
     maximum number of records to retrieve per fetch.
     Use \code{n = -1} to retrieve all pending records.
   }
-  \item{\dots }{currently not used.}
+  \item{\dots }{currently unused.}
 }
 \value{
   number of records fetched from database.

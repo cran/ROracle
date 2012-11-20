@@ -1,6 +1,6 @@
 PKG_CPPFLAGS=-I./oci
 ifeq "$(R_ARCH)" "/x64"
-  PKG_LIBS = -L"$(OCI_LIB64)" -loci
+  PKG_LIBS = -L"$(OCI_LIB64)" oci.dll
 else
-  PKG_LIBS = -L"$(OCI_LIB32)" -loci
+  PKG_LIBS = -L"$(OCI_LIB32)" oci.dll
 endif

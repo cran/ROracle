@@ -1,3 +1,12 @@
+Version 1.1-6 (2012-09-18)
+
+* dbWriteTable now uses timestamp with time zone for POSIXct
+  columns
+
+* dbWriteTable now support Date columns
+
+* Oracle interval day to second data type now maps to R's difftime
+
 Version 1.1-5 (2012-09-11)
 
 * Fixed build issues of ROracle driver with 10.2 OCI client 

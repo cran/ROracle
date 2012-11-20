@@ -1,16 +1,14 @@
 \name{dbSendQuery-methods}
 \docType{methods}
-\alias{dbSendQuery-methods}
-\alias{dbGetQuery-methods}
-\alias{dbClearResult-methods}
-\alias{dbGetException-methods}
+\alias{dbSendQuery}
+\alias{dbGetQuery}
+\alias{dbClearResult}
+\alias{dbGetException}
+\alias{execute}
 \alias{dbSendQuery,OraConnection,character-method}
 \alias{dbGetQuery,OraConnection,character-method}
 \alias{dbClearResult,OraResult-method}
 \alias{dbGetException,OraConnection-method}
-\alias{dbGetException,OraResult-method}
-\alias{execute}
-\alias{execute-methods}
 \alias{execute,OraResult-method}
 \title{
   Execute a statement on a given database connection
@@ -19,6 +17,15 @@
    These methods are straight-forward implementations of the corresponding
    generic functions except for the \code{execute} method which is an
    ROracle specific DBI extension.
+}
+\usage{
+\S4method{dbSendQuery}{OraConnection,character}(conn, statement, data = NULL, prefetch = FALSE, bulk_read = 25L, ...)
+\S4method{dbGetQuery}{OraConnection,character}(conn, statement, data = NULL, prefetch = FALSE, bulk_read = 25L, ...)
+\S4method{dbClearResult}{OraResult}(res, ...)
+\S4method{dbGetException}{OraConnection}(conn, ...)
+
+execute(res, ...)
+\S4method{execute}{OraResult}(res, data = NULL, ...)
 }
 \arguments{
   \item{conn}{an \code{OraConnection} object.}
@@ -45,7 +52,7 @@
     query result and a larger value will benefit queries that return a large 
     result. Application can tune this value to its need.
   }
-  \item{\dots }{additional parameters.}
+  \item{\dots}{currently unused.}
 }
 \value{
   \item{dbSendQuery}{

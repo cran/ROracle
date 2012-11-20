@@ -68,6 +68,12 @@ All rights reserved. */
    NOTES
 
    MODIFIED   (MM/DD/YY)
+   paboyoun    11/05/12 - add PROTECT to rociConInfo
+   paboyoun    09/29/12 - use Rf_inherits to determine class
+   rpingte     09/26/12 - TimesTen interval DS not supported for difftime
+   rpingte     09/21/12 - use roociAllocDescBindBuf
+   paboyoun    09/17/12 - add difftime support
+   demukhin    09/04/12 - add Extproc driver
    rkanodia    08/27/12 - [14542319] Updated ROracle version from 1.1-4 to
                           1.1-5
    rkanodia    08/08/12 - Removed redundant arguments passed to functions
@@ -190,9 +196,10 @@ while (0)
 
 /* RODBI DRiVer version */
 #define RODBI_DRV_NAME       "Oracle (OCI)"
+#define RODBI_DRV_EXTPROC    "Oracle (extproc)"
 #define RODBI_DRV_MAJOR       1
 #define RODBI_DRV_MINOR       1
-#define RODBI_DRV_UPDATE      5
+#define RODBI_DRV_UPDATE      6
 
 /* RODBI R classes */
 #define RODBI_R_LOG           1                                  /* LOGICAL */
@@ -201,7 +208,8 @@ while (0)
 #define RODBI_R_CHR           4                                /* CHARACTER */
 #define RODBI_R_LST           5                                     /* LIST */
 #define RODBI_R_DAT           6                                  /* POSIXct */
-#define RODBI_R_RAW           7                                      /* RAW */
+#define RODBI_R_DIF           7                                 /* DIFFTIME */
+#define RODBI_R_RAW           8                                      /* RAW */
 
 /* RODBI R classes NaMes */
 #define RODBI_R_LOG_NM       "logical"
@@ -210,6 +218,7 @@ while (0)
 #define RODBI_R_CHR_NM       "character"
 #define RODBI_R_LST_NM       "list"
 #define RODBI_R_DAT_NM       "POSIXct"
+#define RODBI_R_DIF_NM       "difftime"
 #define RODBI_R_RAW_NM       "raw"
   
 /* rodbi internal Oracle types */
@@ -284,6 +293,7 @@ struct rodbiDrv
   ub4        magicWord_rodbiDrv;  /* Magic word to check structure validity */
   roociCtx   ctx_rodbiDrv;                                   /* OCI context */
   boolean    interrupt_rodbiDrv;   /* Use ^C handler for long running query */
+  boolean    extproc_rodbiDrv;                       /* extproc driver flag */
 };
 typedef struct rodbiDrv rodbiDrv;
 
@@ -360,7 +370,7 @@ const rodbiITyp rodbiITypTab[] =
   {RODBI_TIME_NM,     RODBI_R_DAT, SQLT_TIMESTAMP_TZ, sizeof(OCIDateTime *)}, 
   {RODBI_TIME_TZ_NM,  RODBI_R_DAT, SQLT_TIMESTAMP_TZ, sizeof(OCIDateTime *)}, 
   {RODBI_INTER_YM_NM, RODBI_R_CHR, SQLT_STR,          0},
-  {RODBI_INTER_DS_NM, RODBI_R_CHR, SQLT_STR,          0},
+  {RODBI_INTER_DS_NM, RODBI_R_DIF, SQLT_INTERVAL_DS,  sizeof(OCIInterval *)},
   {RODBI_TIME_LTZ_NM, RODBI_R_DAT, SQLT_TIMESTAMP_TZ, sizeof(OCIDateTime *)}
 };
 
@@ -455,6 +465,7 @@ static const rodbiRTyp rodbiRTypTab[] =
   {RODBI_R_CHR_NM, STRSXP},
   {RODBI_R_LST_NM, VECSXP},
   {RODBI_R_DAT_NM, REALSXP},
+  {RODBI_R_DIF_NM, REALSXP},
   {RODBI_R_RAW_NM, VECSXP}
 };
 
@@ -581,7 +592,7 @@ SEXP rociDrvAlloc(void);
 
 /* ----------------------------- rociDrvInit ------------------------------ */
 /* Initialize driver  context */
-SEXP rociDrvInit(SEXP ptrDrv, SEXP interruptible);
+SEXP rociDrvInit(SEXP ptrDrv, SEXP interruptible, SEXP ptrEpx);
 
 /* ----------------------------- rociDrvInfo ------------------------------ */
 /* get driver info */
@@ -665,9 +676,10 @@ SEXP rociDrvAlloc(void)
 
 /* ------------------------------ rociDrvInit ----------------------------- */
 
-SEXP rociDrvInit(SEXP ptrDrv, SEXP interruptible)
+SEXP rociDrvInit(SEXP ptrDrv, SEXP interruptible, SEXP ptrEpx)
 {
   rodbiDrv  *drv = R_ExternalPtrAddr(ptrDrv);
+  void      *epx = isNull(ptrEpx) ? NULL : R_ExternalPtrAddr(ptrEpx);
 
   /* check validity */
   if (drv)
@@ -691,12 +703,13 @@ SEXP rociDrvInit(SEXP ptrDrv, SEXP interruptible)
  
   /* create OCI environment, get client version */
   RODBI_CHECK_DRV(drv, __FUNCTION__, 1, TRUE,
-               roociInitializeCtx(&(drv->ctx_rodbiDrv),
+               roociInitializeCtx(&(drv->ctx_rodbiDrv), epx,
                                   *LOGICAL(interruptible)));
   
   /* set magicWord for driver */
   drv->magicWord_rodbiDrv = RODBI_CHECKWD;
   drv->interrupt_rodbiDrv = *LOGICAL(interruptible);
+  drv->extproc_rodbiDrv = (epx == NULL) ? FALSE : TRUE;
 
   RODBI_TRACE("driver created");
 
@@ -720,7 +733,8 @@ SEXP rociDrvInfo(SEXP ptrDrv)
   setAttrib(info, R_NamesSymbol, names);                  /* protects names */
 
   /* driverName */
-  SET_VECTOR_ELT(info,  0, mkString(RODBI_DRV_NAME));
+  SET_VECTOR_ELT(info,  0, drv->extproc_rodbiDrv ? mkString(RODBI_DRV_EXTPROC)
+                                                 : mkString(RODBI_DRV_NAME));
   SET_STRING_ELT(names, 0, mkChar("driverName"));
 
   /* driverVersion */
@@ -799,23 +813,29 @@ SEXP rociConInit(SEXP ptrDrv, SEXP params, SEXP prefetch, SEXP nrows,
                                for oracle wallet authentication, user needs to
                                pass empty strings for username and password */
 
-  /* allocate rodbi connection */
-  ROOCI_MEM_ALLOC(con, 1, sizeof(rodbiCon));
-  if (!con)
-    RODBI_ERROR(RODBI_ERR_MEMORY_ALC);
-  
-  con->drv_rodbiCon = drv;
+  if (drv->extproc_rodbiDrv && drv->ctx_rodbiDrv.num_roociCtx > 0)
+    con = drv->ctx_rodbiDrv.con_roociCtx[0]->parent_roociCon;
+  else
+  {
+    /* allocate rodbi connection */
+    ROOCI_MEM_ALLOC(con, 1, sizeof(rodbiCon));
+    if (!con)
+      RODBI_ERROR(RODBI_ERR_MEMORY_ALC);
 
-  /* Initialize connection environment */
-  RODBI_CHECK_CON(con, __FUNCTION__, 1, FALSE,
-                  roociInitializeCon(&drv->ctx_rodbiDrv, &(con->con_rodbiCon),
-                                     user, pass, conStr, wallet,
-                                     (ub4)INTEGER(stmtCacheSize)[0])); 
-  
-  (con->con_rodbiCon).parent_roociCon = con;
-  con->ociprefetch_rodbiCon           = (*LOGICAL(prefetch) == TRUE) ? 
-                                                                 TRUE : FALSE;
-  con->nrows_rodbiCon                 = INTEGER(nrows)[0];
+    con->drv_rodbiCon = drv;
+
+    /* Initialize connection environment */
+    RODBI_CHECK_CON(con, __FUNCTION__, 1, FALSE,
+                    roociInitializeCon(&drv->ctx_rodbiDrv,
+                                       &(con->con_rodbiCon),
+                                       user, pass, conStr, wallet,
+                                       (ub4)INTEGER(stmtCacheSize)[0])); 
+
+    (con->con_rodbiCon).parent_roociCon = con;
+    con->ociprefetch_rodbiCon           = (*LOGICAL(prefetch) == TRUE) ? 
+                                                                  TRUE : FALSE;
+    con->nrows_rodbiCon                 = INTEGER(nrows)[0];
+  }
 
   /* allocate connection handle */
   hdlCon = R_MakeExternalPtr((void *)con, R_NilValue, R_NilValue);
@@ -906,9 +926,10 @@ SEXP rociConInfo(SEXP hdlCon)
                                     verServer, &stmt_cache_size));
 
     /* username */
-    usr_string = allocVector(STRSXP, 1);
+    PROTECT(usr_string = allocVector(STRSXP, 1));
     SET_STRING_ELT(usr_string, 0, mkCharLen((const char *)user, (int)userLen));
     SET_VECTOR_ELT(info,  0, usr_string);
+    UNPROTECT(1);
     SET_STRING_ELT(names, 0, mkChar("username"));
 
     /* dbname */
@@ -922,6 +943,8 @@ SEXP rociConInfo(SEXP hdlCon)
     /* serverType */
     if ((con->con_rodbiCon).timesten_rociCon)
       SET_VECTOR_ELT(info, 3, mkString("TimesTen IMDB"));
+    else if (con->drv_rodbiCon->extproc_rodbiDrv)
+      SET_VECTOR_ELT(info, 3, mkString("Oracle Extproc"));
     else
       SET_VECTOR_ELT(info, 3, mkString("Oracle RDBMS"));
 
@@ -1348,7 +1371,7 @@ static SEXP rodbiDrvInfoConnections(rodbiDrv *drv)
   if ((drv->ctx_rodbiDrv).num_roociCtx)
   {
     /* allocate output vector */
-    vec = allocVector(VECSXP, (drv->ctx_rodbiDrv).num_roociCtx);
+    PROTECT(vec = allocVector(VECSXP, (drv->ctx_rodbiDrv).num_roociCtx));
 
     /* set valid connection IDs */ 
     for (conID = 0; conID < (drv->ctx_rodbiDrv).max_roociCtx; conID++)
@@ -1361,8 +1384,11 @@ static SEXP rodbiDrvInfoConnections(rodbiDrv *drv)
         SEXP hdlCon = R_MakeExternalPtr(
                    ((drv->ctx_rodbiDrv).con_roociCtx[conID])->parent_roociCon,
                    R_NilValue, R_NilValue);
-        SET_VECTOR_ELT(vec, vecID++, hdlCon);               /* protects vec */
+        SET_VECTOR_ELT(vec, vecID++, hdlCon);
       }
+
+    /* release vec */
+    UNPROTECT(1);
   }
 
   return vec;
@@ -1625,17 +1651,22 @@ static void rodbiResBind(rodbiRes *res, SEXP data, boolean free_res)
     /* set bind parameters */
     if (isReal(vec))
     {
-      SEXP  clsName = GET_CLASS(vec);
-      if (isNull(clsName) ||
-          strcmp(CHAR(STRING_ELT(clsName, 0)), RODBI_R_DAT_NM)) 
-      {
-        (res->res_rodbiRes).btyp_roociRes[bid] = SQLT_BDOUBLE;
-        (res->res_rodbiRes).bsiz_roociRes[bid] = (ub2)sizeof(double);
-      }
-      else
+      if (Rf_inherits(vec, RODBI_R_DAT_NM))
       {
         (res->res_rodbiRes).btyp_roociRes[bid] = SQLT_TIMESTAMP_TZ;
         (res->res_rodbiRes).bsiz_roociRes[bid] = (ub2)sizeof(OCIDateTime *);
+      }
+      else if (Rf_inherits(vec, RODBI_R_DIF_NM) &&
+               /* TimesTen binds difftime as SQLT_BDOUBLE */
+               !res->con_rodbiRes->con_rodbiCon.timesten_rociCon)
+      {
+        (res->res_rodbiRes).btyp_roociRes[bid] = SQLT_INTERVAL_DS;
+        (res->res_rodbiRes).bsiz_roociRes[bid] = (ub2)sizeof(OCIInterval *);
+      }
+      else
+      {
+        (res->res_rodbiRes).btyp_roociRes[bid] = SQLT_BDOUBLE;
+        (res->res_rodbiRes).bsiz_roociRes[bid] = (ub2)sizeof(double);
       }
     }
     else if (isInteger(vec) || isLogical(vec))
@@ -1666,9 +1697,19 @@ static void rodbiResBind(rodbiRes *res, SEXP data, boolean free_res)
     {
       void **tsdt = (void **)((res->res_rodbiRes).bdat_roociRes[bid]);
       RODBI_CHECK_RES(res, __FUNCTION__, 1, free_res,
-                      roociAllocTSBindBuf(&(res->res_rodbiRes), tsdt, bid));
+                      roociAllocDescBindBuf(&(res->res_rodbiRes), tsdt, bid,
+                      (ub4)OCI_DTYPE_TIMESTAMP_TZ));
     } 
-    
+    else if (((res->res_rodbiRes).btyp_roociRes[bid] == SQLT_INTERVAL_DS) &&
+             /* TimesTen binds difftime as SQLT_BDOUBLE */
+             !res->con_rodbiRes->con_rodbiCon.timesten_rociCon)
+    {
+      void **invl = (void **)((res->res_rodbiRes).bdat_roociRes[bid]);
+      RODBI_CHECK_RES(res, __FUNCTION__, 1, free_res,
+                      roociAllocDescBindBuf(&(res->res_rodbiRes), invl, bid,
+                      OCI_DTYPE_INTERVAL_DS));
+    } 
+
     ROOCI_MEM_ALLOC((res->res_rodbiRes).bind_roociRes[bid],
                     (res->res_rodbiRes).bmax_roociRes, sizeof(sb2));
 
@@ -1715,6 +1756,11 @@ static void rodbiResBindCopy(rodbiRes *res, SEXP data, int beg, int end,
             RODBI_CHECK_RES(res, __FUNCTION__, 1, free_res,
                             roociWriteDateTimeData(&(res->res_rodbiRes),
                                                    *(OCIDateTime **)dat,
+                                                   REAL(elem)[i]));
+          else if ((res->res_rodbiRes).btyp_roociRes[bid] == SQLT_INTERVAL_DS)
+            RODBI_CHECK_RES(res, __FUNCTION__, 1, free_res,
+                            roociWriteDiffTimeData(&(res->res_rodbiRes),
+                                                   *(OCIInterval **)dat,
                                                    REAL(elem)[i]));
           else
             *(double *)dat = REAL(elem)[i];
@@ -1916,6 +1962,7 @@ static void rodbiResAccum(rodbiRes *res)
 
         case RODBI_R_NUM:
         case RODBI_R_DAT:
+        case RODBI_R_DIF:
           REAL(vec)[lcur] = NA_REAL;
           break;
 
@@ -2032,8 +2079,15 @@ static void rodbiResAccum(rodbiRes *res)
           REAL(vec)[lcur] = tstm;
           break;
 
+        case SQLT_INTERVAL_DS:
+          RODBI_CHECK_RES(res, __FUNCTION__, 5, FALSE,
+               roociReadDiffTimeData(&(res->res_rodbiRes),
+               *(OCIInterval **)dat, &tstm));
+          REAL(vec)[lcur] = tstm;
+          break;
+
         default:
-          RODBI_FATAL(__FUNCTION__, 5, etyp);
+          RODBI_FATAL(__FUNCTION__, 6, etyp);
           break;
         }
       }
@@ -2085,6 +2139,14 @@ static void rodbiResDataFrame(rodbiRes *res)
       SET_STRING_ELT(cla, 1, mkChar("POSIXt"));
       setAttrib(VECTOR_ELT(res->list_rodbiRes, cid), R_ClassSymbol, cla);
       UNPROTECT(1);
+    }
+    else if (RODBI_TYPE_R((res->res_rodbiRes).typ_roociRes[cid]) ==
+             RODBI_R_DIF)
+    {
+      setAttrib(VECTOR_ELT(res->list_rodbiRes, cid), install("units"),
+                ScalarString(mkChar("secs")));
+      setAttrib(VECTOR_ELT(res->list_rodbiRes, cid), R_ClassSymbol,
+                ScalarString(mkChar(RODBI_R_DIF_NM)));
     }
   }
 

@@ -10,6 +10,8 @@
 #    NOTES
 #
 #    MODIFIED   (MM/DD/YY)
+#    paboyoun    09/17/12 - add difftime support
+#    demukhin    09/04/12 - add Extproc driver
 #    rkanodia    08/02/12 - Removed redundant arguments passed to functions
 #                           and removed LOB prefetch support bug [145082788888888]
 #    paboyoun    08/01/12 - optimize .oci.data.frame
@@ -38,23 +40,21 @@
 ##  (*) OraDriver                                                            ##
 ###############################################################################
 
-.oci.Driver <- function(interruptible = FALSE)
+.oci.Driver <- function(drv, interruptible = FALSE, extproc.ctx = NULL)
 {
-  drv <- .oci.drv()
-  .Call("rociDrvInit", drv@handle, interruptible, PACKAGE = "ROracle")
+  .Call("rociDrvInit", drv@handle, interruptible, extproc.ctx,
+        PACKAGE = "ROracle")
   drv
 }
 
-.oci.UnloadDriver <- function()
+.oci.UnloadDriver <- function(drv)
 {
-  drv <- .oci.drv()
   .Call("rociDrvTerm", drv@handle, PACKAGE = "ROracle")
   TRUE
 }
 
-.oci.DriverInfo <- function(what)
+.oci.DriverInfo <- function(drv, what)
 {
-  drv <- .oci.drv()
   info <- .Call("rociDrvInfo", drv@handle, PACKAGE = "ROracle")
   info$connections <- lapply(info$connections,
                              function(hdl) new("OraConnection", handle = hdl))
@@ -63,9 +63,9 @@
   info
 }
 
-.oci.DriverSummary <- function()
+.oci.DriverSummary <- function(drv)
 {
-  info <- .oci.DriverInfo()
+  info <- .oci.DriverInfo(drv)
   cat("Driver name:           ", info$driverName,    "\n")
   cat("Driver version:        ", info$driverVersion, "\n")
   cat("Client version:        ", info$clientVersion, "\n")
@@ -79,10 +79,8 @@
 ##  (*) OraConnection                                                        ##
 ###############################################################################
 
-# 25 -> RO_BULK_READ in rooci.h
-# 0 ->  Default statement cache size
-.oci.Connect <- function(username = "", password = "", dbname = "",
-                         prefetch, bulk_read, stmt_cache)
+.oci.Connect <- function(drv, username = "", password = "", dbname = "",
+                         prefetch = FALSE, bulk_read = 25L, stmt_cache = 0L)
 {
   # validate
   username <- as.character(username)
@@ -95,39 +93,23 @@
   if (length(dbname) != 1L)
     stop("'dbname' must be a single string")
 
-  if (!missing(prefetch))
-  {
-    prefetch <- as.logical(prefetch)
-    if (length(prefetch) != 1L)
-      stop(gettextf("argument '%s' must be single logical value", "prefetch"))
-  }
-  else
-    prefetch = FALSE
+  prefetch <- as.logical(prefetch)
+  if (length(prefetch) != 1L)
+    stop(gettextf("argument '%s' must be single logical value", "prefetch"))
 
-  if (!missing(bulk_read))
-  {
-    bulk_read <- as.integer(bulk_read)
-    if (length(bulk_read) != 1L)
-      stop(gettextf("argument '%s' must be single integer", "bulk_read"))
-    if (bulk_read < 1L)
-      stop(gettextf("argument '%s' must be greater than 0", "bulk_read")) 
-  }
-  else
-    bulk_read = 25L
+  bulk_read <- as.integer(bulk_read)
+  if (length(bulk_read) != 1L)
+    stop(gettextf("argument '%s' must be single integer", "bulk_read"))
+  if (bulk_read < 1L)
+    stop(gettextf("argument '%s' must be greater than 0", "bulk_read")) 
 
-  if (!missing(stmt_cache))
-  {
-    stmt_cache <- as.integer(stmt_cache)
-    if (length(stmt_cache) != 1L)
-      stop(gettextf("argument '%s' must be single integer", "stmt_cache"))
-    if (stmt_cache < 0L)
-      stop(gettextf("argument '%s' must be positive integer", "stmt_cache"))
-  }
-  else
-    stmt_cache = 0L
-  
+  stmt_cache <- as.integer(stmt_cache)
+  if (length(stmt_cache) != 1L)
+    stop(gettextf("argument '%s' must be single integer", "stmt_cache"))
+  if (stmt_cache < 0L)
+    stop(gettextf("argument '%s' must be positive integer", "stmt_cache"))
+
   # connect
-  drv <- .oci.drv()
   params <- c(username, password, dbname)
   hdl <- .Call("rociConInit", drv@handle, params, prefetch, bulk_read,
                stmt_cache, PACKAGE = "ROracle")
@@ -142,29 +124,19 @@
   TRUE
 }
 
-# 25 -> RO_BULK_READ in rooci.h
-.oci.SendQuery <- function(con, stmt, data = NULL, prefetch, bulk_read)
+.oci.SendQuery <- function(con, stmt, data = NULL, prefetch = FALSE,
+                           bulk_read = 25L)
 {
   #validate
-  if (!missing(prefetch))
-  {
-    prefetch <- as.logical(prefetch)
-    if (length(prefetch) != 1L)
-      stop(gettextf("argument '%s' must be single logical value", "prefetch"))
-  }
-  else
-    prefetch = FALSE
+  prefetch <- as.logical(prefetch)
+  if (length(prefetch) != 1L)
+    stop(gettextf("argument '%s' must be single logical value", "prefetch"))
 
-  if (!missing(bulk_read))
-  {
-    bulk_read <- as.integer(bulk_read)
-    if (length(bulk_read) != 1L)
-      stop(gettextf("argument '%s' must be single integer", "bulk_read"))
-    if (bulk_read < 1L)
-      stop(gettextf("argument '%s' must be greater than 0", "bulk_read")) 
-  }
-  else
-    bulk_read = 25L
+  bulk_read <- as.integer(bulk_read)
+  if (length(bulk_read) != 1L)
+    stop(gettextf("argument '%s' must be single integer", "bulk_read"))
+  if (bulk_read < 1L)
+    stop(gettextf("argument '%s' must be greater than 0", "bulk_read")) 
 
   stmt <- as.character(stmt)
   if (length(stmt) != 1L)
@@ -178,29 +150,19 @@
   new("OraResult", handle = hdl)
 }
 
-# 25 -> RO_BULK_READ in rooci.h
-.oci.GetQuery <- function(con, stmt, data = NULL, prefetch, bulk_read)
+.oci.GetQuery <- function(con, stmt, data = NULL, prefetch = FALSE,
+                          bulk_read = 25L)
 {
   #validate
-  if (!missing(prefetch))
-  {
-    prefetch <- as.logical(prefetch)
-    if (length(prefetch) != 1L)
-      stop(gettextf("argument '%s' must be single logical value", "prefetch"))
-  }
-  else
-    prefetch = FALSE
+  prefetch <- as.logical(prefetch)
+  if (length(prefetch) != 1L)
+    stop(gettextf("argument '%s' must be single logical value", "prefetch"))
 
-  if (!missing(bulk_read))
-  {
-    bulk_read <- as.integer(bulk_read)
-    if (length(bulk_read) != 1L)
-      stop(gettextf("argument '%s' must be single integer", "bulk_read"))
-    if (bulk_read < 1L)
-      stop(gettextf("argument '%s' must be greater than 0", "bulk_read")) 
-  }
-  else
-    bulk_read = 25L
+  bulk_read <- as.integer(bulk_read)
+  if (length(bulk_read) != 1L)
+    stop(gettextf("argument '%s' must be single integer", "bulk_read"))
+  if (bulk_read < 1L)
+    stop(gettextf("argument '%s' must be greater than 0", "bulk_read")) 
 
   stmt <- as.character(stmt)
   if (length(stmt) != 1L)
@@ -549,13 +511,21 @@
 
 .oci.Commit   <- function(con)
 {
-  .Call("rociConCommit", con@handle, PACKAGE = "ROracle")
+  info <- .oci.ConnectionInfo(con)
+  if (info$serverType == "Oracle Extproc")
+    .oci.GetQuery(con, "commit")
+  else  
+    .Call("rociConCommit", con@handle, PACKAGE = "ROracle")
   TRUE
 }
 
 .oci.Rollback <- function(con)
 {
-  .Call("rociConRollback", con@handle, PACKAGE = "ROracle")  
+  info <- .oci.ConnectionInfo(con)
+  if (info$serverType == "Oracle Extproc")
+    .oci.GetQuery(con, "rollback")
+  else  
+    .Call("rociConRollback", con@handle, PACKAGE = "ROracle")  
   TRUE
 }
 
@@ -615,12 +585,14 @@
 ##                            INTERNAL FUNCTIONS                             ##
 ## ------------------------------------------------------------------------- ##
 
-.oci.drv <- function() get("driver", envir = .oci.GlobalEnv)
+.oci.drv <- function() get("ora.driver", envir = .oci.GlobalEnv)
+
+.ext.drv <- function() get("ext.driver", envir = .oci.GlobalEnv)
 
 .oci.dbTypeCheck <- function(obj)
 {
   (inherits(obj, c("logical", "integer", "numeric", "character",
-                   "POSIXct")) ||
+                   "POSIXct", "difftime")) ||
    (is.list(obj) && all(unlist(lapply(obj, is.raw), use.names = FALSE))))
 }
 
@@ -632,7 +604,14 @@
   {
     col <- obj[[i]]
     if (!.oci.dbTypeCheck(col))
-      obj[[i]] <- as.character(col)
+    {
+      if (inherits(col, "Date"))
+        obj[[i]] <- as.POSIXct(as.POSIXlt(col), tz = "")  # use local time zone
+      else
+        obj[[i]] <- as.character(col)
+    }
+    else if (inherits(col, "difftime"))
+      obj[[i]] <- as.difftime(as.numeric(col, units = "secs"), units = "secs")
   }
   obj
 }
@@ -670,7 +649,9 @@
            logical   =,
            integer   = "integer",
            double  = if (inherits(obj, "POSIXct"))
-                       "timestamp"
+                       "timestamp with time zone"
+                     else if (inherits(obj, "difftime"))
+                       "interval day to second"
                      else if (ora.number)
                        "number"
                      else

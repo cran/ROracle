@@ -1,7 +1,7 @@
 \name{dbCommit-methods}
 \docType{methods}
-\alias{dbCommit-methods}
-\alias{dbRollback-methods}
+\alias{dbCommit}
+\alias{dbRollback}
 \alias{dbCommit,OraConnection-method}
 \alias{dbRollback,OraConnection-method}
 \title{
@@ -11,11 +11,15 @@
   Commits or roll backs the current transaction 
   in an Oracle connection 
 }
+\usage{
+\S4method{dbCommit}{OraConnection}(conn, ...)
+\S4method{dbRollback}{OraConnection}(conn, ...)
+}
 \arguments{
   \item{conn}{
     a \code{OraConnection} object, as produced by the function \code{dbConnect}
   }
-  \item{\dots }{currently unused.}
+  \item{\dots}{currently unused.}
 }
 \section{Side Effects}{
   \describe{

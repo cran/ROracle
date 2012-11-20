@@ -1,8 +1,9 @@
 \name{dbListConnections-methods}
 \docType{methods}
-\alias{dbListConnections-methods}
-\alias{dbListResults-methods}
+\alias{dbListConnections}
+\alias{dbListResults}
 \alias{dbListConnections,OraDriver-method}
+\alias{dbListConnections,ExtDriver-method}
 \alias{dbListResults,OraConnection-method}
 \title{
   List items from Oracle objects 
@@ -11,10 +12,15 @@
    These methods are straight-forward implementations of the corresponding
    generic functions.
 }
+\usage{
+\S4method{dbListConnections}{OraDriver}(drv, ...)
+\S4method{dbListConnections}{ExtDriver}(drv, ...)
+\S4method{dbListResults}{OraConnection}(conn, ...)
+}
 \arguments{
-  \item{drv}{an \code{OraDriver}.}
+  \item{drv}{an \code{OraDriver} or \code{ExtDriver}.}
   \item{conn}{an \code{OraConnection}.}
-  \item{\dots}{currently not used.}
+  \item{\dots}{currently unused.}
 }
 \value{
   \item{dbListConnections}{
