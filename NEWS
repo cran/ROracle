@@ -1,3 +1,10 @@
+Version 1.1-7 (2012-11-25)
+
+* bug 15900089: Fixed ORA-1805 error when accessing date or time stamp columns
+  when the time zone versions on the client and server differ. ROracle returns
+  the date, time stamp, time stamp with time zone and time stamp with local
+  time zone in POSIXct format. Please refer to man page
+
 Version 1.1-6 (2012-09-18)
 
 * dbWriteTable now uses timestamp with time zone for POSIXct

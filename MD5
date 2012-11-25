@@ -1,9 +1,9 @@
-b86c5781a9ad4b0bf50c1a9666f3b3c9 *DESCRIPTION
-220e34f7d9d838fc1fba7ce0ab308318 *INSTALL
+2d20fd27aef18fa6135504fb4082b09e *DESCRIPTION
+33419314d7fae41f3f1d43bc16105b48 *INSTALL
 45075bfcbb0f12fc1e626c23d8841468 *NAMESPACE
-af0df92ab04c4c062b7a8ca68fcb96c2 *NEWS
+8e1129722f9788ba17addea0eb468ee9 *NEWS
 10e788ffbf9fa0bc912a33c6c3817019 *R/dbi.R
-e96edd171e0f05de4e3b0ca4f2aa301a *R/oci.R
+c4a11d9b6846cb70437580990024e20a *R/oci.R
 4a0a8294842faabd6bdde7b2d43b27fc *R/zzz.R
 c3cded853a2388ad53569a7105d1c1e3 *cleanup
 767cab58ad9d6b2a0b22f902f53da982 *configure
@@ -37,7 +37,7 @@ e5dfff5f0c63e5429a382b597a82b47c *inst/doc/man/en/Oracle.Rd
 14383080ba9dfaa3858c785aa1fe59ad *inst/doc/man/en/dbDriver-methods.Rd
 4b7228c1b447d798d94555c834b84d92 *inst/doc/man/en/dbGetInfo-methods.Rd
 ed18acc9a0156b79bc124f7fe756451d *inst/doc/man/en/dbListConnections-methods.Rd
-ae082c6e91913d16760206aa466a3173 *inst/doc/man/en/dbReadTable-methods.Rd
+cef2b773ea49b8103a6486e949409d56 *inst/doc/man/en/dbReadTable-methods.Rd
 e011122d3d684d4990e4153e32e3fd27 *inst/doc/man/en/dbSendQuery-methods.Rd
 e6a818abd6644adb0ef3daf8c5ad4c40 *inst/doc/man/en/dbSetDataMappings-methods.Rd
 dc6dd4757d81e89e43096e14e3b1880d *inst/doc/man/en/fetch-methods.Rd
@@ -173,7 +173,7 @@ e5dfff5f0c63e5429a382b597a82b47c *man/Oracle.Rd
 14383080ba9dfaa3858c785aa1fe59ad *man/dbDriver-methods.Rd
 4b7228c1b447d798d94555c834b84d92 *man/dbGetInfo-methods.Rd
 ed18acc9a0156b79bc124f7fe756451d *man/dbListConnections-methods.Rd
-ae082c6e91913d16760206aa466a3173 *man/dbReadTable-methods.Rd
+cef2b773ea49b8103a6486e949409d56 *man/dbReadTable-methods.Rd
 e011122d3d684d4990e4153e32e3fd27 *man/dbSendQuery-methods.Rd
 e6a818abd6644adb0ef3daf8c5ad4c40 *man/dbSetDataMappings-methods.Rd
 dc6dd4757d81e89e43096e14e3b1880d *man/fetch-methods.Rd
@@ -194,7 +194,7 @@ a43f1b9fc656f60481fc9b8d9be6457a *po/R-zh_TW.po
 543aa2bf445671680b39a998d36e33d2 *src/Makevars.in
 7284b543f7d2fd9d564b8e1478ffd0a3 *src/Makevars.win
 dd90e5748e9ef66e153d218102bc27fd *src/oci/oratypes.h
-79c995ab79dcb8cacf00dc7f5a668ba8 *src/rodbi.c
+602f0baf7a9fe36e644ecf6a6126c735 *src/rodbi.c
 b2ddecbef402d9e92ff519b8c195b34b *src/rodbi.h
-9af6d85f6404a520388bdaae8d720b18 *src/rooci.c
-e851db3754e3ef61edc35b04e15c1d3c *src/rooci.h
+0bd4faa93ee6f204e5e6c5192ef97aa2 *src/rooci.c
+aecaeb02fbcb477e1bc9d4cd1a94905e *src/rooci.h

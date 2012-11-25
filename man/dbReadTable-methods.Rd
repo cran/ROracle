@@ -108,13 +108,57 @@
     \code{ora.number} is \code{TRUE} or Oracle  \code{BINARY_DOUBLE} if
     \code{FALSE}
     \item \code{character} maps to Oracle \code{VARCHAR2(4000)}
-    \item \code{Date} and \code{POSIXt} map to Oracle
+    \item \code{Date} and \code{POSIXct} map to Oracle \code{DATE}
+    \pkg{ROracle} - the ROracle package
+    \R - the R application
+    \code{POSIXct} - the POSIXct class
+    \code{TIMESTAMP}
     \code{TIMESTAMP WITH TIME ZONE}
+    \code{TIMESTAMP WITH LOCAL TIME ZONE}
     \item \code{difftime} maps to Oracle \code{INTERVAL DAY TO SECOND}
     \item \code{list} of \code{raw} vectors map to Oracle \code{RAW(2000)}
     \item other \R types such as \code{factor} are converted to
     \code{character}
   }
+
+   ROracle returns values from database columns that are of data type: date,
+   time stamp, time stamp with time zone and time stamp with local time zone
+   data types in R's POSIXct format. POSIXct refers to a
+   time that is internally stored as the number of seconds since the start of
+   1970 in UTC. Number of seconds are exchanged from R and ROracle driver in
+   floating point double format. In POSIXct representation R uses the TZ
+   environment variable or maps the OS time zone environment variable to its
+   own, therefore the date will be displayed in this time zone format.
+
+   One can insert data into columns of the 4 data types listed above using a
+   string with the correct format or POSIXct representation. String data is
+   passed to the databse directly and ROracle relies on databse to convert it
+   to date time representation. POSIXct data will be converted to Oracle's
+   internal DateTime descriptor by adding the beginning of 1970 UTC to the
+   number of seconds obtained from R. Any POSIXct variables in insert
+   statement are bound as SQLT_TIMESTAMP_TZ.
+
+   When these data types are selected from Oracle they are converted to POSIXct
+   format by subtracting the start of 1970 UTC. When ROracle client and
+   database have different time zone version files and an application uses the
+   time zone data types it is recommended that they be the same as the region
+   may have changed its zone. ROracle will report an error in this situation as
+   it can cause data corruption or loss of information when operating on these
+   data types.
+
+   Columns having date and time stamp data type are fetched by ROracle using
+   the SQLT_TIMESTAMP data type. Columns having time stamp with time zone and
+   time stamp with local time zone data types are fetched using
+   SQLT_TIMESTAMP_TZ data type. Columns of datatype time zone with local time
+   zone undergo conversion to the session time zone that the R application runs
+   in therefore setting the time zone environment TZ in R will affect the data
+   values in this column. ROracle driver does not map the TZ environment
+   variable to session time zone and
+   does not issue an alter DDL to set the session time zone. In order to
+   fetch data from columns with timestamp with time zone and timestamp with
+   local time zone the client and server must have the same time zone data
+   file else an error will be reported.
+   
 
   Also \code{dbWriteTable} always auto commits a current transaction as
   well as the data it inserts, i.e. it acts as a DDL statement even if
@@ -130,8 +174,10 @@
   exception.
 }
 \section{References}{
-  For the Oracle Database documentaion see 
+  For the Oracle Database documentation see 
   \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
+  For Datetime Data Types and Time Zone Support in Oracle see
+  \url{http://docs.oracle.com/cd/E14072_01/server.112/e10729/ch4datetime.htm}.
 }
 \seealso{
   \code{\link{Oracle}},
@@ -164,6 +210,81 @@
 
     dbListTables(con)
     dbListFields(con, "EMP")
+
+    # example of POSIXct usage
+    # A table is created using:
+    createTab <- "create table RORACLE_TEST(row_num number, id1 date,
+                 id2 timestamp, id3 timestamp with time zone, 
+                 id4 timestamp with local time zone )"
+
+    dbGetQuery(con, createTab)
+    # Insert statement
+    insStr <- "insert into RORACLE_TEST values(:1, :2, :3, :4, :5)";
+
+    # Select statement
+    selStr <- "select * from RORACLE_TEST";
+
+    # Insert time stamp without time values in POSIXct form
+    x <- 1; 
+    y <- "2012-06-05";
+    y <- as.POSIXct(y);
+    dbGetQuery(con, insStr, data.frame(x, y, y, y, y));
+
+    # Insert date & times tamp with time values in POSIXct form
+    x <- 2;
+    y <- "2012-01-05 07:15:02";
+    y <- as.POSIXct(y);
+    z <- "2012-01-05 07:15:03.123";
+    z <- as.POSIXct(z);
+    dbGetQuery(con, insStr, data.frame(x, y, z,  z, z));
+
+    # Insert list of date objects in POSIXct form
+    x <- c(3, 4, 5, 6);
+    y <- c('2012-01-05', '2011-01-05', '2013-01-05', '2020-01-05');
+    y <- as.POSIXct(y);
+    dbGetQuery(con, insStr, data.frame(x, y, y, y, y));
+
+    # Selecting data and displaying it
+    res <- dbGetQuery(con, selStr)
+    res[,1]
+    res[,2]
+    res[,3]
+    res[,4]
+    res[,5]
+
+Example below shows the effect of changing time zone in R environment:
+R> Sys.timezone()
+[1] "PST8PDT"
+R>     res[,1]
+[1] 1 2 3 4 5 6
+R>     res[,2]
+[1] "2012-06-05 00:00:00 PDT" "2012-01-05 07:15:02 PST" "2012-01-05 00:00:00 PST" "2011-01-05 00:00:00 PST"
+[5] "2013-01-05 00:00:00 PST" "2020-01-05 00:00:00 PST"
+R>     res[,3]
+[1] "2012-06-05 00:00:00 PDT" "2012-01-05 07:15:03 PST" "2012-01-05 00:00:00 PST" "2011-01-05 00:00:00 PST"
+[5] "2013-01-05 00:00:00 PST" "2020-01-05 00:00:00 PST"
+R>     res[,4]
+[1] "2012-06-05 00:00:00 PDT" "2012-01-05 07:15:03 PST" "2012-01-05 00:00:00 PST" "2011-01-05 00:00:00 PST"
+[5] "2013-01-05 00:00:00 PST" "2020-01-05 00:00:00 PST"
+R>     res[,5]
+[1] "2012-06-05 00:00:00 PDT" "2012-01-05 07:15:03 PST" "2012-01-05 00:00:00 PST" "2011-01-05 00:00:00 PST"
+[5] "2013-01-05 00:00:00 PST" "2020-01-05 00:00:00 PST"
+R> Sys.setenv(TZ='EST5EDT')
+R>     res[,1]
+[1] 1 2 3 4 5 6
+R>     res[,2]
+[1] "2012-06-05 03:00:00 EDT" "2012-01-05 10:15:02 EST" "2012-01-05 03:00:00 EST" "2011-01-05 03:00:00 EST"
+[5] "2013-01-05 03:00:00 EST" "2020-01-05 03:00:00 EST"
+R>     res[,3]
+[1] "2012-06-05 03:00:00 EDT" "2012-01-05 10:15:03 EST" "2012-01-05 03:00:00 EST" "2011-01-05 03:00:00 EST"
+[5] "2013-01-05 03:00:00 EST" "2020-01-05 03:00:00 EST"
+R>     res[,4]
+[1] "2012-06-05 03:00:00 EDT" "2012-01-05 10:15:03 EST" "2012-01-05 03:00:00 EST" "2011-01-05 03:00:00 EST"
+[5] "2013-01-05 03:00:00 EST" "2020-01-05 03:00:00 EST"
+R>     res[,5]
+[1] "2012-06-05 03:00:00 EDT" "2012-01-05 10:15:03 EST" "2012-01-05 03:00:00 EST" "2011-01-05 03:00:00 EST"
+[5] "2013-01-05 03:00:00 EST" "2020-01-05 03:00:00 EST"
+
   }
 }
 \keyword{methods}

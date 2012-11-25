@@ -10,6 +10,7 @@
 #    NOTES
 #
 #    MODIFIED   (MM/DD/YY)
+#    rpingte     11/28/12 - 15930335: use timestamp data type for POSIXct value
 #    paboyoun    09/17/12 - add difftime support
 #    demukhin    09/04/12 - add Extproc driver
 #    rkanodia    08/02/12 - Removed redundant arguments passed to functions
@@ -649,7 +650,7 @@
            logical   =,
            integer   = "integer",
            double  = if (inherits(obj, "POSIXct"))
-                       "timestamp with time zone"
+                       "timestamp"
                      else if (inherits(obj, "difftime"))
                        "interval day to second"
                      else if (ora.number)
