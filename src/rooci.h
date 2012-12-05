@@ -11,6 +11,8 @@ All rights reserved. */
    NOTES
 
    MODIFIED   (MM/DD/YY)
+   rpingte     11/20/12 - 15900089: remove avoidable errors reported with date
+                          time types
    rpingte     09/21/12 - roociAllocDescBindBuf
    paboyoun    09/17/12 - add difftime support
    demukhin    09/05/12 - add Extproc driver
@@ -146,6 +148,7 @@ struct roociCon
   sb4                nlsmaxwidth_roociCon;    /* NLS max width of character */
   roociResAccess     acc_roociCon;       /* sequential traversal of results */
   OCIInterval       *tzdiff_roociCon;    /* interval from UTC to session TZ */
+  double             secs_UTC_roociCon;     /* LocalTZ, UTC diff in seconds */
   /* TODO: add mutex when R is thread-safe */
 };
 typedef struct roociCon roociCon;
@@ -178,6 +181,8 @@ struct roociRes
   boolean          prefetch_roociRes;    /* TRUE - use OCI prefetch buffers */
   int              nrows_roociRes;    /* nuumber of rows to fetch at a time */
   OCIDateTime     *epoch_roociRes;             /* epoch from 1970/01/01 UTC */
+  OCIDateTime     *epoch_tz_roociRes;          /* epoch from 1970/01/01 UTC */
+  OCIDateTime     *temp_ts_roociRes;              /* temp TS for conversion */
   OCIInterval     *diff_roociRes; /* time interval difference from 1970 UTC */
   /* TODO: add mutex when R is thread-safe */
 };
@@ -282,7 +287,7 @@ sword roociReadBLOBData(roociRes *pres, int *lob_len, int rowpos, int cid);
 /* -------------------------- rociReadDateTimeData ------------------------- */
 /* Read DateTime data */
 sword roociReadDateTimeData(roociRes *pres, OCIDateTime *tstm, double *date,
-                            boolean isDateCol);
+                            boolean isDate, boolean isLTZ);
 
 /* ------------------------- roociWriteDateTimeData ------------------------ */
 /* Write DateTime data */

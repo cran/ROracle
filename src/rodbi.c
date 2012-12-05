@@ -68,6 +68,8 @@ All rights reserved. */
    NOTES
 
    MODIFIED   (MM/DD/YY)
+   rpingte     11/20/12 - 15900089: remove avoidable errors reported with date
+                          time types
    paboyoun    11/05/12 - add PROTECT to rociConInfo
    paboyoun    09/29/12 - use Rf_inherits to determine class
    rpingte     09/26/12 - TimesTen interval DS not supported for difftime
@@ -199,7 +201,7 @@ while (0)
 #define RODBI_DRV_EXTPROC    "Oracle (extproc)"
 #define RODBI_DRV_MAJOR       1
 #define RODBI_DRV_MINOR       1
-#define RODBI_DRV_UPDATE      6
+#define RODBI_DRV_UPDATE      7
 
 /* RODBI R classes */
 #define RODBI_R_LOG           1                                  /* LOGICAL */
@@ -355,7 +357,7 @@ const rodbiITyp rodbiITypTab[] =
   {RODBI_NUMBER_NM,   RODBI_R_NUM, SQLT_BDOUBLE,      sizeof(double)},
   {RODBI_INTEGER_NM,  RODBI_R_INT, SQLT_INT,          sizeof(int)},
   {RODBI_LONG_NM,     0,           0,                 0},
-  {RODBI_DATE_NM,     RODBI_R_DAT, SQLT_TIMESTAMP_TZ, sizeof(OCIDateTime *)}, 
+  {RODBI_DATE_NM,     RODBI_R_DAT, SQLT_TIMESTAMP,    sizeof(OCIDateTime *)}, 
   {RODBI_RAW_NM,      RODBI_R_RAW, SQLT_BIN,          0}, 
   {RODBI_LONG_RAW_NM, 0,           0,                 0},
   {RODBI_ROWID_NM,    RODBI_R_CHR, SQLT_STR,          0}, 
@@ -367,7 +369,7 @@ const rodbiITyp rodbiITypTab[] =
   {RODBI_CLOB_NM,     RODBI_R_CHR, SQLT_CLOB,         sizeof(OCILobLocator *)},
   {RODBI_BLOB_NM,     RODBI_R_RAW, SQLT_BLOB,         sizeof(OCILobLocator *)},
   {RODBI_BFILE_NM,    RODBI_R_RAW, SQLT_BFILE,        sizeof(OCILobLocator *)},
-  {RODBI_TIME_NM,     RODBI_R_DAT, SQLT_TIMESTAMP_TZ, sizeof(OCIDateTime *)}, 
+  {RODBI_TIME_NM,     RODBI_R_DAT, SQLT_TIMESTAMP,    sizeof(OCIDateTime *)}, 
   {RODBI_TIME_TZ_NM,  RODBI_R_DAT, SQLT_TIMESTAMP_TZ, sizeof(OCIDateTime *)}, 
   {RODBI_INTER_YM_NM, RODBI_R_CHR, SQLT_STR,          0},
   {RODBI_INTER_DS_NM, RODBI_R_DIF, SQLT_INTERVAL_DS,  sizeof(OCIInterval *)},
@@ -2070,12 +2072,15 @@ static void rodbiResAccum(rodbiRes *res)
         }
         break;
 
+        case SQLT_TIMESTAMP:
         case SQLT_TIMESTAMP_TZ:
           RODBI_CHECK_RES(res, __FUNCTION__, 4, FALSE,
                roociReadDateTimeData(&(res->res_rodbiRes),
                *(OCIDateTime **)dat, &tstm,
                !strcmp(RODBI_NAME_INT((res->res_rodbiRes).typ_roociRes[cid]),
-                       RODBI_DATE_NM)));
+                       RODBI_DATE_NM),
+               rodbiTypeExt((res->res_rodbiRes).typ_roociRes[cid]) ==
+                            SQLT_TIMESTAMP_TZ));
           REAL(vec)[lcur] = tstm;
           break;
 
