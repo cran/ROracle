@@ -10,6 +10,7 @@
 #    NOTES
 #
 #    MODIFIED   (MM/DD/YY)
+#    rkanodia    12/10/12 - Changed default value of bulk_read  to 1000
 #    rpingte     11/28/12 - 15930335: use timestamp data type for POSIXct value
 #    paboyoun    09/17/12 - add difftime support
 #    demukhin    09/04/12 - add Extproc driver
@@ -81,7 +82,7 @@
 ###############################################################################
 
 .oci.Connect <- function(drv, username = "", password = "", dbname = "",
-                         prefetch = FALSE, bulk_read = 25L, stmt_cache = 0L)
+                         prefetch = FALSE, bulk_read = 1000L, stmt_cache = 0L)
 {
   # validate
   username <- as.character(username)
@@ -126,7 +127,7 @@
 }
 
 .oci.SendQuery <- function(con, stmt, data = NULL, prefetch = FALSE,
-                           bulk_read = 25L)
+                           bulk_read = 1000L)
 {
   #validate
   prefetch <- as.logical(prefetch)
@@ -152,7 +153,7 @@
 }
 
 .oci.GetQuery <- function(con, stmt, data = NULL, prefetch = FALSE,
-                          bulk_read = 25L)
+                          bulk_read = 1000L)
 {
   #validate
   prefetch <- as.logical(prefetch)

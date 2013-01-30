@@ -14,8 +14,8 @@
 }
 \usage{
 \S4method{dbConnect}{OraDriver}(drv, username = "", password = "", dbname = "", prefetch = FALSE,
-          bulk_read = 25L, stmt_cache = 0L, ...)
-\S4method{dbConnect}{ExtDriver}(drv, prefetch = FALSE, bulk_read = 25L, stmt_cache = 0L, ...)
+          bulk_read = 1000L, stmt_cache = 0L, ...)
+\S4method{dbConnect}{ExtDriver}(drv, prefetch = FALSE, bulk_read = 1000L, stmt_cache = 0L, ...)
 \S4method{dbDisconnect}{OraConnection}(conn, ...)
 }
 \arguments{
@@ -56,7 +56,7 @@
   }
   \item{bulk_read}{
     an integer value indicating the number of rows to fetch at a time. Default
-    is 25L. When prefetch option is select, memory is allocated for prefetch
+    is 1000L. When the prefetch option is selected, memory is allocated for prefetch
     buffers and OCI will fetch those many rows at a time. When prefetch is not
     used(default) memory is allocated in RODBI/ROOCI define buffers. Setting 
     this to a large value will result in more memory allocated based on the 

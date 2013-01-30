@@ -1,4 +1,4 @@
-/* Copyright (c) 2011, 2012, Oracle and/or its affiliates. 
+/* Copyright (c) 2011, 2013, Oracle and/or its affiliates. 
 All rights reserved. */
 
 /*
@@ -68,6 +68,8 @@ All rights reserved. */
    NOTES
 
    MODIFIED   (MM/DD/YY)
+   rpingte     01/30/13 - change version to 1.1-8
+   rkanodia    12/10/12 - Changed default value of bulk read/write to 1000
    rpingte     11/20/12 - 15900089: remove avoidable errors reported with date
                           time types
    paboyoun    11/05/12 - add PROTECT to rociConInfo
@@ -140,8 +142,8 @@ All rights reserved. */
 #define RODBI_ERR_PREF_STMT_CACHE  _("prefetch should be enabled for statement cache")
 
 #define RODBI_DRV_ERR_CHECKWD     -1                      /* Invalid object */
-#define RODBI_BULK_READ           25               /* rodbi BULK READ count */ 
-#define RODBI_BULK_WRITE         100              /* rodbi BULK WRITE count */
+#define RODBI_BULK_READ         1000               /* rodbi BULK READ count */ 
+#define RODBI_BULK_WRITE        1000              /* rodbi BULK WRITE count */
 
 
 /* RODBI FATAL error */
@@ -201,7 +203,7 @@ while (0)
 #define RODBI_DRV_EXTPROC    "Oracle (extproc)"
 #define RODBI_DRV_MAJOR       1
 #define RODBI_DRV_MINOR       1
-#define RODBI_DRV_UPDATE      7
+#define RODBI_DRV_UPDATE      8
 
 /* RODBI R classes */
 #define RODBI_R_LOG           1                                  /* LOGICAL */
