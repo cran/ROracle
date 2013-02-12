@@ -19,8 +19,8 @@
    ROracle specific DBI extension.
 }
 \usage{
-\S4method{dbSendQuery}{OraConnection,character}(conn, statement, data = NULL, prefetch = FALSE, bulk_read = 25L, ...)
-\S4method{dbGetQuery}{OraConnection,character}(conn, statement, data = NULL, prefetch = FALSE, bulk_read = 25L, ...)
+\S4method{dbSendQuery}{OraConnection,character}(conn, statement, data = NULL, prefetch = FALSE, bulk_read = 1000L, ...)
+\S4method{dbGetQuery}{OraConnection,character}(conn, statement, data = NULL, prefetch = FALSE, bulk_read = 1000L, ...)
 \S4method{dbClearResult}{OraResult}(res, ...)
 \S4method{dbGetException}{OraConnection}(conn, ...)
 
@@ -42,7 +42,7 @@ execute(res, ...)
   }
   \item{bulk_read}{
     an integer value indicating the number of rows to fetch at a time. Default
-    is 25L. When prefetch option is select, memory is allocated for prefetch
+    is 1000L. When the prefetch option is selected, memory is allocated for prefetch
     buffers and OCI will fetch those many rows at a time. When prefetch is not 
     used(default) memory is allocated in RODBI/ROOCI define buffers. Setting 
     this to a large value will result in more memory allocated based on the 

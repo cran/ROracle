@@ -1,3 +1,8 @@
+Version 1.1-8 (2013-01-30)
+
+* bug 16188612: Setting of OCI_LIB32 and/or OCI_LIB64 environment variables
+  on Windows is mandatory, see INSTALL for details.
+
 Version 1.1-7 (2012-11-25)
 
 * bug 15900089: Fixed ORA-1805 error when accessing date or time stamp columns

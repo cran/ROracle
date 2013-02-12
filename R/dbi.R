@@ -10,6 +10,7 @@
 #    NOTES
 #
 #    MODIFIED   (MM/DD/YY)
+#    rkanodia    12/10/12 - Changed default value of bulk_read to 1000
 #    paboyoun    09/17/12 - add difftime support
 #    demukhin    09/11/12 - add Extproc driver
 #    jfeldhau    06/19/12 - ROracle support for TimesTen.
@@ -121,7 +122,7 @@ setClass("OraConnection",
 setMethod("dbConnect",
 signature(drv = "OraDriver"),
 function(drv, username = "", password = "", dbname = "", prefetch = FALSE,
-         bulk_read = 25L, stmt_cache = 0L, ...)
+         bulk_read = 1000L, stmt_cache = 0L, ...)
 .oci.Connect(.oci.drv(), username = username, password = password,
              dbname = dbname, prefetch = prefetch, bulk_read = bulk_read,
              stmt_cache = stmt_cache)
@@ -129,7 +130,7 @@ function(drv, username = "", password = "", dbname = "", prefetch = FALSE,
 
 setMethod("dbConnect",
 signature(drv = "ExtDriver"),
-function(drv, prefetch = FALSE, bulk_read = 25L, stmt_cache = 0L, ...)
+function(drv, prefetch = FALSE, bulk_read = 1000L, stmt_cache = 0L, ...)
 .oci.Connect(.ext.drv(), prefetch = prefetch, bulk_read = bulk_read,
              stmt_cache = stmt_cache)
 )
@@ -141,14 +142,16 @@ function(conn, ...) .oci.Disconnect(conn)
 
 setMethod("dbSendQuery",
 signature(conn = "OraConnection", statement = "character"),
-function(conn, statement, data = NULL, prefetch = FALSE, bulk_read = 25L, ...)
+function(conn, statement, data = NULL, prefetch = FALSE, 
+         bulk_read = 1000L, ...)
 .oci.SendQuery(conn, statement, data = data, prefetch = prefetch,
                bulk_read = bulk_read)
 )
 
 setMethod("dbGetQuery",
 signature(conn = "OraConnection", statement = "character"),
-function(conn, statement, data = NULL, prefetch = FALSE, bulk_read = 25L, ...)
+function(conn, statement, data = NULL, prefetch = FALSE, 
+         bulk_read = 1000L, ...)
 .oci.GetQuery(conn, statement, data = data, prefetch = prefetch,
               bulk_read = bulk_read)
 )

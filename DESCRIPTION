@@ -1,6 +1,6 @@
 Package: ROracle
-Version: 1.1-7
-Date: 2012-11-25
+Version: 1.1-8
+Date: 2013-01-30
 Author: Denis Mukhin, David A. James and Jake Luciani
 Maintainer: Denis Mukhin <denis.x.mukhin@oracle.com>
 Title: OCI based Oracle database interface for R
@@ -12,6 +12,6 @@ Depends: methods, DBI
 License: LGPL
 URL: http://www.oracle.com
 Collate: dbi.R oci.R zzz.R
-Packaged: 2012-12-03 04:56:20 UTC; aime
+Packaged: 2013-02-10 05:37:19 UTC; aime
 Repository: CRAN
-Date/Publication: 2012-12-05 18:32:02
+Date/Publication: 2013-02-12 18:54:05
