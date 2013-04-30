@@ -159,6 +159,49 @@
    local time zone the client and server must have the same time zone data
    file else an error will be reported.
    
+   Example below shows the effect of changing time zone in R environment:
+   \preformatted{   R> Sys.timezone()
+   [1] "PST8PDT"
+   # Selecting data and displaying it
+   res <- dbGetQuery(con, selStr)
+   R>     res[,1]
+   [1] 1 2 3 4 5 6
+   R>     res[,2]
+   [1] "2012-06-05 00:00:00 PDT" "2012-01-05 07:15:02 PST"
+       "2012-01-05 00:00:00 PST" "2011-01-05 00:00:00 PST"
+   [5] "2013-01-05 00:00:00 PST" "2020-01-05 00:00:00 PST"
+   R>     res[,3]
+   [1] "2012-06-05 00:00:00 PDT" "2012-01-05 07:15:03 PST"
+       "2012-01-05 00:00:00 PST" "2011-01-05 00:00:00 PST"
+   [5] "2013-01-05 00:00:00 PST" "2020-01-05 00:00:00 PST"
+   R>     res[,4]
+   [1] "2012-06-05 00:00:00 PDT" "2012-01-05 07:15:03 PST"
+       "2012-01-05 00:00:00 PST" "2011-01-05 00:00:00 PST"
+   [5] "2013-01-05 00:00:00 PST" "2020-01-05 00:00:00 PST"
+   R>     res[,5]
+   [1] "2012-06-05 00:00:00 PDT" "2012-01-05 07:15:03 PST"
+       "2012-01-05 00:00:00 PST" "2011-01-05 00:00:00 PST"
+   [5] "2013-01-05 00:00:00 PST" "2020-01-05 00:00:00 PST"
+   R> Sys.setenv(TZ='EST5EDT')
+   R>     res[,1]
+   [1] 1 2 3 4 5 6
+   R>     res[,2]
+   [1] "2012-06-05 03:00:00 EDT" "2012-01-05 10:15:02 EST"
+       "2012-01-05 03:00:00 EST" "2011-01-05 03:00:00 EST"
+   [5] "2013-01-05 03:00:00 EST" "2020-01-05 03:00:00 EST"
+   R>     res[,3]
+   [1] "2012-06-05 03:00:00 EDT" "2012-01-05 10:15:03 EST"
+       "2012-01-05 03:00:00 EST" "2011-01-05 03:00:00 EST"
+   [5] "2013-01-05 03:00:00 EST" "2020-01-05 03:00:00 EST"
+   R>     res[,4]
+   [1] "2012-06-05 03:00:00 EDT" "2012-01-05 10:15:03 EST"
+       "2012-01-05 03:00:00 EST" "2011-01-05 03:00:00 EST"
+   [5] "2013-01-05 03:00:00 EST" "2020-01-05 03:00:00 EST"
+   R>     res[,5]
+   [1] "2012-06-05 03:00:00 EDT" "2012-01-05 10:15:03 EST"
+       "2012-01-05 03:00:00 EST" "2011-01-05 03:00:00 EST"
+   [5] "2013-01-05 03:00:00 EST" "2020-01-05 03:00:00 EST"}
+
 
   Also \code{dbWriteTable} always auto commits a current transaction as
   well as the data it inserts, i.e. it acts as a DDL statement even if
@@ -211,6 +254,9 @@
     dbListTables(con)
     dbListFields(con, "EMP")
 
+    if (dbExistsTable(con, "RORACLE_TEST", "SCOTT"))
+      dbRemoveTable(con, "RORACLE_TEST")
+
     # example of POSIXct usage
     # A table is created using:
     createTab <- "create table RORACLE_TEST(row_num number, id1 date,
@@ -244,6 +290,8 @@
     y <- as.POSIXct(y);
     dbGetQuery(con, insStr, data.frame(x, y, y, y, y));
 
+    dbCommit (con)
+
     # Selecting data and displaying it
     res <- dbGetQuery(con, selStr)
     res[,1]
@@ -251,40 +299,6 @@
     res[,3]
     res[,4]
     res[,5]
-
-Example below shows the effect of changing time zone in R environment:
-R> Sys.timezone()
-[1] "PST8PDT"
-R>     res[,1]
-[1] 1 2 3 4 5 6
-R>     res[,2]
-[1] "2012-06-05 00:00:00 PDT" "2012-01-05 07:15:02 PST" "2012-01-05 00:00:00 PST" "2011-01-05 00:00:00 PST"
-[5] "2013-01-05 00:00:00 PST" "2020-01-05 00:00:00 PST"
-R>     res[,3]
-[1] "2012-06-05 00:00:00 PDT" "2012-01-05 07:15:03 PST" "2012-01-05 00:00:00 PST" "2011-01-05 00:00:00 PST"
-[5] "2013-01-05 00:00:00 PST" "2020-01-05 00:00:00 PST"
-R>     res[,4]
-[1] "2012-06-05 00:00:00 PDT" "2012-01-05 07:15:03 PST" "2012-01-05 00:00:00 PST" "2011-01-05 00:00:00 PST"
-[5] "2013-01-05 00:00:00 PST" "2020-01-05 00:00:00 PST"
-R>     res[,5]
-[1] "2012-06-05 00:00:00 PDT" "2012-01-05 07:15:03 PST" "2012-01-05 00:00:00 PST" "2011-01-05 00:00:00 PST"
-[5] "2013-01-05 00:00:00 PST" "2020-01-05 00:00:00 PST"
-R> Sys.setenv(TZ='EST5EDT')
-R>     res[,1]
-[1] 1 2 3 4 5 6
-R>     res[,2]
-[1] "2012-06-05 03:00:00 EDT" "2012-01-05 10:15:02 EST" "2012-01-05 03:00:00 EST" "2011-01-05 03:00:00 EST"
-[5] "2013-01-05 03:00:00 EST" "2020-01-05 03:00:00 EST"
-R>     res[,3]
-[1] "2012-06-05 03:00:00 EDT" "2012-01-05 10:15:03 EST" "2012-01-05 03:00:00 EST" "2011-01-05 03:00:00 EST"
-[5] "2013-01-05 03:00:00 EST" "2020-01-05 03:00:00 EST"
-R>     res[,4]
-[1] "2012-06-05 03:00:00 EDT" "2012-01-05 10:15:03 EST" "2012-01-05 03:00:00 EST" "2011-01-05 03:00:00 EST"
-[5] "2013-01-05 03:00:00 EST" "2020-01-05 03:00:00 EST"
-R>     res[,5]
-[1] "2012-06-05 03:00:00 EDT" "2012-01-05 10:15:03 EST" "2012-01-05 03:00:00 EST" "2011-01-05 03:00:00 EST"
-[5] "2013-01-05 03:00:00 EST" "2020-01-05 03:00:00 EST"
-
   }
 }
 \keyword{methods}

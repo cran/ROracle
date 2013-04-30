@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved. 
+# Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved. 
 #
 #    NAME
 #      oci.R - OCI based implementaion for DBI
@@ -10,6 +10,7 @@
 #    NOTES
 #
 #    MODIFIED   (MM/DD/YY)
+#    qinwan      03/01/13 - avoid unnecessary data copy in type check
 #    rkanodia    12/10/12 - Changed default value of bulk_read  to 1000
 #    rpingte     11/28/12 - 15930335: use timestamp data type for POSIXct value
 #    paboyoun    09/17/12 - add difftime support
@@ -344,7 +345,7 @@
   value <- .oci.data.frame(value)
 
   # get column names and types
-  ctypes <- sapply(value, .oci.dbType, ora.number = ora.number, 
+  ctypes <- sapply(head(value,0), .oci.dbType, ora.number = ora.number, 
                    timesten = con@timesten)
   cnames <- sprintf('"%s"', names(value))
 

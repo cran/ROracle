@@ -68,6 +68,9 @@ All rights reserved. */
    NOTES
 
    MODIFIED   (MM/DD/YY)
+   rpingte     05/08/13 - update version to 10
+   rpingte     04/09/13 - use SQLT_FLT instead of SQLT_BDOUBLE
+   qinwan      03/01/13 - remove rawVecToListCall
    rpingte     01/30/13 - change version to 1.1-8
    rkanodia    12/10/12 - Changed default value of bulk read/write to 1000
    rpingte     11/20/12 - 15900089: remove avoidable errors reported with date
@@ -203,7 +206,7 @@ while (0)
 #define RODBI_DRV_EXTPROC    "Oracle (extproc)"
 #define RODBI_DRV_MAJOR       1
 #define RODBI_DRV_MINOR       1
-#define RODBI_DRV_UPDATE      8
+#define RODBI_DRV_UPDATE      10
 
 /* RODBI R classes */
 #define RODBI_R_LOG           1                                  /* LOGICAL */
@@ -356,7 +359,7 @@ const rodbiITyp rodbiITypTab[] =
 {
   {"",                0,           0,                 0},
   {RODBI_VARCHAR2_NM, RODBI_R_CHR, SQLT_STR,          0}, 
-  {RODBI_NUMBER_NM,   RODBI_R_NUM, SQLT_BDOUBLE,      sizeof(double)},
+  {RODBI_NUMBER_NM,   RODBI_R_NUM, SQLT_FLT,          sizeof(double)},
   {RODBI_INTEGER_NM,  RODBI_R_INT, SQLT_INT,          sizeof(int)},
   {RODBI_LONG_NM,     0,           0,                 0},
   {RODBI_DATE_NM,     RODBI_R_DAT, SQLT_TIMESTAMP,    sizeof(OCIDateTime *)}, 
@@ -1999,6 +2002,7 @@ static void rodbiResAccum(rodbiRes *res)
           break;
 
         case SQLT_BDOUBLE:
+        case SQLT_FLT:
           REAL(vec)[lcur] = *(double *)dat;
           break;
 
@@ -2455,6 +2459,9 @@ ub1 rodbiTypeInt(ub2 ctyp, sb2 precision, sb1 scale, ub2 size,
   case SQLT_AFC:                            
     ityp = RODBI_CHAR;
     break;
+  case SQLT_FLT:
+    ityp = RODBI_NUMBER;                                          /* DOUBLE */
+    break;
   case SQLT_IBFLOAT:
     ityp = RODBI_BFLOAT;                                    /* BINARY_FLOAT */
     break;
@@ -2502,31 +2509,5 @@ ub1 rodbiTypeInt(ub2 ctyp, sb2 precision, sb1 scale, ub2 size,
 
   return ityp;
 } /* end rodbiTypeInt */
-
-
-/* ---------------------------- rawVecToListCall ------------------------------ */
-SEXP rawVecToListCall(SEXP val, SEXP chunksz) {
-
-  const int CHUNKSZ = *(INTEGER(chunksz));
-  R_len_t k, idx=0, seglen=0, rawlen=LENGTH(val);
-  Rbyte * valraw;
-  Rbyte * valout;
-  PROTECT_INDEX px;
-  SEXP out;
-
-  valraw = RAW(val);
-  PROTECT_WITH_INDEX(out = allocVector(VECSXP, rawlen>0 ? (rawlen-1)/CHUNKSZ+1 : 0), &px);
-  for (k=0; k < rawlen; k+=CHUNKSZ) {
-    seglen =  k+CHUNKSZ <= rawlen ? CHUNKSZ : rawlen-k;
-    SET_VECTOR_ELT(out, idx, allocVector(RAWSXP, seglen));
-    valout = RAW(VECTOR_ELT(out, idx));
-    memcpy(valout, valraw+k, seglen);
-    idx++;
-  }
-
-  UNPROTECT(1);
-  return out;
-
-} /* end of rawVecToListCall */
 
 /* end of file rodbi.c */
