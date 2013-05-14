@@ -1,3 +1,11 @@
+Version 1.1-10 (2013-04-30)
+
+* Oracle number columns are now fetched using SQLT_FLT data type
+
+Version 1.1-9 (2013-03-29)
+
+* bug 16570993: Fix platform-porting issue for supporting datastore
+
 Version 1.1-8 (2013-01-30)
 
 * bug 16188612: Setting of OCI_LIB32 and/or OCI_LIB64 environment variables

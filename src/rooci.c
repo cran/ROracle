@@ -1,4 +1,4 @@
-/* Copyright (c) 2011, 2012, Oracle and/or its affiliates. 
+/* Copyright (c) 2011, 2013, Oracle and/or its affiliates. 
 All rights reserved. */
 
 /*
@@ -11,6 +11,7 @@ All rights reserved. */
    NOTES
 
    MODIFIED   (MM/DD/YY)
+   rpingte     04/09/13 - use SQLT_FLT instead of SQLT_BDOUBLE
    rpingte     11/20/12 - 15900089: remove avoidable errors reported with date
                           time types
    rpingte     11/01/12 - use OCI_ATTR_CHARSET_FORM
@@ -1244,6 +1245,7 @@ sword roociDescCol(roociRes *pres, ub4 colId, ub2 *extTyp, oratext **colName,
     switch(*extTyp)
     {
       case SQLT_BDOUBLE:
+      case SQLT_FLT:
         pres->siz_roociRes[colId-1] = sizeof(double);
         break;
 
