@@ -1,5 +1,5 @@
-/* Copyright (c) 2011, 2013, Oracle and/or its affiliates. 
-All rights reserved. */
+/* Copyright (c) 2011, 2014, Oracle and/or its affiliates. 
+All rights reserved.*/
 
 /*
    NAME
@@ -11,6 +11,10 @@ All rights reserved. */
    NOTES
 
    MODIFIED   (MM/DD/YY)
+   rpingte     02/12/14 - OCI_ATTR_DRIVER_NAME available only in 11g
+   rpingte     01/09/14 - Copyright update
+   rpingte     11/18/13 - add lobinres_roociRes
+   rkanodia    10/03/13 - Add session mode
    rpingte     04/09/13 - use SQLT_FLT instead of SQLT_BDOUBLE
    rpingte     11/20/12 - 15900089: remove avoidable errors reported with date
                           time types
@@ -453,8 +457,8 @@ sword roociInitializeCtx (roociCtx *pctx, void *epx, boolean interrupt_srv)
 /* ----------------------------- roociInitializeCon ----------------------- */
 
 sword roociInitializeCon(roociCtx *pctx, roociCon *pcon,
-                         char *user, char *pass, char *cstr, boolean bwallet,
-                         ub4 stmt_cache_siz)
+                         char *user, char *pass, char *cstr,
+                         ub4 stmt_cache_siz, ub4 session_mode)
 {
   sword     rc                             = OCI_ERROR; 
   char      srvVersion [ROOCI_VERSION_LEN] = "";
@@ -510,12 +514,20 @@ sword roociInitializeCon(roociCtx *pctx, roociCon *pcon,
     if (rc == OCI_ERROR)
       return ROOCI_DRV_ERR_CON_FAIL;
 
+#if OCI_MAJOR_VERSION > 10
+    /* set driver name */
+    rc = OCIAttrSet(pcon->auth_roociCon, OCI_HTYPE_AUTHINFO,
+                    (void *)"ROracle", sizeof("ROracle") - 1, 
+                    OCI_ATTR_DRIVER_NAME, pcon->err_roociCon);
+    if (rc == OCI_ERROR)
+      return ROOCI_DRV_ERR_CON_FAIL;
+#endif
+
     /* start user session */
     rc = OCISessionGet(pctx->env_roociCtx, pcon->err_roociCon, 
                        &pcon->svc_roociCon, pcon->auth_roociCon, 
                        (OraText *)cstr, strlen(cstr), 
-                       NULL, 0, NULL, NULL, NULL,
-                       (bwallet)? OCI_SESSGET_CREDEXT:OCI_DEFAULT);
+                       NULL, 0, NULL, NULL, NULL, session_mode);
     if (rc == OCI_ERROR)
     return ROOCI_DRV_ERR_CON_FAIL;
   }
@@ -1052,6 +1064,7 @@ sword roociResDefine(roociRes *pres)
         (etyp == SQLT_BFILE))
     {
       dat = (ub1 *)pres->dat_roociRes[cid];
+      pres->lobinres_roociRes = TRUE;
 
       for (fcur = 0; fcur < nrows; fcur++)
       {

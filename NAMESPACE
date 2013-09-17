@@ -2,6 +2,7 @@ useDynLib(ROracle)
 
 import(methods)
 import(DBI)
+importFrom(utils, globalVariables)
 
 exportClasses(
   OraDriver, ExtDriver, OraConnection, OraResult)

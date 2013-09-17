@@ -1,6 +1,6 @@
 \name{dbSetDataMappings-methods}
 \docType{methods}
-\alias{dbSetDataMappings-methods}
+\alias{dbSetDataMappings}
 \alias{dbSetDataMappings,OraResult,data.frame-method}
 \title{
 Definir Asignaciones de Datos entre Oracle y R

@@ -1,3 +1,20 @@
+Version 1.1-11 (2014-01-09)
+
+* Performance improvements for RAW data type and large result sets
+
+* Cache resultset in memory before transferring to R to avoid unnecessary alloc
+  and free using allocVector when result exceeds bulk_read rows
+
+* Updated INSTALL with restrictions on using Basic Lite package
+
+* added session mode to connect as SYSDBA or external credentials
+  NOTE: authentication using SYSDBA is only available by default in 11.2 and
+        later releases, for earlier releases please obtain patch for
+        bug# 7000451 in Oracle Client
+
+* bug 17383542: Enhanced dbWritetable() & dbRemoveTable() to work on global
+  schema.
+
 Version 1.1-10 (2013-04-30)
 
 * Oracle number columns are now fetched using SQLT_FLT data type

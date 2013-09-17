@@ -1,6 +1,6 @@
 \name{dbCallProc-methods}
 \docType{methods}
-\alias{dbCallProc-methods}
+\alias{dbCallProc}
 \alias{dbCallProc,OraConnection-method}
 \title{
 Chamar um procedimento armazenado SQL

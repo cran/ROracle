@@ -1,12 +1,13 @@
 \name{dbGetInfo-methods}
 \docType{methods}
-\alias{dbGetInfo-methods}
-\alias{dbGetStatement-methods}
-\alias{dbGetRowCount-methods}
-\alias{dbGetRowsAffected-methods}
-\alias{dbColumnInfo-methods}
-\alias{dbHasCompleted-methods}
+\alias{dbGetInfo}
+\alias{dbGetStatement}
+\alias{dbGetRowCount}
+\alias{dbGetRowsAffected}
+\alias{dbColumnInfo}
+\alias{dbHasCompleted}
 \alias{dbGetInfo,OraDriver-method}
+\alias{dbGetInfo,ExtDriver-method}
 \alias{dbGetInfo,OraConnection-method}
 \alias{dbGetInfo,OraResult-method}
 \alias{dbGetStatement,OraResult-method}
@@ -20,15 +21,38 @@
 \description{
 これらのメソッドは対応する汎用関数の直接的な実装です。
 }
-\section{Methods}{\describe{
-\item{dbObj}{
-  any object that implements some functionality in the R
-  interface to databases (a driver, a connection or a result set).
+\usage{
+\S4method{dbGetInfo}{OraDriver}(dbObj, ...)
+\S4method{dbGetInfo}{ExtDriver}(dbObj, ...)
+\S4method{dbGetInfo}{OraConnection}(dbObj, what, ...)
+\S4method{dbGetInfo}{OraResult}(dbObj, what, ...)
+\S4method{dbGetStatement}{OraResult}(res, ...)
+\S4method{dbGetRowCount}{OraResult}(res, ...)
+\S4method{dbGetRowsAffected}{OraResult}(res, ...)
+\S4method{dbColumnInfo}{OraResult}(res, ...)
+\S4method{dbHasCompleted}{OraResult}(res, ...)
 }
-\item{res}{ an \code{OraResult}.}
-\item{what}{ an element of the output list.}
-\item{\dots}{currently not being used.}
+\arguments{
+  \item{dbObj}{
+Rインタフェースの機能をデータベースに実装する
+    オブジェクト(ドライバ、接続または結果セット)。
 }
+  \item{what}{
+出力リストの要素を指定する文字列。
+}
+  \item{res}{
+\code{OraResult}。
+}
+  \item{\dots}{
+現在使用されていません。
+}
+}
+\value{
+オブジェクトに関する情報。
+}
+\section{References}{
+  For the Oracle Database documentaion see
+  \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
 }
 \seealso{
   \code{\link{Oracle}},
@@ -42,24 +66,25 @@
   \code{\link[DBI]{dbListTables}},
   \code{\link[DBI]{dbReadTable}}.
 }
-\examples{\dontrun{
-drv <- dbDriver("Oracle")
-con <- dbConnect(drv, "scott", "tiger")
+\examples{
+  \dontrun{
+    drv <- dbDriver("Oracle")
+    con <- dbConnect(drv, "scott", "tiger")
 
-rs <- dbSendQuery(con, "select * from emp")
-dbGetStatement(rs)
-dbHasCompleted(rs)
-dbGetInfo(rs)
+    rs <- dbSendQuery(con, "select * from emp")
+    dbGetStatement(rs)
+    dbHasCompleted(rs)
+    dbGetInfo(rs)
 
-# DBIDriver info
-names(dbGetInfo(drv))
+    # DBIDriver info
+    names(dbGetInfo(drv))
 
-# DBIConnection info
-names(dbGetInfo(con))
+    # DBIConnection info
+    names(dbGetInfo(con))
 
-# DBIResult info
-names(dbGetInfo(rs)) 
-}
+    # DBIResult info
+    names(dbGetInfo(rs)) 
+  }
 }
 \keyword{methods}
 \keyword{interface}

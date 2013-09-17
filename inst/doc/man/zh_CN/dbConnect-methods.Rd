@@ -1,10 +1,10 @@
 \name{dbConnect-methods}
 \docType{methods}
-\alias{dbDisconnect-methods}
-\alias{dbConnect-methods}
-\alias{dbDisconnect,OraConnection-method}
+\alias{dbConnect}
+\alias{dbDisconnect}
 \alias{dbConnect,OraDriver-method}
-\alias{dbConnect,OraConnection-method}
+\alias{dbConnect,ExtDriver-method}
+\alias{dbDisconnect,OraConnection-method}
 \title{
 创建与 Oracle DBMS 的连接对象
 }
@@ -12,61 +12,136 @@
 这些方法是相应泛型函数的
    简单实现。
 }
-\section{Methods}{\describe{
-\item{drv}{
-  an object of class \code{OraDriver}.
+\usage{
+\S4method{dbConnect}{OraDriver}(drv, username = "", password = "", dbname = "", prefetch = FALSE,
+          bulk_read = 1000L, stmt_cache = 0L, external_credentials = FALSE,
+          sysdba = FALSE, ...)
+\S4method{dbConnect}{ExtDriver}(drv, prefetch = FALSE, bulk_read = 1000L, stmt_cache = 0L,
+          external_credentials = FALSE, sysdba = FALSE, ...)
+\S4method{dbDisconnect}{OraConnection}(conn, ...)
 }
-\item{conn}{
-  an \code{OraConnection} object as produced by \code{dbConnect}.
+\arguments{
+  \item{drv}{
+类 \code{OraDriver} 或 \code{ExtDriver} 的对象。
 }
-\item{username}{
-  a character string specifying a user name.
+  \item{conn}{
+由 \code{OraConnection} 生成的 \code{dbConnect} 对象。
 }
-\item{password}{
-  a character string specifying a password.
+  \item{username}{
+一个用于指定用户名的字符串。
 }
-\item{dbname}{
-  a character string specifying a connect identifier (for more
-  informations refer to chapter 8 (Configuring Naming Methods) of Oracle
-  Database Net Services Administrator's Guide). This is the same as part
-  of the SQL*Plus connect string that follows the '@' sign. 
-  If you are using Oracle Wallet to store username and password, 
-  then this string should be the connect string used to create the 
-  wallet mapping (for more information refer to the chapter 3 
-  (Configuring Clients to Use the External Password Store)
-  of Oracle Database Ssecurity Guide).
+  \item{password}{
+一个用于指定口令的字符串。
 }
-\item{prefetch=FALSE}{
-  a logical value indicating TRUE or FALSE. When set to TRUE, ROracle will use
-  OCI prefetch buffers to retrieve additional data from the server thus saving
-  memory required in RODBI/ROOCI by allocating a single row buffer to fetch the
-  data from OCI. Using prefetch results in a fetch call for every row. By
-  default, prefetch is FALSE and array fetch is used to retrive the data from
-  server.
+  \item{dbname}{
+一个用于指定连接标识符的字符串 (有关
+    详细信息, 请参阅 Oracle Database Net Services Administrator's Guide 中的
+    第 8 章“Configuring Naming Methods”)。这与 
+    后跟 '@' 符号的 SQL*Plus 连接字符串部分相同。
+    如果使用 Oracle Wallet 来存储用户名和口令,
+    则此字符串应为用于创建 wallet 映射的
+    连接字符串 (有关详细信息, 请参阅 Oracle Database Security Guide
+    中第 3 章的“Configuring Clients to Use the External Password Store”)。
+    通过 OCI tnsnames 或轻松连接指定方法来支持
+     Oracle TimesTen IMDB 实例的连接标识符。有关 OCI 的 TimesTen 的连接
+    详细信息, 请参阅 TimesTen In-Memory C Developer's Guide 中的
+    第 3 章。
 }
-\item{bulk_read=25L}{
-  an integer value indicating the number of rows to fetch at a time. Default
-  is 25L. When prefetch option is select, memory is allocated for prefetch
-  buffers and OCI will fetch those many rows at a time. When prefetch is not
-  used(default) memory is allocated in RODBI/ROOCI define buffers. Setting this
-  to a large value will result in more memory allocated based on the number of
-  columns in the select list and the types of columns. For a column of
-  character, define buffers are allocated using the maximum width times the
-  NLS maximum width. Application should adjust this value based on the query
-  result and a larger value will benefit queries that return a large result.
-  Application can tune this value to its need.
+  \item{prefetch}{
+一个指示 TRUE 或 FALSE 的逻辑值。设置为 TRUE 时, ROracle 将
+    使用 OCI 预取缓冲区来从服务器检索附加数据, 通过分配一个
+    单行缓冲区来从 OCI 提取数据, 从而节省 RODBI/ROOCI 中
+    所需的内存。使用预取将对每一行产生一个提取调用。
+    默认情况下, 预取为 FALSE, 使用阵列提取从服务器检索
+    数据。
 }
-\item{\dots }{
-  any optional arguments.
+  \item{bulk_read}{
+一个指示一次提取的行数的整数值。默认值为
+    1000L。选择了预取选项时, 将为预取缓冲区分配
+    内存, OCI 将提取一次提取这么多行。未使用预取 
+    (默认) 时, 在 RODBI/ROOCI 定义缓冲区中分配内存。
+    根据选择列表中的列数以及列的数据类型,
+    将此项设置为较大的值可以分配更多内存。
+    对于字符类型的列, 定义缓冲区将使用最大宽度乘以 
+    NLS 最大宽度来分配。应用程序应根据查询结果调整
+    此值, 较大的值对于返回较大结果的查询
+    会有好处。应用程序可以根据其需求调整
+    此值。
+}
+  \item{stmt_cache}{
+一个指示要高速缓存的语句数的整数值。它表示
+    游标已就绪可以使用, 无需重新对语句进行
+    语法分析。默认值为 0L。如果 stmt_cache 值大于 0L,
+    则 \code{prefetch} 值必须设置为 TRUE。
+}
+  \item{external_credentials}{
+一个指示 TRUE 或 FALSE 的逻辑值。设置为 TRUE 时, ROracle 将
+    启动在连接上通过外部身份证明验证的 OCI 会话。
+    默认值为 FALSE。
+}
+  \item{sysdba}{
+一个指示 TRUE 或 FALSE 的逻辑值。设置为 TRUE 时, ROracle 将
+    启动在连接上具有 SYSDBA 权限的 OCI 会话。
+    默认值为 FALSE。
+}
+  \item{\dots}{
+当前未使用。
 }
 }
+\value{
+\item{dbConnect}{
+    其类扩展 \code{OraConnection} 的对象 \code{DBIConnection}。
+    此对象用于在数据库上执行 SQL 查询。
+  }
+  \item{dbDisconnect}{
+    指示操作是否成功的逻辑值。
+  }
 }
 \section{Side Effects}{
-  A connection between R and an Oracle  server is established.
+  \describe{
+    \item{dbConnect}{
+      Establishes a connection between R and an Oracle Database server.
+    }
+    \item{dbDisconnect}{
+      Frees resources used by the connection object.
+    }
+  }
 }
-\references{
-For the Oracle Database documentaion see
-\url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
+      
+
+
+
+
+           
+\details{
+\\describe{
+    \item{dbConnect}{
+      此连接对象用于在数据库上执行操作。
+      将 \code{prefetch} 设置为 TRUE 时, 它允许使用 OCI
+      预取缓冲区来从服务器检索其他数据。
+      \code{bulk_read} 参数用于设置整数值, 指示
+      一次提取的行数。
+      \code{stmt_cache} 参数用于启用或禁用语句
+      高速缓存功能。其值指定语句高速缓存大小。
+      \code{external_credentials} 参数用于启动通过连接上的外部
+      身份证明验证的 OCI 会话。
+      \code{sysdba} 参数用于启动在连接上具有 SYSDBA
+      权限的 OCI 会话。
+      建立具有 \code{ExtDriver} 驱动程序的会话时,
+      不使用任何指定身份证明的参数。采用此模式的
+      连接是单例对象, 即, 所有对 \code{dbConnect} 的
+      调用返回相同连接对象。
+    }
+    \item{dbDisconnect}{
+      此实施将断开 R 与数据库服务器之间的连接。
+      它释放连接对象使用的所有资源, 
+      并释放与此连接对象关联的所有结果集。
+    }
+  }
+}
+\section{References}{
+  For the Oracle Database documentation see
+  \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
 }
 \seealso{
   \code{\link{Oracle}},
@@ -78,35 +153,153 @@ For the Oracle Database documentaion see
   \code{\link[DBI]{dbGetInfo}},
   \code{\link[DBI]{dbReadTable}}.
 }
-\examples{\dontrun{
-## create an Oracle instance and create one connection.
-drv <- dbDriver("Oracle")
+\examples{
+  \dontrun{
+    ## create an Oracle Database instance and create one connection on the
+    ## same machine.
+    drv <- dbDriver("Oracle")
 
-## use username/password authentication
-con <- dbConnect(drv, username = "scott", password = "tiger")
+    ## use username/password authentication
+    con <- dbConnect(drv, username = "scott", password = "tiger")
 
-## run an SQL statement by creating first a resultSet object
-rs <- dbSendQuery(con, "select * from emp where deptno = 10")
+    ## run a SQL statement by creating first a resultSet object
+    rs <- dbSendQuery(con, "select * from emp where deptno = 10")
 
-## we now fetch records from the resultSet into a data.frame
-data <- fetch(rs)       ## extract all rows
-dim(data)
-}
-\dontrun{
-## create an Oracle instance and create one connection.
-drv <- dbDriver("Oracle")
+    ## we now fetch records from the resultSet into a data.frame
+    data <- fetch(rs)       ## extract all rows
+    dim(data)
+  }
+  \dontrun{
+    ## create an Oracle Database instance and create one connection to a
+    ## remote database using the SID in the connect string. 
+    drv <- dbDriver("Oracle")
 
-## use Oracle wallet authentication
-con <- dbConnect(drv, username ="", password="", 
-                 dbname = "<wallet_connect_string>")
+    ## refer to Oracle Database Net Services Administator's Guide for
+    ## details on connect string specification.
+    host <- "myhost"
+    port <- 1521
+    sid <- "mysid"
+    connect.string <- paste(
+      "(DESCRIPTION=",
+      "(ADDRESS=(PROTOCOL=tcp)(HOST=", host, ")(PORT=", port, "))",
+        "(CONNECT_DATA=(SID=", sid, ")))", sep = "")
 
-## run an SQL statement by creating first a resultSet object
-rs <- dbSendQuery(con, "select * from emp where deptno = 10")
+    ## use username/password authentication
+    con <- dbConnect(drv, username = "scott", password = "tiger",
+                     dbname = connect.string)
 
-## we now fetch records from the resultSet into a data.frame
-data <- fetch(rs)       ## extract all rows
-dim(data)
-}
+    ## run a SQL statement by creating first a resultSet object
+    rs <- dbSendQuery(con, "select * from emp where deptno = 10")
+
+    ## we now fetch records from the resultSet into a data.frame
+    data <- fetch(rs)       ## extract all rows
+    dim(data)
+  }
+  \dontrun{
+    ## create an Oracle Database instance and create one connection to a
+    ## remote database using the service name.
+    drv <- dbDriver("Oracle")
+
+    ## refer to Oracle Database Net Services Administator's Guide for
+    ## details on connect string specification.
+
+    host <- "myhost"
+    port <- 1521
+    svc <- "mydb.example.com"
+    connect.string <- paste(
+      "(DESCRIPTION=",
+      "(ADDRESS=(PROTOCOL=tcp)(HOST=", host, ")(PORT=", port, "))",
+      "(CONNECT_DATA=(SERVICE_NAME=", svc, ")))", sep = "")
+    ## use username/password authentication
+    con <- dbConnect(drv, username = "scott", password = "tiger",
+                     dbname = connect.string)
+
+    ## run a SQL statement by creating first a resultSet object
+    rs <- dbSendQuery(con, "select * from emp where deptno = 10")
+
+    ## we now fetch records from the resultSet into a data.frame
+    data <- fetch(rs)       ## extract all rows
+    dim(data)
+  }
+  \dontrun{
+    ## create an Oracle Database instance and create one connection.
+    drv <- dbDriver("Oracle")
+
+    ## use Oracle Wallet authentication
+    con <- dbConnect(drv, username ="", password="", 
+    dbname = "<wallet_connect_string>")
+
+    ## run a SQL statement by creating first a resultSet object
+    rs <- dbSendQuery(con, "select * from emp where deptno = 10")
+
+    ## we now fetch records from the resultSet into a data.frame
+    data <- fetch(rs)       ## extract all rows
+    dim(data)
+  }
+  \dontrun{
+    ## create an Oracle Database instance and create one connection.
+    drv <- dbDriver("Oracle")
+
+    ## connect to a TimesTen IMDB instance using the easy connect 
+    ## naming method where SampleDb is a direct driver TimesTen DSN
+    con <- dbConnect(drv, username ="scott", password="tiger", 
+                     dbname = "localhost/SampleDb:timesten_direct")
+
+    ## run a SQL statement by creating first a resultSet object
+    rs <- dbSendQuery(con, "select * from dual")
+
+    ## we now fetch records from the resultSet into a data.frame
+    data <- fetch(rs)       ## extract all rows
+    dim(data)
+  }
+  \dontrun{
+    ## connect to an extproc (this assumes that the driver has already
+    ## been initialized in the embedded R code by passing an external
+    ## pointer representing the extproc context)
+    con <- dbConnect(Extproc())
+
+    ## run a SQL statement by creating first a resultSet object
+    rs <- dbSendQuery(con, "select * from dual")
+
+    ## we now fetch records from the resultSet into a data.frame
+    data <- fetch(rs)       ## extract all rows
+    dim(data)
+  }
+  \dontrun{
+    ## create an Oracle Database instance and create one connection.
+    drv <- dbDriver("Oracle")
+
+    ## create connection with SYSDBA privileges
+    con <- dbConnect(drv, username ="scott", password="tiger",
+                     sysdba = TRUE)
+
+    ## run a SQL statement by creating first a resultSet object
+    rs <- dbSendQuery(con, "select * from emp where deptno = 10")
+
+    ## we now fetch records from the resultSet into a data.frame
+    data <- fetch(rs)       ## extract all rows
+    dim(data)
+  }
+  \dontrun{
+    ## create an Oracle Database instance and create one connection.
+    drv <- dbDriver("Oracle")
+    
+    ## Use OS authentication as an example of external authentication
+    ## Make sure that databse user exist to allow an OS authentication
+
+    ## create connection authenticated with external credentials 
+    con <- dbConnect(drv, username ="", password="",
+                     external_credentials = TRUE)
+    
+    ## Above dbConnect() used OS credentials to connect with database.
+
+    ## run a SQL statement by creating first a resultSet object
+    rs <- dbSendQuery(con, "select * from emp where deptno = 10")
+
+    ## we now fetch records from the resultSet into a data.frame
+    data <- fetch(rs)       ## extract all rows
+    dim(data)
+  }
 }
 \keyword{methods}
 \keyword{interface}

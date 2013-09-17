@@ -1,5 +1,5 @@
-/* Copyright (c) 2011, 2012, Oracle and/or its affiliates. 
-All rights reserved. */
+/* Copyright (c) 2011, 2014, Oracle and/or its affiliates. 
+All rights reserved.*/
 
 /*
    NAME
@@ -21,6 +21,7 @@ All rights reserved. */
    NOTES
 
    MODIFIED   (MM/DD/YY)
+   rpingte     01/09/14 - Copyright update
    jfeldhau    06/18/12 - ROracle support for TimesTen.
    demukhin    05/10/12 - translation changes
    rpingte     04/10/12 - only include what is necessary

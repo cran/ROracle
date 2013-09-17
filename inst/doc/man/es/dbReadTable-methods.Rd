@@ -1,11 +1,11 @@
 \name{dbReadTable-methods}
 \docType{methods}
-\alias{dbReadTable-methods}
-\alias{dbWriteTable-methods}
-\alias{dbExistsTable-methods}
-\alias{dbRemoveTable-methods}
-\alias{dbListTables-methods}
-\alias{dbListFields-methods}
+\alias{dbReadTable}
+\alias{dbWriteTable}
+\alias{dbExistsTable}
+\alias{dbRemoveTable}
+\alias{dbListTables}
+\alias{dbListFields}
 \alias{dbReadTable,OraConnection,character-method}
 \alias{dbWriteTable,OraConnection,character,data.frame-method}
 \alias{dbExistsTable,OraConnection,character-method}
@@ -26,90 +26,203 @@ Estas funciones imitan a los equivalentes de R
   salvo en el hecho de que generan código que se ejecuta de manera remota en un motor
   de base de datos.
 }
-\section{Methods}{\describe{
-\item{conn}{
-  an \code{OraConnection} database connection object.
-  }
-\item{name}{
-  a case sensitive character string specifying a table name.
-  }
-\item{schema}{
-  a case sensitive character string specifying a schema name (or a
-  vector of character strings for dbListTables).
-  }
-\item{all}{
-  a boolean specifying whether to look at all schemas.
-  }
-\item{full}{
-  a boolean specifying whether to generate schema names. When 'all' is
-  set to TRUE the output is a vector containing schema names followed by
-  the table names. One can do matrix(..., ncol = 2) on the output. This
-  way each row of the matrix will correspond to a table with the first
-  column being a schema name and the second - the tabel name.
-  }
-\item{value}{
-  a data.frame (or coercible to data.frame). Vectors of types
-  \code{logical}, \code{integer}, \code{numeric}, and \code{character}
-  are supported natively; all other vectors must be coercible to
-  \code{character}. \code{logical} and \code{integer} vectors map to
-  INTEGER columns, \code{numeric} to NUMBER (or BINARY_DOUBLE if
-  \code{ora.number} is set to \code{FALSE}), and \code{character} to
-  VARCHAR2(4000).
-  }
-\item{row.names}{
-  in the case of \code{dbReadTable}, this argument can be a string, an
-  index or a logical vector specifying the column in the DBMS table to
-  be used as \code{row.names} in the output data.frame (a \code{NULL}
-  specifies that no column should be used as \code{row.names} in the
-  output). The default is \code{NULL}.
+\usage{
+\S4method{dbReadTable}{OraConnection,character}(conn, name, schema = NULL, row.names = NULL, ...)
+\S4method{dbWriteTable}{OraConnection,character,data.frame}(conn, name, value, row.names = FALSE, overwrite = FALSE,
+             append = FALSE, ora.number = TRUE, schema = NULL, ...)
+\S4method{dbExistsTable}{OraConnection,character}(conn, name, schema = NULL, ...)
+\S4method{dbRemoveTable}{OraConnection,character}(conn, name, purge = FALSE, schema = NULL, ...)
+\S4method{dbListTables}{OraConnection}(conn, schema = NULL, all = FALSE, full = FALSE, ...)
+\S4method{dbListFields}{OraConnection,character}(conn, name, schema = NULL, ...)
+}
+\arguments{
+  \item{conn}{
+Objeto de conexión de la base de datos \code{OraConnection}.
+}
+  \item{name}{
+Cadena de caracteres sensible a mayúsculas/minúsculas que especifica un nombre de tabla.
+}
+  \item{schema}{
+Cadena de caracteres sensible a mayúsculas/minúsculas que especifica un nombre de esquema (o un
+    vector de cadenas de caracteres para \code{dbListTables}).
+}
 
-  In the case of \code{dbWriteTable}, this argument should be a logical
-  specifying whether the \code{row.names} should be output to the
-  output DBMS table; if \code{TRUE}, an extra column whose name is 
-  \code{"row.names"} will be added to the output. The default is
-  \code{FALSE}.
-  }
-\item{overwrite}{
-  a logical specifying whether to overwrite an existing table
-  or not.  Its default is \code{FALSE}.
-  }
-\item{append}{
-  a logical specifying whether to append to an existing table
-  in the DBMS.  Its default is \code{FALSE}.
-  }
-\item{ora.number}{
-  a logical specifying whether to create a table with NUMBER or
-  BINARY_DOUBLE columns while writing numeric data. The default value
-  is \code{TRUE} - create NUMBER columns.
-  }
-\item{purge}{
-  a logical specifying whether to add PURGE option to the DROP TABLE
-  statement.
-  }
-\item{\dots }{any optional arguments.}
+  \item{row.names}{
+En el caso de \code{dbReadTable}, este argumento puede ser una cadena, un
+    índice o un vector lógico que especifica la columna en la tabla DBMS que
+    se utilizará como \code{row.names} en el elemento data.frame de salida, (\code{NULL}
+    especifica que no se debe utilizar ninguna columna como \code{row.names} en la
+    salida). El valor por defecto es \code{NULL}.
+    En el caso de \code{dbWriteTable}, este argumento debe ser un valor
+    lógico que especifique si \code{row.names} debe ser una salida a la
+    tabla DBMS de salida; si \code{TRUE}, una columna adicional cuyo nombre es 
+    \code{"row.names"}, se agregará a la salida. El valor por defecto es
+    \code{FALSE}.
+}
+  \item{value}{
+\code{data.frame} que contiene los datos para escribir en una tabla. (Consulte
+    la sección Detalles para ver los tipos de columna soportados.)
+}
+  \item{overwrite}{
+Valor lógico que especifica si se debe sobrescribir una tabla existente
+    o no. El valor por defecto es \code{FALSE}.
+}
+  \item{append}{
+Valor lógico que especifica si se debe agregar a una tabla existente
+    en DBMS. El valor por defecto es \code{FALSE}.
+}
+  \item{ora.number}{
+Valor lógico que especifica si se debe crear una tabla con columnas
+    \code{NUMBER} o \code{BINARY_DOUBLE} de Oracle al escribir datos numéricos.
+    El valor por defecto es \code{TRUE}.
+}
+  \item{purge}{
+Valor lógico que especifica si se debe agregar la opción \code{PURGE} a la
+    sentencia \code{DROP TABLE} SQL.
+}
+  \item{all}{
+Valor lógico que especifica si se deben consultar todos los esquemas.
+}
+  \item{full}{
+Valor lógico que especifica si se deben generar nombres de esquema. Cuando el argumento
+    \code{all} es \code{TRUE}, la salida es un vector que contiene los nombres de esquema
+    seguidos de los nombres de tabla. Al utilizar \code{matrix(..., ncol = 2)}
+    en la salida, se produce una matriz en la que cada fila corresponde a una
+    tabla y las columnas representan los nombres de esquema y los nombres de tabla
+    respectivamente.
+}
+  \item{\dots}{
+no utilizado actualmente.
 }
 }
 
+
+
+
+
+   
+
+
+\details{
+Los nombres de tabla, esquema y columna son sensibles a mayúsculas/minúsculas, por ejemplo, los nombres
+  de tabla \code{ABC} y \code{abc} no son los mismos. Todos los nombres de objeto
+  de esquema de base de datos no se deben escribir entre comillas, ya que cuando están entre comillas, se generará
+  la sentencia SQL correspondiente.
+  Los métodos \\pkg{ROracle} como \code{dbReadTable}, \code{dbGetQuery},
+  \code{fetch} y \code{dbWriteTable} utilizan la siguiente asignación
+  entre los tipos de dato de \R y de Oracle:
+  \itemize{
+    \item \code{logical} y \code{integer} se asignan a Oracle \code{INTEGER}
+    \item \code{numeric} se asigna a Oracle \code{NUMBER} si el argumento
+    \code{ora.number} es \code{TRUE} u Oracle  \code{BINARY_DOUBLE} si
+    \code{FALSE}
+    \item \code{character} se asigna a Oracle \code{VARCHAR2(4000)}
+    \item \code{Date} y \code{POSIXct} se asigna a Oracle \code{DATE}
+    \\pkg{ROracle}: paquete ROracle
+    \R: aplicación de R
+    \code{POSIXct}: clase POSIXct
+    \code{TIMESTAMP}
+    \code{TIMESTAMP WITH TIME ZONE}
+    \code{TIMESTAMP WITH LOCAL TIME ZONE}
+    \item \code{difftime} se asigna a Oracle \code{INTERVAL DAY TO SECOND}
+    \item \code{list} de los vectores \code{raw} se asigna a Oracle \code{RAW(2000)}
+    \item otros tipos de \R como \code{factor} se convierten a
+    \code{character}
+  }
+   ROracle devuelve valores desde las columnas de la base de datos que forman parte del tipo de dato: fecha,
+   registro de hora, registro de hora con zona horaria y registro de hora con zona horaria local
+   en el formato POSIXct de R. POSIXct hace referencia a una hora
+   que se almacena internamente como el número de segundos desde el principio de
+   1970 en UTC. El número de segundos se intercambia entre el controlador de R y ROracle en
+   formato doble de punto flotante. En la representación POSIXct, R utiliza la variable de entorno TZ
+   o se asigna a sí mismo la variable de entorno de zona horaria del sistema operativo,
+   por lo tanto, la fecha aparecerá en este formato de zona horaria.
+   Un usuario puede insertar datos en columnas de los 4 tipos de dato mostrados anteriormente que utilizan 
+   una cadena con el formato correcto o la representación POSIXct. Los datos de cadena se
+   transfieren a la base de datos directamente y ROracle se basa en una base de datos para convertirla
+   a una representación de fecha y hora. Los datos POSIXct se pueden convertir a un descriptor
+   interno DateTime de Oracle agregando el principio de 1970 UTC al número
+   de segundos que se obtiene de R. Cualquier variable de POSIXct en la sentencia
+   de inserción se enlazan como SQLT_TIMESTAMP_TZ.
+   Cuando estos tipos de dato se seleccionan desde Oracle, éstos se convierten a formato POSIXct
+   restando el principio de 1970 UTC. Cuando el cliente de ROracle y la
+   base de datos tienen archivos de versión de zona horaria diferentes y una aplicación utiliza los
+   tipos de dato de zona horaria, se recomienda que sean los mismos, ya que la región
+   puede haber cambiado su zona. ROracle informará de un error en este caso, ya que
+   puede provocar la pérdida y corrupción de información al trabajar con estos
+   tipos de dato.
+   ROracle recupera las columnas con el tipo de dato de registro de fecha y hora mediante el tipo de dato
+   SQLT_TIMESTAMP. Las columnas de los tipos de dato de registro de hora con zona horaria y
+   de registro de hora con zona horaria local se recuperarán mediante el tipo de dato
+   SQLT_TIMESTAMP_TZ. Las columnas de zona horaria de tipo de dato con zona horaria local
+   experimentan una conversión a la zona horaria de la sesión que ejecuta la aplicación R
+   configurando así TZ de entorno de zona horaria en R y afectando a los valores de datos
+   de esta columna. El controlador de ROracle no asigna la variable de entorno TZ
+   a la zona horaria de la sesión y
+   no emite una DDL de modificación para definir la zona horaria de la sesión. Para
+   recuperar datos de columnas con registro de hora de zona horaria y registro de hora de
+   zona horaria local, el cliente y el servidor deben tener el mismo archivo de datos de zona horaria,
+   de lo contrario, se informará de un error.
+   El siguiente ejemplo muestra el efecto de cambiar la zona horaria en el entorno de R:
+   \\preformatted{   R> Sys.timezone()
+   [1] "PST8PDT"
+   # Seleccionar datos y mostrarlos
+   res <- dbGetQuery(con, selStr)
+   R>     res[,1]
+   [1] 1 2 3 4 5 6
+   R>     res[,2]
+   [1] "2012-06-05 00:00:00 PDT" "2012-01-05 07:15:02 PST"
+       "2012-01-05 00:00:00 PST" "2011-01-05 00:00:00 PST"
+   [5] "2013-01-05 00:00:00 PST" "2020-01-05 00:00:00 PST"
+   R>     res[,3]
+   [1] "2012-06-05 00:00:00 PDT" "2012-01-05 07:15:03 PST"
+       "2012-01-05 00:00:00 PST" "2011-01-05 00:00:00 PST"
+   [5] "2013-01-05 00:00:00 PST" "2020-01-05 00:00:00 PST"
+   R>     res[,4]
+   [1] "2012-06-05 00:00:00 PDT" "2012-01-05 07:15:03 PST"
+       "2012-01-05 00:00:00 PST" "2011-01-05 00:00:00 PST"
+   [5] "2013-01-05 00:00:00 PST" "2020-01-05 00:00:00 PST"
+   R>     res[,5]
+   [1] "2012-06-05 00:00:00 PDT" "2012-01-05 07:15:03 PST"
+       "2012-01-05 00:00:00 PST" "2011-01-05 00:00:00 PST"
+   [5] "2013-01-05 00:00:00 PST" "2020-01-05 00:00:00 PST"
+   R> Sys.setenv(TZ='EST5EDT')
+   R>     res[,1]
+   [1] 1 2 3 4 5 6
+   R>     res[,2]
+   [1] "2012-06-05 03:00:00 EDT" "2012-01-05 10:15:02 EST"
+       "2012-01-05 03:00:00 EST" "2011-01-05 03:00:00 EST"
+   [5] "2013-01-05 03:00:00 EST" "2020-01-05 03:00:00 EST"
+   R>     res[,3]
+   [1] "2012-06-05 03:00:00 EDT" "2012-01-05 10:15:03 EST"
+       "2012-01-05 03:00:00 EST" "2011-01-05 03:00:00 EST"
+   [5] "2013-01-05 03:00:00 EST" "2020-01-05 03:00:00 EST"
+   R>     res[,4]
+   [1] "2012-06-05 03:00:00 EDT" "2012-01-05 10:15:03 EST"
+       "2012-01-05 03:00:00 EST" "2011-01-05 03:00:00 EST"
+   [5] "2013-01-05 03:00:00 EST" "2020-01-05 03:00:00 EST"
+   R>     res[,5]
+   [1] "2012-06-05 03:00:00 EDT" "2012-01-05 10:15:03 EST"
+       "2012-01-05 03:00:00 EST" "2011-01-05 03:00:00 EST"
+   [5] "2013-01-05 03:00:00 EST" "2020-01-05 03:00:00 EST"}
+  De la misma forma, \code{dbWriteTable} siempre confirma automáticamente una transacción actual, de la misma forma
+  que inserta los datos, es decir, actúa como una sentencia DDL, incluso si
+  agrega filas a una tabla ya existente.
+}
 \value{
-Elemento data.frame en el caso de \code{dbReadTable}; vector en el caso
-   de \code{dbListTables} y \code{dbListFields}; elemento lógico en el caso
-   de \code{dbExistsTable}, que indica si existe la tabla; de lo contrario,
-   TRUE cuando la operación se ha realizado con éxito o en caso de excepción.
+\code{data.frame} en caso de \code{dbReadTable};
+  \code{vector} en caso de \code{dbListTables} y
+  \code{dbListFields};
+  \code{logical} en caso de \code{dbExistsTable} que indica
+  si la tabla existe;
+  de lo contrario \code{TRUE} cuando la operación ha sido correcta o
+  una excepción.
 }
-\note{
-   Note that the data.frame returned by \code{dbReadTable} only has
-   primitive data, e.g., it does not coerce character data to
-   factors. This is similar to the output produced by \code{fetch} and
-   \code{dbGetQuery}.
-
-   Table, schema, and column names are case sensitive, e.g., table
-   names \code{ABC} and \code{abc} are not the same. All database schema
-   object names should not include double quotes as they are enclosed in
-   double quotes when the corresponding SQL statement is generated.
-
-   \code{dbWriteTable} always auto commits a current transaction as well
-   as the data it inserts, i.e. it acts as a DDL statement even if
-   appends rows to an already existing table.
+\section{References}{
+  For the Oracle Database documentation see 
+  \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
+  For Datetime Data Types and Time Zone Support in Oracle see
+  \url{http://docs.oracle.com/cd/E14072_01/server.112/e10729/ch4datetime.htm}.
 }
 \seealso{
   \code{\link{Oracle}},
@@ -121,27 +234,74 @@ Elemento data.frame en el caso de \code{dbReadTable}; vector en el caso
   \code{\link[DBI]{dbCommit}},
   \code{\link[DBI]{dbGetInfo}}.
 }
-\examples{\dontrun{
-con <- dbConnect(Oracle(), "scott", "tiger")
-if (dbExistsTable(con, "FOO", "SCOTT"))
-   dbRemoveTable(con, "FOO")
+\examples{
+  \dontrun{
+    con <- dbConnect(Oracle(), "scott", "tiger")
+    if (dbExistsTable(con, "FOO", "SCOTT"))
+      dbRemoveTable(con, "FOO")
 
-foo <- dbReadTable(con, "EMP")
-row.names(foo) <- foo$EMPNO
-foo <- foo[,-1]
+    foo <- dbReadTable(con, "EMP")
+    row.names(foo) <- foo$EMPNO
+    foo <- foo[,-1]
 
-dbWriteTable(con, "FOO", foo, row.names = TRUE)
-dbWriteTable(con, "FOO", foo, row.names = TRUE, overwrite = TRUE)
-dbReadTable(con, "FOO", row.names = 1)
+    dbWriteTable(con, "FOO", foo, row.names = TRUE)
+    dbWriteTable(con, "FOO", foo, row.names = TRUE, overwrite = TRUE)
+    dbReadTable(con, "FOO", row.names = 1)
 
-dbGetQuery(con, "delete from foo")
-dbWriteTable(con, "FOO", foo, row.names = TRUE, append = TRUE)
-dbReadTable(con, "FOO", row.names = 1)
-dbRemoveTable(con, "FOO")
+    dbGetQuery(con, "delete from foo")
+    dbWriteTable(con, "FOO", foo, row.names = TRUE, append = TRUE)
+    dbReadTable(con, "FOO", row.names = 1)
+    dbRemoveTable(con, "FOO")
 
-dbListTables(con)
-dbListFields(con, "EMP")
-}
+    dbListTables(con)
+    dbListFields(con, "EMP")
+
+    if (dbExistsTable(con, "RORACLE_TEST", "SCOTT"))
+      dbRemoveTable(con, "RORACLE_TEST")
+
+    # example of POSIXct usage
+    # A table is created using:
+    createTab <- "create table RORACLE_TEST(row_num number, id1 date,
+                 id2 timestamp, id3 timestamp with time zone, 
+                 id4 timestamp with local time zone )"
+
+    dbGetQuery(con, createTab)
+    # Insert statement
+    insStr <- "insert into RORACLE_TEST values(:1, :2, :3, :4, :5)";
+
+    # Select statement
+    selStr <- "select * from RORACLE_TEST";
+
+    # Insert time stamp without time values in POSIXct form
+    x <- 1; 
+    y <- "2012-06-05";
+    y <- as.POSIXct(y);
+    dbGetQuery(con, insStr, data.frame(x, y, y, y, y));
+
+    # Insert date & times stamp with time values in POSIXct form
+    x <- 2;
+    y <- "2012-01-05 07:15:02";
+    y <- as.POSIXct(y);
+    z <- "2012-01-05 07:15:03.123";
+    z <- as.POSIXct(z);
+    dbGetQuery(con, insStr, data.frame(x, y, z,  z, z));
+
+    # Insert list of date objects in POSIXct form
+    x <- c(3, 4, 5, 6);
+    y <- c('2012-01-05', '2011-01-05', '2013-01-05', '2020-01-05');
+    y <- as.POSIXct(y);
+    dbGetQuery(con, insStr, data.frame(x, y, y, y, y));
+
+    dbCommit (con)
+
+    # Selecting data and displaying it
+    res <- dbGetQuery(con, selStr)
+    res[,1]
+    res[,2]
+    res[,3]
+    res[,4]
+    res[,5]
+  }
 }
 \keyword{methods}
 \keyword{interface}
