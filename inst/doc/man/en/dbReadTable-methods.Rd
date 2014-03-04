@@ -13,10 +13,10 @@
 \alias{dbListTables,OraConnection-method}
 \alias{dbListFields,OraConnection,character-method}
 \title{
-  Convenience functions for manipulating DBMS tables
+  Convenience Functions for Manipulating DBMS Tables
 }
 \description{
-  These functions mimic their R counterpart 
+  These functions mimic their R counterparts 
   \code{get},
   \code{assign},
   \code{exists}, 
@@ -29,62 +29,62 @@
 \usage{
 \S4method{dbReadTable}{OraConnection,character}(conn, name, schema = NULL, row.names = NULL, ...)
 \S4method{dbWriteTable}{OraConnection,character,data.frame}(conn, name, value, row.names = FALSE, overwrite = FALSE,
-             append = FALSE, ora.number = TRUE, ...)
+             append = FALSE, ora.number = TRUE, schema = NULL, ...)
 \S4method{dbExistsTable}{OraConnection,character}(conn, name, schema = NULL, ...)
-\S4method{dbRemoveTable}{OraConnection,character}(conn, name, purge = FALSE, ...)
+\S4method{dbRemoveTable}{OraConnection,character}(conn, name, purge = FALSE, schema = NULL, ...)
 \S4method{dbListTables}{OraConnection}(conn, schema = NULL, all = FALSE, full = FALSE, ...)
 \S4method{dbListFields}{OraConnection,character}(conn, name, schema = NULL, ...)
 }
 \arguments{
   \item{conn}{
-    an \code{OraConnection} database connection object.
+    An \code{OraConnection} database connection object.
   }
   \item{name}{
-    a case sensitive character string specifying a table name.
+    A case-sensitive character string specifying a table name.
   }
   \item{schema}{
-    a case sensitive character string specifying a schema name (or a
+    A case-sensitive character string specifying a schema name (or a
     vector of character strings for \code{dbListTables}).
   }
   \item{row.names}{
-    in the case of \code{dbReadTable}, this argument can be a string, an
+    In the case of \code{dbReadTable}, this argument can be a string, an
     index or a logical vector specifying the column in the DBMS table to
     be used as \code{row.names} in the output data.frame (a \code{NULL}
     specifies that no column should be used as \code{row.names} in the
     output). The default is \code{NULL}.
 
     In the case of \code{dbWriteTable}, this argument should be a logical
-    specifying whether the \code{row.names} should be output to the
+    value specifying whether the \code{row.names} should be output to the
     output DBMS table; if \code{TRUE}, an extra column whose name is 
     \code{"row.names"} will be added to the output. The default is
     \code{FALSE}.
   }
   \item{value}{
-    a \code{data.frame} containing the data to write to a table. (See
+    A \code{data.frame} containing the data to write to a table. (See
     Details section for supported column types.)
   }
   \item{overwrite}{
-    a logical specifying whether to overwrite an existing table
+    A logical value specifying whether to overwrite an existing table
     or not. The default is \code{FALSE}.
   }
   \item{append}{
-    a logical specifying whether to append to an existing table
+    A logical value specifying whether to append to an existing table
     in the DBMS. The default is \code{FALSE}.
   }
   \item{ora.number}{
-    a logical specifying whether to create a table with Oracle
+    A logical value specifying whether to create a table with Oracle
     \code{NUMBER} or \code{BINARY_DOUBLE} columns while writing numeric
     data. The default value is \code{TRUE}.
   }
   \item{purge}{
-    a logical specifying whether to add \code{PURGE} option to the
-    Oracle \code{DROP TABLE} statement.
+    A logical value specifying whether to add the \code{PURGE} option to the
+    SQL \code{DROP TABLE} statement.
   }
   \item{all}{
-    a logical specifying whether to look at all schemas.
+    A logical value specifying whether to look at all schemas.
   }
   \item{full}{
-    a logical specifying whether to generate schema names. When argument
+    A logical value specifying whether to generate schema names. When argument
     \code{all} is \code{TRUE}, the output is a vector containing schema
     names followed by the table names. Using \code{matrix(..., ncol = 2)}
     on the output produces a matrix where each row corresponds to a
@@ -276,7 +276,7 @@
     y <- as.POSIXct(y);
     dbGetQuery(con, insStr, data.frame(x, y, y, y, y));
 
-    # Insert date & times tamp with time values in POSIXct form
+    # Insert date & times stamp with time values in POSIXct form
     x <- 2;
     y <- "2012-01-05 07:15:02";
     y <- as.POSIXct(y);

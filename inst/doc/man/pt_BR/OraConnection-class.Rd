@@ -17,8 +17,8 @@ Class \code{"DBIObject"}, by class \code{"DBIConnection"}, distance 2.
 \section{Methods}{
   \describe{
     \item{dbDisconnect}{\code{signature(conn = "OraConnection")}: ... }
-    \item{dbSendQuery}{\code{signature(conn = "OraConnection", statement = "character", prefetch = FALSE, bulk_read = 25L)}: ... }
-    \item{dbGetQuery}{\code{signature(conn = "OraConnection", statement = "character", prefetch = FALSE, bulk_read = 25L)}: ... }
+    \item{dbSendQuery}{\code{signature(conn = "OraConnection", statement = "character", prefetch = FALSE, bulk_read = 1000L)}: ... }
+    \item{dbGetQuery}{\code{signature(conn = "OraConnection", statement = "character", prefetch = FALSE, bulk_read = 1000L)}: ... }
     \item{dbGetException}{\code{signature(conn = "OraConnection")}: ... }
     \item{dbListResults}{\code{signature(conn = "OraConnection")}: ... }
     \item{dbListTables}{\code{signature(conn = "OraConnection")}: ... }
@@ -42,7 +42,38 @@ Class \code{"DBIObject"}, by class \code{"DBIConnection"}, distance 2.
 }
 \examples{\dontrun{
 ora <- dbDriver("Oracle")
+## connecting without a connect string
 con <- dbConnect(ora, "scott", "tiger")
+
+## connecting with a connection string with SID
+host <- "myhost"
+port <- 1521
+sid <- "mysid"
+connect.string <- paste(
+  "(DESCRIPTION=",
+  "(ADDRESS=(PROTOCOL=tcp)(HOST=", host, ")(PORT=", port, "))",
+  "(CONNECT_DATA=(SID=", sid, ")))", sep = "")
+
+## use username/password authentication
+con <- dbConnect(drv, username = "scott", password = "tiger",
+                 dbname = connect.string)
+
+## connecting with a connection string with service name
+host <- "myhost"
+port <- 1521
+svc <- "mydb.example.com"
+connect.string <- paste(
+  "(DESCRIPTION=",
+  "(ADDRESS=(PROTOCOL=tcp)(HOST=", host, ")(PORT=", port, "))",
+  "(CONNECT_DATA=(SERVICE_NAME=", svc, ")))", sep = "")
+## use username/password authentication
+con <- dbConnect(drv, username = "scott", password = "tiger",
+                 dbname = connect.string)
+
+## Please refer to "Oracle Database Net Services Administator's Guide", which
+## has the topic "Connect Identifier and Connect Descriptor Syntax
+## Characteristics"
+
 dbListTables(con)
 }
 }

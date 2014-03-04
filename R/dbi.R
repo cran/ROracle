@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved. 
+# Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 #    NAME
 #      dbi.R - DBI implementation for Oracle RDBMS based on OCI
@@ -10,6 +10,9 @@
 #    NOTES
 #
 #    MODIFIED   (MM/DD/YY)
+#    rkanodia    10/03/13 - Add session mode
+#    rkanodia    08/30/13 - [17383542] Added schema argument to
+#                           .oci.WriteTable() & .oci.RemoveTable()
 #    rkanodia    12/10/12 - Changed default value of bulk_read to 1000
 #    paboyoun    09/17/12 - add difftime support
 #    demukhin    09/11/12 - add Extproc driver
@@ -122,17 +125,21 @@ setClass("OraConnection",
 setMethod("dbConnect",
 signature(drv = "OraDriver"),
 function(drv, username = "", password = "", dbname = "", prefetch = FALSE,
-         bulk_read = 1000L, stmt_cache = 0L, ...)
+         bulk_read = 1000L, stmt_cache = 0L, external_credentials = FALSE,
+         sysdba = FALSE, ...)
 .oci.Connect(.oci.drv(), username = username, password = password,
              dbname = dbname, prefetch = prefetch, bulk_read = bulk_read,
-             stmt_cache = stmt_cache)
+             stmt_cache = stmt_cache,
+             external_credentials = external_credentials, sysdba = sysdba)
 )
 
 setMethod("dbConnect",
 signature(drv = "ExtDriver"),
-function(drv, prefetch = FALSE, bulk_read = 1000L, stmt_cache = 0L, ...)
+function(drv, prefetch = FALSE, bulk_read = 1000L, stmt_cache = 0L,
+         external_credentials = FALSE, sysdba = FALSE, ...)
 .oci.Connect(.ext.drv(), prefetch = prefetch, bulk_read = bulk_read,
-             stmt_cache = stmt_cache)
+             stmt_cache = stmt_cache, 
+             external_credentials = external_credentials, sysdba = sysdba)
 )
 
 setMethod("dbDisconnect",
@@ -209,10 +216,10 @@ function(conn, name, schema = NULL, row.names = NULL, ...)
 setMethod("dbWriteTable",
 signature(conn = "OraConnection", name = "character", value = "data.frame"),
 function(conn, name, value, row.names = FALSE, overwrite = FALSE,
-         append = FALSE, ora.number = TRUE, ...)
+         append = FALSE, ora.number = TRUE, schema = NULL, ...)
 .oci.WriteTable(conn, name, value, row.names = row.names,
                 overwrite = overwrite, append = append,
-                ora.number = ora.number)
+                ora.number = ora.number, schema = schema)
 )
 
 setMethod("dbExistsTable",
@@ -223,8 +230,8 @@ function(conn, name, schema = NULL, ...)
 
 setMethod("dbRemoveTable",
 signature(conn = "OraConnection", name = "character"),
-function(conn, name, purge = FALSE, ...)
-.oci.RemoveTable(conn, name, purge = purge)
+function(conn, name, purge = FALSE, schema = NULL, ...)
+.oci.RemoveTable(conn, name, purge = purge, schema = schema)
 )
 
 setMethod("dbListFields",

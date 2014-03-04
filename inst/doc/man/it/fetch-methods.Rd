@@ -1,8 +1,7 @@
 \name{fetch-methods}
 \docType{methods}
-\alias{fetch-methods}
-\alias{fetch,OraResult,numeric-method}
-\alias{fetch,OraResult,missing-method}
+\alias{fetch}
+\alias{fetch,OraResult-method}
 \title{
 Recupero tramite fetch di record da una query precedentemente eseguita
 }
@@ -10,21 +9,31 @@ Recupero tramite fetch di record da una query precedentemente eseguita
 Questo metodo è un'implementazione semplice della corrispondente
    funzione generica.
 }
-\section{Methods}{\describe{
-
-\item{res}{
-  an \code{OraResult} object.
-  }
-\item{n}{
-  maximum number of records to retrieve per fetch.
-  Use \code{n = -1} to retrieve all pending records.
-  }
-\item{\dots }{currently not used.}
+\usage{
+\S4method{fetch}{OraResult}(res, n = -1, ...)
 }
+\arguments{
+  \item{res}{
+oggetto \code{OraResult}.
+}
+  \item{n}{
+numero massimo di record da recuperare per singola operazione fetch.
+    Usare \code{n = -1} per recuperare tutti i record in sospeso.
+}
+  \item{\dots }{
+attualmente inutilizzato.
+}
+}
+\value{
+numero di record recuperati dal database.
 }
 \details{
 Le implementazioni \code{ROracle} recuperano solo i record \code{n},
   e se \code{n} risulta mancante, restituisce tutti i record.
+}
+\section{References}{
+  For the Oracle Database documentaion see
+  \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
 }
 \seealso{
   \code{\link{Oracle}},
@@ -36,20 +45,21 @@ Le implementazioni \code{ROracle} recuperano solo i record \code{n},
   \code{\link[DBI]{dbGetInfo}},
   \code{\link[DBI]{dbReadTable}}.
 }
-\examples{\dontrun{
-drv <- dbDriver("Oracle")
-con <- dbConnect(drv, "scott", "tiger")
-res <- dbSendQuery(con, "select * from emp")
+\examples{
+  \dontrun{
+    drv <- dbDriver("Oracle")
+    con <- dbConnect(drv, "scott", "tiger")
+    res <- dbSendQuery(con, "select * from emp")
 
-# we now fetch the first 10 records from the resultSet into a data.frame
-data1 <- fetch(res, n = 10)   
-dim(data1)
+    # we now fetch the first 10 records from the resultSet into a data.frame
+    data1 <- fetch(res, n = 10)   
+    dim(data1)
 
-dbHasCompleted(res)
+    dbHasCompleted(res)
 
-# let's get all remaining records
-data2 <- fetch(res, n = -1)
-}
+    # let's get all remaining records
+    data2 <- fetch(res, n = -1)
+  }
 }
 \keyword{methods}
 \keyword{interface}

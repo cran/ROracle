@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved. 
+# Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
 #
 #    NAME
 #      oci.R - OCI based implementaion for DBI
@@ -10,6 +10,9 @@
 #    NOTES
 #
 #    MODIFIED   (MM/DD/YY)
+#    rkanodia    10/03/13 - Add session mode
+#    rkanodia    08/30/13 - [17383542] Enhance .oci.WriteTable() to work on
+#                           tables of global space
 #    qinwan      03/01/13 - avoid unnecessary data copy in type check
 #    rkanodia    12/10/12 - Changed default value of bulk_read  to 1000
 #    rpingte     11/28/12 - 15930335: use timestamp data type for POSIXct value
@@ -83,7 +86,8 @@
 ###############################################################################
 
 .oci.Connect <- function(drv, username = "", password = "", dbname = "",
-                         prefetch = FALSE, bulk_read = 1000L, stmt_cache = 0L)
+                         prefetch = FALSE, bulk_read = 1000L, stmt_cache = 0L,
+                         external_credentials = FALSE, sysdba = FALSE)
 {
   # validate
   username <- as.character(username)
@@ -98,24 +102,35 @@
 
   prefetch <- as.logical(prefetch)
   if (length(prefetch) != 1L)
-    stop(gettextf("argument '%s' must be single logical value", "prefetch"))
+    stop(gettextf("argument '%s' must be a single logical value", "prefetch"))
 
   bulk_read <- as.integer(bulk_read)
   if (length(bulk_read) != 1L)
-    stop(gettextf("argument '%s' must be single integer", "bulk_read"))
+    stop(gettextf("argument '%s' must be a single integer", "bulk_read"))
   if (bulk_read < 1L)
     stop(gettextf("argument '%s' must be greater than 0", "bulk_read")) 
 
   stmt_cache <- as.integer(stmt_cache)
   if (length(stmt_cache) != 1L)
-    stop(gettextf("argument '%s' must be single integer", "stmt_cache"))
+    stop(gettextf("argument '%s' must be a single integer", "stmt_cache"))
   if (stmt_cache < 0L)
-    stop(gettextf("argument '%s' must be positive integer", "stmt_cache"))
+    stop(gettextf("argument '%s' must be a positive integer", "stmt_cache"))
 
+  # Validate external_credentials parameter 
+  external_credentials <- as.logical(external_credentials)
+  if (length(external_credentials) != 1L)
+    stop(gettextf("argument '%s' must be a single logical value",
+                  "external_credentials"))
+  
+  # Validate sysdba parameter 
+  sysdba <- as.logical(sysdba)
+  if (length(sysdba) != 1L)
+    stop(gettextf("argument '%s' must be a single logical value", "sysdba"))
+  
   # connect
   params <- c(username, password, dbname)
   hdl <- .Call("rociConInit", drv@handle, params, prefetch, bulk_read,
-               stmt_cache, PACKAGE = "ROracle")
+               stmt_cache, external_credentials, sysdba, PACKAGE = "ROracle")
   timesten <- (.Call("rociConInfo", hdl, 
                       PACKAGE = "ROracle")$serverType == "TimesTen IMDB")
   new("OraConnection", handle = hdl, timesten = timesten)
@@ -133,17 +148,16 @@
   #validate
   prefetch <- as.logical(prefetch)
   if (length(prefetch) != 1L)
-    stop(gettextf("argument '%s' must be single logical value", "prefetch"))
+    stop(gettextf("argument '%s' must be a single logical value", "prefetch"))
 
   bulk_read <- as.integer(bulk_read)
   if (length(bulk_read) != 1L)
-    stop(gettextf("argument '%s' must be single integer", "bulk_read"))
+    stop(gettextf("argument '%s' must be a single integer", "bulk_read"))
   if (bulk_read < 1L)
     stop(gettextf("argument '%s' must be greater than 0", "bulk_read")) 
 
   stmt <- as.character(stmt)
-  if (length(stmt) != 1L)
-    stop("'statement' must be a single string")
+  .oci.ValidateString("statement",stmt)
 
   if (!is.null(data))
     data <- .oci.data.frame(data)
@@ -159,17 +173,16 @@
   #validate
   prefetch <- as.logical(prefetch)
   if (length(prefetch) != 1L)
-    stop(gettextf("argument '%s' must be single logical value", "prefetch"))
+    stop(gettextf("argument '%s' must be a single logical value", "prefetch"))
 
   bulk_read <- as.integer(bulk_read)
   if (length(bulk_read) != 1L)
-    stop(gettextf("argument '%s' must be single integer", "bulk_read"))
+    stop(gettextf("argument '%s' must be a single integer", "bulk_read"))
   if (bulk_read < 1L)
     stop(gettextf("argument '%s' must be greater than 0", "bulk_read")) 
 
   stmt <- as.character(stmt)
-  if (length(stmt) != 1L)
-    stop("'statement' must be a single string")
+  .oci.ValidateString("statement",stmt)
 
   if (!is.null(data))
     data <- .oci.data.frame(data)
@@ -242,6 +255,7 @@
   {
     # validate schema
     schema <- as.character(schema)
+    .oci.ValidateString("schema", schema, TRUE)
 
     bnd <- paste(':', seq_along(schema), sep = '', collapse = ',')
     #Bug 13843807 : Modify query to list views also
@@ -272,15 +286,13 @@
 {
   # validate name
   name <- as.character(name)
-  if (length(name) != 1L)
-    stop("'name' must be a single string")
+  .oci.ValidateString("name", name)
 
   # validate schema
   if (!is.null(schema))
   {
     schema <- as.character(schema)
-    if (length(schema) != 1L)
-      stop("'schema' must be a single string")
+    .oci.ValidateString("schema", schema)
   }
 
   # form name
@@ -320,7 +332,7 @@
 
 .oci.WriteTable <- function(con, name, value, row.names = FALSE,
                             overwrite = FALSE, append = FALSE,
-                            ora.number = TRUE)
+                            ora.number = TRUE, schema = NULL)
 {
   # commit
   .oci.Commit(con)
@@ -331,8 +343,14 @@
 
   # validate name
   name <- as.character(name)
-  if (length(name) != 1L)
-    stop("'name' must be a single string")
+  .oci.ValidateString("name", name)
+
+  # validate schema
+  if (!is.null(schema))
+  {
+    schema <- as.character(schema)
+    .oci.ValidateString("schema", schema)
+  }
 
   # add row.names column
   if (row.names && !is.null(row.names(value)))
@@ -351,12 +369,12 @@
 
   # create table
   drop <- TRUE
-  if (.oci.ExistsTable(con, name))
+  if (.oci.ExistsTable(con, name, schema))
   {
     if (overwrite)
     {
-      .oci.RemoveTable(con, name)
-      .oci.CreateTable(con, name, cnames, ctypes)
+      .oci.RemoveTable(con, name, FALSE, schema)
+      .oci.CreateTable(con, name, cnames, ctypes, schema)
     }
     else if (append)
       drop <- FALSE
@@ -364,19 +382,30 @@
       stop("table or view already exists")
   }
   else
-    .oci.CreateTable(con, name, cnames, ctypes)
+    .oci.CreateTable(con, name, cnames, ctypes, schema)
 
   # insert data
   res <- try(
   {
-    stmt <- sprintf('insert into "%s" values (%s)', name,
-                    paste(":", seq_along(cnames), sep = "", collapse = ","))
+    # [17383542] create query to insert data in table of global space also
+    if (is.null(schema))
+    {
+      stmt <- sprintf('insert into "%s" values (%s)', name,
+                      paste(":", seq_along(cnames), sep = "",
+                      collapse = ","))
+    }
+    else
+    {
+      stmt <- sprintf('insert into "%s"."%s" values (%s)', schema, name,
+                      paste(":", seq_along(cnames), sep = "",
+                      collapse = ","))
+    }
     .oci.GetQuery(con, stmt, data = value)
   }, silent = TRUE)
   if (inherits(res, "try-error"))
   {
     if (drop)
-      .oci.RemoveTable(con, name)
+      .oci.RemoveTable(con, name, FALSE, schema)
     stop(res)
   }
   else
@@ -388,15 +417,13 @@
 {
   # validate name
   name <- as.character(name)
-  if (length(name) != 1L)
-    stop("'name' must be a single string")
+  .oci.ValidateString("name", name)
 
   # validate schema
   if (!is.null(schema))
   {
     schema <- as.character(schema)
-    if (length(schema) != 1L)
-      stop("'schema' must be a single string")
+    .oci.ValidateString("schema", schema)
   }
 
   # check for existence
@@ -420,12 +447,18 @@
   nrow(res) == 1L
 }
 
-.oci.RemoveTable <- function(con, name, purge = FALSE)
+.oci.RemoveTable <- function(con, name, purge = FALSE, schema = NULL)
 {
   # validate name
   name <- as.character(name)
-  if (length(name) != 1L)
-    stop("'name' must be a single string")
+  .oci.ValidateString("name", name)
+
+  # validate schema
+  if (!is.null(schema))
+  {
+    schema <- as.character(schema)
+    .oci.ValidateString("schema", schema)
+  }
 
   # remove
   parm <- if (purge) "purge" else ""
@@ -437,9 +470,19 @@
   res <- .oci.GetQuery(con, qry,  data = data.frame(name = name))
 
   if (nrow(res) == 1L)
+  {
+    if (is.null(schema))
       stmt <- sprintf('drop view "%s"', name)
+    else
+      stmt <- sprintf('drop view "%s"."%s"', schema, name)
+  }
   else
+  {
+    if (is.null(schema))
       stmt <- sprintf('drop table "%s" %s', name, parm)
+    else
+      stmt <- sprintf('drop table "%s"."%s" %s', schema, name, parm)
+  }
 
   .oci.GetQuery(con, stmt)
   TRUE
@@ -447,22 +490,14 @@
 
 .oci.ListFields <- function(con, name, schema = NULL)
 {
-  # validate name
   name <- as.character(name)
-  if (length(name) != 1L)
-    stop("'name' must be a single string")
-
-  # validate schema
   if (!is.null(schema))
-  {
     schema <- as.character(schema)
-    if (length(schema) != 1L)
-      stop("'schema' must be a single string")
-  }
 
   #Bug 13843805 : Check table exist or not. 
   #               If table does not exist then throw error
   validTab = .oci.ExistsTable(con,name, schema)
+
   if (!validTab)
     stop(gettextf('table "%s" does not exist', name))
 
@@ -666,11 +701,36 @@
   }
 }
 
-.oci.CreateTable <- function(con, name, cnames, ctypes)
+.oci.CreateTable <- function(con, name, cnames, ctypes, schema = NULL)
 {
-  stmt <- sprintf('create table "%s" (%s)', name,
-                  paste(cnames, ctypes, collapse = ","))
+  if (is.null(schema))
+  {
+    stmt <- sprintf('create table "%s" (%s)', name,
+                    paste(cnames, ctypes, collapse = ","))
+  }
+  else
+  {
+    stmt <- sprintf('create table "%s"."%s" (%s)', schema, name,
+                    paste(cnames, ctypes, collapse = ","))
+  }
   .oci.GetQuery(con, stmt)
+}
+
+.oci.ValidateString <- function(name, value, multi_val = FALSE)
+{
+  if (!multi_val)
+  {
+    if (length(value) != 1L)
+      stop(gettextf("'%s' must be a single string", name))
+  
+    if (!nchar(value))
+      stop(gettextf("'%s' must be a non-empty string", name))
+  }
+  else
+  {
+    if (all(!nchar(value)))
+      stop(gettextf("'%s' must be non-empty strings", name))
+  }
 }
 
 # end of file oci.R

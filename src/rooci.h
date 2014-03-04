@@ -1,5 +1,5 @@
-/* Copyright (c) 2011, 2012, Oracle and/or its affiliates. 
-All rights reserved. */
+/* Copyright (c) 2011, 2014, Oracle and/or its affiliates. 
+All rights reserved.*/
 
 /*
    NAME
@@ -11,6 +11,11 @@ All rights reserved. */
    NOTES
 
    MODIFIED   (MM/DD/YY)
+   rpingte     01/09/14 - Copyright update
+   rpingte     11/18/13 - add lobinres_roociRes
+   rpingte     10/24/13 - Cache resultset in memory before transferring to R to
+                          avoid unnecessary alloc and free using allocVector
+   rkanodia    10/03/13 - Add session mode
    rpingte     11/20/12 - 15900089: remove avoidable errors reported with date
                           time types
    rpingte     09/21/12 - roociAllocDescBindBuf
@@ -51,6 +56,7 @@ All rights reserved. */
 #define ROOCI_MAX_IDENTIFIER_LEN   30       /* max length of db identifiers */
 #define ROOCI_DRV_ERR_MEM_FAIL    -10   /* memory allocation fail error no. */
 #define ROOCI_DRV_ERR_CON_FAIL    -11  /* connection creation fail error no */
+#define ROOCI_DRV_ERR_NO_DATA     -12              /* no more data in cache */
 
 /* macro for memory allocation */
 #ifdef ROOCI_MEM_DEBUG
@@ -62,6 +68,20 @@ All rights reserved. */
   do \
   { \
     (buf_) = calloc((size_t)(no_of_elem), (siz_of_elem)); \
+  } \
+  while (0)
+#endif
+
+/* macro for memory allocation without clearing it */
+#ifdef ROOCI_MEM_DEBUG
+/* Intentionally left in one line to get the exact line number */
+# define ROOCI_MEM_MALLOC(buf_, no_of_elem, siz_of_elem) \
+  (buf_) = malloc((size_t)(no_of_elem) * (siz_of_elem)); fprintf(stdout, "%p allocated in %s at line# %d\n", (buf_), __FUNCTION__, __LINE__);
+#else
+# define ROOCI_MEM_MALLOC(buf_, no_of_elem, siz_of_elem) \
+  do \
+  { \
+    (buf_) = malloc((size_t)(no_of_elem) * (siz_of_elem)); \
   } \
   while (0)
 #endif
@@ -178,8 +198,9 @@ struct roociRes
   sb4             *siz_roociRes;                    /* buffer maximum SIZes */
   ub1             *lobbuf_roociRes;                      /* temp LOB BUFfer */
   size_t           loblen_roociRes;               /* temp LOB buffer LENgth */
+  boolean          lobinres_roociRes;   /* TRUE - BLOB,CLOB,BFILE in result */
   boolean          prefetch_roociRes;    /* TRUE - use OCI prefetch buffers */
-  int              nrows_roociRes;    /* nuumber of rows to fetch at a time */
+  int              nrows_roociRes;     /* number of rows to fetch at a time */
   OCIDateTime     *epoch_roociRes;             /* epoch from 1970/01/01 UTC */
   OCIDateTime     *epoch_tz_roociRes;          /* epoch from 1970/01/01 UTC */
   OCIDateTime     *temp_ts_roociRes;              /* temp TS for conversion */
@@ -200,8 +221,8 @@ sword roociInitializeCtx (roociCtx *pctx, void *epx, boolean interrupt_srv);
 /* ----------------------------- roociInitializeCon ----------------------- */
 /* Initialize connection oci context */
 sword roociInitializeCon(roociCtx *pctx, roociCon *pcon,
-                         char *user, char *pass, char *cstr, boolean bwallet,
-                         ub4 stmt_cache_siz);
+                         char *user, char *pass, char *cstr,
+                         ub4 stmt_cache_siz, ub4 session_mode);
 
 /* ----------------------------- roociGetError ---------------------------- */
 /* Retrieve error message and and error number */

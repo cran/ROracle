@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved. 
+# Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
 #
 #    NAME
 #      zzz.R - ROCI load and unload operations
@@ -10,12 +10,15 @@
 #    NOTES
 #
 #    MODIFIED   (MM/DD/YY)
+#    rpingte     02/27/14 - use utils::globalVariables
 #    demukhin    09/11/12 - add Extproc driver
 #    demukhin    01/20/12 - cleanup
 #    paboyoun    01/04/12 - minor code cleanup
 #    demukhin    12/02/11 - add support for more methods
 #    demukhin    10/19/11 - Creation
 #
+
+utils::globalVariables(c(".oci.GlobalEnv"))
 
 .onLoad <- function(libname, pkgname)
 {

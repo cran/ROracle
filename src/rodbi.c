@@ -1,5 +1,5 @@
-/* Copyright (c) 2011, 2013, Oracle and/or its affiliates. 
-All rights reserved. */
+/* Copyright (c) 2011, 2014, Oracle and/or its affiliates. 
+All rights reserved.*/
 
 /*
    NAME
@@ -56,6 +56,7 @@ All rights reserved. */
          rodbiResExpand
          rodbiResSplit
          rodbiResAccum
+         rodbiResAccumInCache
          rodbiResTrim
          rodbiResDataFrame
          rodbiResStateNext
@@ -68,6 +69,14 @@ All rights reserved. */
    NOTES
 
    MODIFIED   (MM/DD/YY)
+   rpingte     02/12/14 - OCI_SESSGET_SYSDBA available in specific
+                          patch/release
+   rpingte     01/09/14 - Copyright update
+   rpingte     10/24/13 - Cache resultset in memory before transferring to R to
+                          avoid unnecessary alloc and free using allocVector
+                          when result exceeds bulk_read rows
+   rkanodia    10/03/13 - Add session mode
+   rkanodia    09/17/13 - change ROracle version to 1.1-11
    rpingte     05/08/13 - update version to 10
    rpingte     04/09/13 - use SQLT_FLT instead of SQLT_BDOUBLE
    qinwan      03/01/13 - remove rawVecToListCall
@@ -206,7 +215,7 @@ while (0)
 #define RODBI_DRV_EXTPROC    "Oracle (extproc)"
 #define RODBI_DRV_MAJOR       1
 #define RODBI_DRV_MINOR       1
-#define RODBI_DRV_UPDATE      10
+#define RODBI_DRV_UPDATE      11
 
 /* RODBI R classes */
 #define RODBI_R_LOG           1                                  /* LOGICAL */
@@ -282,6 +291,7 @@ while (0)
 /* forward declarations */
 struct rodbiCon;
 struct rodbiRes;
+typedef struct rodbichdl rodbichdl;
 
 /* RODBI fetch STATEs */
 enum rodbiState
@@ -337,6 +347,7 @@ struct rodbiRes
   boolean    done_rodbiRes;                                /* DONE fetching */
   boolean    expand_rodbiRes;                /* adaptively EXPAND data list */
   int        affrows_rodbiRes;           /* No of rows affected; [13843811] */
+  rodbichdl *pghdl_rodbiRes;    /* PaGe data HaNDles for accessing col data */
   SEXP       name_rodbiRes;                          /* column NAMEs vector */
   SEXP       list_rodbiRes;                                    /* data LIST */
   rodbiState state_rodbiRes;                      /* query processing STATE */
@@ -379,6 +390,51 @@ const rodbiITyp rodbiITypTab[] =
   {RODBI_INTER_YM_NM, RODBI_R_CHR, SQLT_STR,          0},
   {RODBI_INTER_DS_NM, RODBI_R_DIF, SQLT_INTERVAL_DS,  sizeof(OCIInterval *)},
   {RODBI_TIME_LTZ_NM, RODBI_R_DAT, SQLT_TIMESTAMP_TZ, sizeof(OCIDateTime *)}
+};
+
+/* default maximum size of a page is 65536 for fixed data types */
+#define RODBI_MAX_FIXED_PAGE_SIZE (int)0x10000
+
+/* default maximum size of a page is 65536*2 for variable data types */
+#define RODBI_MAX_VAR_PAGE_SIZE (int)0x20000
+
+#define RODBI_VCOL_NULL     (int)-1
+#define RODBI_VCOL_NO_REF   (int)-2
+
+/* Each page representation */
+struct rodbiPg
+{
+  struct rodbiPg *next_rodbiPg;
+  ub1             buf_rodbiPg[1];
+};
+typedef struct rodbiPg rodbiPg;
+
+/*
+** variable length column data type: char, raw, blob, clob, etc.
+*/
+struct rodbivcol
+{
+  ub1        flag_rodbivcol;                         /* flag for column data */
+#define RODBI_VCOL_FLG_NOTNULL         0x00      /* column value is not NULL */
+#define RODBI_VCOL_FLG_NULL            0x01          /* column value is NULL */
+#define RODBI_VCOL_FLG_ELEM_IN_NEXT_PG 0x02         /* value is in next page */
+#define RODBI_VCOL_FLG_ELEM_REF_ACCESS 0x04     /* access by ref is possible */
+  ub4        len_rodbivcol;                        /* length of column value */
+  ub1        dat_rodbivcol[1];                                /* column data */
+};
+typedef struct rodbivcol rodbivcol;
+
+/* Handle to traverse the pages to access data */
+struct rodbichdl
+{
+  int      pgsize_rodbichdl;                        /* max size of each page */
+  int      totpgs_rodbichdl;                             /* total pages used */
+  int      extpgs_rodbichdl;  /* number of pages in extent that are not used */
+  int      actual_maxlen_rodbichdl; /* actual maximum length of var in cache */
+  rodbiPg *begpg_rodbichdl;                                     /* head page */
+  rodbiPg *currpg_rodbichdl;          /* current page that is being accessed */
+  rodbiPg *lastpg_rodbichdl;              /* last page page in column handle */
+  int      offset_rodbichdl;       /* item offset in page accessed currently */
 };
 
 /* RODBI CHECK error using DRiVer handle */
@@ -489,6 +545,311 @@ static const rodbiRTyp rodbiRTypTab[] =
                 rodbiRTypTab[rodbiITypTab[ityp].rtyp_rodbiITyp].name_rodbiRTyp
 
 
+/*
+** Name:      RODBI_CREATE_COL_HDL - ROracle DBI CREATE COLumn HanDLe
+**
+** Function:  This function initializes the column handle to write data into
+**            paged memory.
+**
+** Input:     hdl(IN)     - address of rodbichdl
+**            pgsize(IN)  - max size of each page
+**            blob(IN)    - TRUE if it a BLOB, CLOB or BFILE
+**
+** Exception: Fatal error when memory cannot be allocated.
+**
+** Returns:   Initialized collection handle on success.
+**
+*/
+#define RODBI_CREATE_COL_HDL(hdl, pgsize)                                     \
+do                                                                            \
+{                                                                             \
+  ROOCI_MEM_ALLOC((hdl)->begpg_rodbichdl,                                     \
+                  ((pgsize) + sizeof(struct rodbiPg *)), sizeof(ub1));        \
+  if (!(hdl)->begpg_rodbichdl)                                                \
+    RODBI_ERROR(RODBI_ERR_MEMORY_ALC);                                        \
+  (hdl)->pgsize_rodbichdl = (pgsize);                                         \
+  (hdl)->lastpg_rodbichdl = (hdl)->begpg_rodbichdl;                           \
+  RODBI_EXTEND_PAGES((hdl), (hdl)->begpg_rodbichdl, 4);                       \
+  (hdl)->currpg_rodbichdl = (hdl)->begpg_rodbichdl;                           \
+  (hdl)->totpgs_rodbichdl = 0;                                                \
+  (hdl)->extpgs_rodbichdl = 4;                                                \
+  (hdl)->actual_maxlen_rodbichdl = 0;                                         \
+  (hdl)->offset_rodbichdl = 0;                                                \
+}                                                                             \
+while (0)
+
+
+/*
+** Name:      RODBI_REPOSITION_COL_HDL - ROracle DBI RE-POSITION COLumn HanDLe
+**
+** Function:  This function repositions the column handle to the beginning of
+**            paged memory to be used to read the data.
+**
+** Input:     hdl(IN)     - address of rodbichdl
+**
+** Exception: None
+**
+** Returns:   Initialized collection handle.
+**
+*/
+#define RODBI_REPOSITION_COL_HDL(hdl)               \
+do                                                  \
+{                                                   \
+  (hdl)->currpg_rodbichdl = (hdl)->begpg_rodbichdl; \
+  (hdl)->offset_rodbichdl = 0;                      \
+} while (0)
+
+
+/*
+** Name:      RODBI_DESTROY_COL_HDL - ROracle DBI DESTROY COLumn HanDLe
+**
+** Function:  This function closes the column handle after freeing all pages
+**            allocated.
+**
+** Input:     hdl(IN)     - address of rodbichdl
+**
+** Exception: None
+**
+** Returns:   None.
+**
+*/
+#define RODBI_DESTROY_COL_HDL(hdl)             \
+do                                             \
+{                                              \
+  rodbiPg *tmppg;                              \
+  if (hdl)                                     \
+  {                                            \
+    tmppg = (hdl)->begpg_rodbichdl;            \
+    if ((hdl)->begpg_rodbichdl)                \
+    {                                          \
+      while (tmppg)                            \
+      {                                        \
+        rodbiPg *tmppg2 = tmppg->next_rodbiPg; \
+        ROOCI_MEM_FREE(tmppg);                 \
+        tmppg = tmppg2;                        \
+      }                                        \
+    }                                          \
+                                               \
+    (hdl)->begpg_rodbichdl = NULL;             \
+  }                                            \
+} while(0)
+
+
+/*
+** Name:      RODBI_EXTEND_PAGES - ROracle DBI EXTEND PAGE table
+**
+** Function:  This function allocates number of pages at the end of the list
+**            navigating from current page.
+**
+** Input:     hdl(IN)     - address of rodbichdl
+**            curr_page(IN) - current page that hdl is operating with
+**            npages(IN) - number of pages to extend bye
+**
+** Exception: Fatal error when memory cannot be allocated.
+**
+** Returns:   None.
+**
+*/
+#define RODBI_EXTEND_PAGES(hdl, curr_page, npages)                         \
+do                                                                         \
+{                                                                          \
+  rodbiPg *tmppg = (curr_page);                                            \
+  int      npg = (npages);                                                 \
+                                                                           \
+  tmppg = (hdl)->lastpg_rodbichdl;                                         \
+                                                                           \
+  while(npg--)                                                             \
+  {                                                                        \
+    ROOCI_MEM_MALLOC(tmppg->next_rodbiPg,                                  \
+                     ((hdl)->pgsize_rodbichdl + sizeof(struct rodbiPg *)), \
+                     sizeof(ub1));                                         \
+    if (!tmppg->next_rodbiPg)                                              \
+      RODBI_ERROR(RODBI_ERR_MEMORY_ALC);                                   \
+    else                                                                   \
+      tmppg = tmppg->next_rodbiPg;                                         \
+    ((hdl)->extpgs_rodbichdl++);                                           \
+  }                                                                        \
+  (hdl)->lastpg_rodbichdl = tmppg;                                         \
+  tmppg->next_rodbiPg = (rodbiPg *)0;                                      \
+} while (0)
+
+
+
+/*
+** Name:      RODBI_ADD_FIXED_DATA_ITEM - ROracle DBI ADD a FIXED len DATA ITEM
+**                                        to page table
+**
+** Function:  This function adds an integer or double data item to paged memory
+**            at the current offset and incrementing it to add next item.
+**            Before adding an item it expands the page table when the item
+**            does not fit in the page adjusting the current offset.
+**
+** Input:     hdl(IN)     - address of rodbichdl
+**            T(IN)       - type of data
+**            data(IN)    - integer value to be copied into the page
+**
+** Exception: Fatal error when memory cannot be allocated.
+**
+** Returns:   None.
+**
+*/
+#define RODBI_ADD_FIXED_DATA_ITEM(hdl, T, data)                               \
+do                                                                            \
+{                                                                             \
+  if ((hdl)->offset_rodbichdl + sizeof(T) > (hdl)->pgsize_rodbichdl)          \
+  {                                                                           \
+    if ((hdl)->currpg_rodbichdl->next_rodbiPg)                                \
+      (hdl)->currpg_rodbichdl = (hdl)->currpg_rodbichdl->next_rodbiPg;        \
+    else                                                                      \
+    {                                                                         \
+      RODBI_EXTEND_PAGES((hdl), (hdl)->currpg_rodbichdl, 4);                  \
+      (hdl)->currpg_rodbichdl = (hdl)->currpg_rodbichdl->next_rodbiPg;        \
+    }                                                                         \
+    (hdl)->totpgs_rodbichdl++;                                                \
+    (hdl)->extpgs_rodbichdl--;                                                \
+    (hdl)->offset_rodbichdl = 0;                                              \
+  }                                                                           \
+  *((T *)&((hdl)->currpg_rodbichdl->buf_rodbiPg[(hdl)->offset_rodbichdl])) =  \
+            (data);                                                           \
+  (hdl)->offset_rodbichdl += sizeof(T);                                       \
+} while (0)
+
+
+
+/*
+** Name:     RODBI_GET_FIXED_DATA_ITEM - ROracle DBI GET an FIXED len DATA ITEM
+**                                       from page table at current offset
+**
+** Function:  This function copies an integer data from paged memory at the
+**            current offset into address pointed by data. Current offset is
+**            incremented to get the next item.
+**
+** Input:     hdl(IN)   - address of rodbichdl
+**            T(IN)     - type of data item
+**            data(IN)  - pointer to integer where data will be copied to
+**
+** Exception: Fatal error when accessing beyond page limit.
+**
+** Returns:   None.
+**
+*/
+#define RODBI_GET_FIXED_DATA_ITEM(hdl, T, data)                               \
+do                                                                            \
+{                                                                             \
+  if ((hdl)->offset_rodbichdl + sizeof(T) > (hdl)->pgsize_rodbichdl)          \
+  {                                                                           \
+    if ((hdl)->currpg_rodbichdl->next_rodbiPg)                                \
+      (hdl)->currpg_rodbichdl = (hdl)->currpg_rodbichdl->next_rodbiPg;        \
+    else                                                                      \
+      RODBI_FATAL(__FUNCTION__, 1, "no more data");                           \
+    (hdl)->offset_rodbichdl = 0;                                              \
+  }                                                                           \
+  *(data) = *((T *)                                                           \
+           &((hdl)->currpg_rodbichdl->buf_rodbiPg[(hdl)->offset_rodbichdl])); \
+  (hdl)->offset_rodbichdl += sizeof(T);                                       \
+} while(0)
+
+
+/*
+** Name:     RODBI_GET_MAX_VAR_ITEM_LEN - ROracle DBI GET MAXimum VARiable data
+**                                        ITEM LENgth that is store in paged
+**                                        table
+**
+** Function:  This function returns the maximum length of an item that is
+**            currently stored in the entire paged table.
+**
+** Input:     hdl(IN)     - address of rodbichdl
+**            maxlen(IN)  - maximum length of an element stored currently
+**
+** Exception: None.
+**
+** Returns:   None.
+**
+*/
+#define RODBI_GET_MAX_VAR_ITEM_LEN(hdl, maxlen) \
+  (*maxlen) = (hdl)->actual_maxlen_rodbichdl
+
+
+
+/*
+** Name:      RODBI_GET_VAR_DATA_ITEM_BY_REF - ROracle DBI GET a VARiable DATA
+**                                             ITEM from page table BY REFrence
+**
+** Function:  This function returns the pointer to data item from paged memory
+**            at the current offset. Current offset incremented to get the next
+**            item. This access applies to VARCHAR, RAW and CHAR data only used
+**            avoid an extra memcpy.
+**            For LOB's use RODBI_GET_VAR_DATA_ITEM_BY.
+**
+** Input:     hdl(IN)      - address of rodbichdl
+**            data(IN)     - pointer to buffer where data will be copied to
+**            len(IN)      - length of data in paged memory
+**                           -1 - indicates NULL
+**
+** Exception: Fatal error when accessing beyond memory
+**
+** Returns:   None.
+**
+*/
+#define RODBI_GET_VAR_DATA_ITEM_BY_REF(hdl, data, len)                        \
+do                                                                            \
+{                                                                             \
+  rodbivcol *col;                                                             \
+                                                                              \
+  if (((hdl)->offset_rodbichdl + sizeof(rodbivcol)) > (hdl)->pgsize_rodbichdl)\
+  {                                                                           \
+    if ((hdl)->currpg_rodbichdl->next_rodbiPg)                                \
+      (hdl)->currpg_rodbichdl = (hdl)->currpg_rodbichdl->next_rodbiPg;        \
+    else                                                                      \
+      RODBI_FATAL(__FUNCTION__, 1, "no more data");                           \
+    (hdl)->offset_rodbichdl = 0;                                              \
+  }                                                                           \
+                                                                              \
+  col=(rodbivcol *)                                                           \
+             &((hdl)->currpg_rodbichdl->buf_rodbiPg[(hdl)->offset_rodbichdl]);\
+  if (col->flag_rodbivcol & RODBI_VCOL_FLG_ELEM_REF_ACCESS)                   \
+  {                                                                           \
+    if (col->flag_rodbivcol & RODBI_VCOL_FLG_ELEM_IN_NEXT_PG)                 \
+    {                                                                         \
+      (hdl)->offset_rodbichdl = 0;                                            \
+      (hdl)->currpg_rodbichdl = (hdl)->currpg_rodbichdl->next_rodbiPg;        \
+      *data = (void *)&((hdl)->currpg_rodbichdl->buf_rodbiPg[0]);             \
+    }                                                                         \
+    else                                                                      \
+    {                                                                         \
+      (hdl)->offset_rodbichdl += offsetof(struct rodbivcol, dat_rodbivcol);   \
+      *data = (void *)(&col->dat_rodbivcol[0]);                               \
+    }                                                                         \
+                                                                              \
+    if (col->flag_rodbivcol & RODBI_VCOL_FLG_NULL)                            \
+      (*len) = RODBI_VCOL_NULL;                                               \
+    else                                                                      \
+    {                                                                         \
+      (*len) = col->len_rodbivcol;                                            \
+      (hdl)->offset_rodbichdl += (*len);                                      \
+    }                                                                         \
+                                                                              \
+    /* align offset to 4 or 8 byte boundary to access next item */            \
+    (hdl)->offset_rodbichdl += (sizeof(char *) -                              \
+                                 (hdl->offset_rodbichdl % sizeof(char *)));   \
+  }                                                                           \
+  else                                                                        \
+    (*len) = RODBI_VCOL_NO_REF;                                               \
+} while(0)
+
+
+
+/* --------------------- rodbichkIntFn ------------------------------------ */
+/* Check for cntl-C interrupt */
+void rodbichkIntFn(void *dummy)
+{
+  R_CheckUserInterrupt();
+}
+
+/*----------------------------------------------------------------------------
+                               EXPORT FUNCTIONS
+ ---------------------------------------------------------------------------*/
+
 /* --------------------------- rodbiGetDrv -------------------------------- */
 /* get driver pointer */
 static rodbiDrv *rodbiGetDrv(SEXP ptrDrv);
@@ -553,9 +914,17 @@ static void rodbiResSplit(rodbiRes *res);
 /* accumulate result set */
 static void rodbiResAccum(rodbiRes *res);
 
+/* ---------------------- rodbiResAccumInCache ---------------------------- */
+/* accumulate result set in ROracle cache */
+static void rodbiResAccumInCache(rodbiRes *res);
+
 /* ---------------------- rodbiResTrim ------------------------------------ */
 /* trim result set column vector  */
 static void rodbiResTrim(rodbiRes *res);
+
+/* ----------------------- rodbiResPopulate ------------------------------- */
+/* pupulate the result in dataframe from cache */
+static void rodbiResPopulate(rodbiRes *res);
 
 /* ---------------------- rodbiResDataFrame ------------------------------- */
 /* make input data list a data frame  */
@@ -582,16 +951,48 @@ static void rodbiResTerm(rodbiRes  *res);
 static void rodbiCheck(rodbiDrv *drv, rodbiCon *con, const char *fun,
                        int pos, sword status, text *errMsg, size_t errMsgLen);
 
-/* --------------------- rodbichkIntFn ------------------------------------ */
-/* Check for cntl-C interrupt */
-void rodbichkIntFn(void *dummy)
-{
-  R_CheckUserInterrupt();
-}
+/*
+** Name:      RODBI_ADD_VAR_DATA_ITEM - ROracle DBI ADD a VARiable length DATA
+**                                      ITEM to page table
+**
+** Function:  This function adds a variable length data item into the paged
+**            memory at the current offset. Current offset is incremented to add
+**            the next item. Before adding an item it expands the page table when
+**            the item does not fit in the page adjusting the current offset.
+**            It tracks the maximum length of an item added in the paged table.
+**
+** Input:     hdl(IN)      - address of rodbichdl
+**            flag(IN)     - RODBI_VCOL_FLG_NULL when NULL data or 
+**                           RODBI_VCOL_FLG_NOTNULL when data is not NULL
+**            data(IN)     - pointer to buffer where data will be copied from
+**            len(IN)      - length of buffer data
+**
+** Exception: Fatal error when memory cannot be allocated.
+**
+** Returns:   None.
+**
+*/
+static sword RODBI_ADD_VAR_DATA_ITEM(rodbichdl *hdl, ub1 flag,
+                                     void *data, int len);
 
-/*----------------------------------------------------------------------------
-                               EXPORT FUNCTIONS
- ---------------------------------------------------------------------------*/
+/*
+** Name:      RODBI_GET_VAR_DATA_ITEM - ROracle DBI GET a VARiable DATA ITEM from
+**                                      page table at current offset
+**
+** Function:  This function copies a variable length data item from paged memory
+**            at the current offset into address pointed by data. Current offset
+**            is incremented to get the next item.
+**
+** Input:     hdl(IN)      - address of rodbichdl
+**            data(IN)     - pointer to buffer where data will be copied to
+**            len(IN)      - length of buffer data
+**
+** Exception: None.
+**
+** Returns:   0 on success and ROOCI_DRV_ERR_NO_DATA if there is no data.
+**
+*/
+static int RODBI_GET_VAR_DATA_ITEM(rodbichdl *hdl, void *data, int len);
 
 /* ----------------------------- rociDrvAlloc ----------------------------- */
 /* create external pointer of driver */
@@ -612,7 +1013,7 @@ SEXP rociDrvTerm(SEXP ptrDrv);
 /* ---------------------------- rociConInit ------------------------------- */
 /* initialize connection context */
 SEXP rociConInit(SEXP ptrDrv, SEXP params, SEXP prefetch, SEXP nrows,
-                 SEXP stmtCacheSize);
+                 SEXP stmtCacheSize, SEXP external_credentials, SEXP sysdba);
 
 /* ---------------------------- rociConError ------------------------------ */
 /* get connection error */
@@ -807,7 +1208,7 @@ SEXP rociDrvTerm(SEXP ptrDrv)
 /* ----------------------------- rociConCreate ---------------------------- */
 
 SEXP rociConInit(SEXP ptrDrv, SEXP params, SEXP prefetch, SEXP nrows, 
-                 SEXP stmtCacheSize)
+                 SEXP stmtCacheSize, SEXP external_credentials, SEXP sysdba)
 {
   char      *user              = (char *)CHAR(STRING_ELT(params, 0));
   char      *pass              = (char *)CHAR(STRING_ELT(params, 1));
@@ -819,6 +1220,7 @@ SEXP rociConInit(SEXP ptrDrv, SEXP params, SEXP prefetch, SEXP nrows,
                             /* is oracle wallet being used for authentication?
                                for oracle wallet authentication, user needs to
                                pass empty strings for username and password */
+  ub4        sess_mod          = OCI_DEFAULT;                          
 
   if (drv->extproc_rodbiDrv && drv->ctx_rodbiDrv.num_roociCtx > 0)
     con = drv->ctx_rodbiDrv.con_roociCtx[0]->parent_roociCon;
@@ -831,12 +1233,30 @@ SEXP rociConInit(SEXP ptrDrv, SEXP params, SEXP prefetch, SEXP nrows,
 
     con->drv_rodbiCon = drv;
 
+    if (*LOGICAL(external_credentials) || wallet)
+      sess_mod = sess_mod | OCI_SESSGET_CREDEXT;
+
+    if (*LOGICAL(sysdba)) 
+    {
+#if defined(OCI_SESSGET_SYSDBA)
+      sess_mod = sess_mod | OCI_SESSGET_SYSDBA;
+#else
+#pragma message("Oracle Client library used does not support OCI_SESSGET_SYSDBA, please check NEWS for additional details if it is necessary to connect using SYSDBA privilege to the Oracle Database.")
+#endif
+    }
+
+    /* If statement cache size is > 0 then it will set OCI_SESSGET_STMTCACHE
+       session mode */
+    if (((ub4)INTEGER(stmtCacheSize)[0]) > 0)
+      sess_mod = sess_mod | OCI_SESSGET_STMTCACHE;
+
     /* Initialize connection environment */
     RODBI_CHECK_CON(con, __FUNCTION__, 1, FALSE,
                     roociInitializeCon(&drv->ctx_rodbiDrv,
                                        &(con->con_rodbiCon),
-                                       user, pass, conStr, wallet,
-                                       (ub4)INTEGER(stmtCacheSize)[0])); 
+                                       user, pass, conStr,
+                                       (ub4)INTEGER(stmtCacheSize)[0],
+                                       sess_mod)); 
 
     (con->con_rodbiCon).parent_roociCon = con;
     con->ociprefetch_rodbiCon           = (*LOGICAL(prefetch) == TRUE) ? 
@@ -1204,8 +1624,10 @@ SEXP rociResFetch(SEXP hdlRes, SEXP numRec)
     res->expand_rodbiRes = TRUE;
   }
 
-  /* allocate output data frame */
-  rodbiResAlloc(res, nrow);
+  /* if lob's in result we cannot use cache as it slows down upto 2X */
+  if (res->res_rodbiRes.lobinres_roociRes)
+    /* allocate output data frame */
+    rodbiResAlloc(res, nrow);
 
   /* state machine */
   while (!hasOutput)
@@ -1213,14 +1635,38 @@ SEXP rociResFetch(SEXP hdlRes, SEXP numRec)
     switch (res->state_rodbiRes)
     {
     case FETCH_rodbiState:
-        /* fetch data */
-        RODBI_CHECK_RES(res, __FUNCTION__, 1, FALSE,
-                        roociFetchData(&(res->res_rodbiRes), &fch_rows, 
-                                       &(res->done_rodbiRes)));
-       res->fchNum_rodbiRes = (int)fch_rows;
-       /* set state */
-       res->fchBeg_rodbiRes = 0;
-      break;
+      /* fetch data */
+      RODBI_CHECK_RES(res, __FUNCTION__, 1, FALSE,
+                      roociFetchData(&(res->res_rodbiRes), &fch_rows, 
+                                     &(res->done_rodbiRes)));
+     res->fchNum_rodbiRes = (int)fch_rows;
+     /* set state */
+     res->fchBeg_rodbiRes = 0;
+     /* if there are more than nrows_roociRes, cache result set in ROracle */
+     if (res->done_rodbiRes)
+     {
+       if (res->pghdl_rodbiRes)
+         res->nrow_rodbiRes += fch_rows;
+       else
+       {
+         if (nrow > 0)
+           fch_rows = nrow;
+         /* allocate output data frame */
+         if (!res->res_rodbiRes.lobinres_roociRes)
+           rodbiResAlloc(res, fch_rows);
+       }
+     }
+     else
+     {
+       /* cache results only when BLOB,CLOB or BFILE not in result set */
+       if (!res->res_rodbiRes.lobinres_roociRes && !res->pghdl_rodbiRes)
+       {
+         ROOCI_MEM_ALLOC(res->pghdl_rodbiRes, res->res_rodbiRes.ncol_roociRes,
+                         sizeof(rodbichdl));
+         res->nrow_rodbiRes += fch_rows;
+       }
+     }
+     break;
 
     case SPLIT_rodbiState:
       rodbiResExpand(res);
@@ -1228,7 +1674,10 @@ SEXP rociResFetch(SEXP hdlRes, SEXP numRec)
       break;
 
     case ACCUM_rodbiState:
-      rodbiResAccum(res);
+      if (res->pghdl_rodbiRes)
+        rodbiResAccumInCache(res);
+      else
+        rodbiResAccum(res);
       break;
 
     case OUTPUT_rodbiState: 
@@ -1888,8 +2337,11 @@ static void rodbiResAlloc(rodbiRes *res, int nrow)
   setAttrib(res->list_rodbiRes, R_NamesSymbol, res->name_rodbiRes);
 
   /* set the state */
-  res->nrow_rodbiRes = nrow;
-  res->rows_rodbiRes = 0;
+  if (!res->pghdl_rodbiRes)
+  {
+    res->nrow_rodbiRes = nrow;
+    res->rows_rodbiRes = 0;
+  }
 } /* end rodbiResAlloc */
 
 /* ---------------------------- rodbiResExpand ---------------------------- */
@@ -1900,19 +2352,22 @@ static void rodbiResExpand(rodbiRes *res)
   int ncol = (res->res_rodbiRes).ncol_roociRes;
   int cid;
 
-  if (!(res->expand_rodbiRes) || (res->nrow_rodbiRes > nrow))
+  if (!(res->expand_rodbiRes) || (res->nrow_rodbiRes > nrow) || (nrow == 0))
     return;
 
   /* compute new size */
   while (res->nrow_rodbiRes <= nrow)
     res->nrow_rodbiRes *= 2;
 
-  /* expand column vectors */
-  for (cid = 0; cid < ncol; cid++)
+  if (!res->pghdl_rodbiRes)
   {
-    SEXP vec = VECTOR_ELT(res->list_rodbiRes, cid);
-    vec = lengthgets(vec, res->nrow_rodbiRes);
-    SET_VECTOR_ELT(res->list_rodbiRes, cid, vec);           /* protects vec */
+    /* expand column vectors */
+    for (cid = 0; cid < ncol; cid++)
+    {
+      SEXP vec = VECTOR_ELT(res->list_rodbiRes, cid);
+      vec = lengthgets(vec, res->nrow_rodbiRes);
+      SET_VECTOR_ELT(res->list_rodbiRes, cid, vec);          /* protects vec */
+    }
   }
 } /* end rodbiResExpand */
 
@@ -1949,15 +2404,21 @@ static void rodbiResAccum(rodbiRes *res)
   /* accumulate data */
   for (cid = 0; cid < (res->res_rodbiRes).ncol_roociRes; cid++)
   {
-    ub1  *dat = (ub1 *)(res->res_rodbiRes).dat_roociRes[cid] 
-                + (fbeg * (res->res_rodbiRes).siz_roociRes[cid]);
+    ub1  *dat = (ub1 *)(res->res_rodbiRes).dat_roociRes[cid]  +
+                       (fbeg * (res->res_rodbiRes).siz_roociRes[cid]);
+    SEXP       vec = VECTOR_ELT(list, cid);
+    cetype_t   enc;
+    ub1        rtyp = RODBI_TYPE_R((res->res_rodbiRes).typ_roociRes[cid]);
+    ub2        etyp = rodbiTypeExt((res->res_rodbiRes).typ_roociRes[cid]);
+
+
+    if (res->res_rodbiRes.form_roociRes[cid] == SQLCS_NCHAR)
+      enc = CE_UTF8;
+    else
+      enc = CE_NATIVE;
 
     for (fcur = fbeg, lcur = rows; fcur < fend; fcur++, lcur++)
     {
-      SEXP  vec  = VECTOR_ELT(list, cid);
-      ub1   rtyp = RODBI_TYPE_R((res->res_rodbiRes).typ_roociRes[cid]);
-      ub2   etyp = rodbiTypeExt((res->res_rodbiRes).typ_roociRes[cid]);
-
       /* copy data */
       if ((res->res_rodbiRes).ind_roociRes[cid][fcur] == OCI_IND_NULL)
       {
@@ -1978,14 +2439,14 @@ static void rodbiResAccum(rodbiRes *res)
           break;
 
         case RODBI_R_RAW:
-        {
-          int  len = 0;
-          SEXP rawVec;
+          {
+            int  len = 0;
+            SEXP rawVec;
 
-          PROTECT(rawVec = NEW_RAW(len));
-          SET_VECTOR_ELT(vec,  lcur, rawVec);
-          UNPROTECT(1);
-        }
+            PROTECT(rawVec = NEW_RAW(len));
+            SET_VECTOR_ELT(vec,  lcur, rawVec);
+            UNPROTECT(1);
+          }
           break;
 
         default:
@@ -2007,84 +2468,64 @@ static void rodbiResAccum(rodbiRes *res)
           break;
 
         case SQLT_STR:
-        {
-          cetype_t    enc;
-
-          if ((res->res_rodbiRes).form_roociRes[cid] == SQLCS_NCHAR)
-            enc = CE_UTF8;
-          else
-            enc = CE_NATIVE;
-
           SET_STRING_ELT(vec, lcur,
                          Rf_mkCharLenCE((char *)dat,
-                           (res->res_rodbiRes).len_roociRes[cid][fcur], enc));
-        }
-        break;
+                         (res->res_rodbiRes).len_roociRes[cid][fcur], enc));
+          break;
 
         case SQLT_BIN:
-        {
-          int  len = (int)((res->res_rodbiRes).len_roociRes[cid][fcur]);
-          SEXP rawVec;
-          int  i;
-          Rbyte *b;
+          {
+            int  len = (int)((res->res_rodbiRes).len_roociRes[cid][fcur]);
+            SEXP rawVec;
+            Rbyte *b;
 
-          PROTECT(rawVec = NEW_RAW(len));
-          b = RAW(rawVec);
-          for (i=0; i<len; i++)
-            b[i] = dat[i];
-          SET_VECTOR_ELT(vec,  lcur, rawVec);
-          UNPROTECT(1);
-        }
-        break;
+            PROTECT(rawVec = NEW_RAW(len));
+            b = RAW(rawVec);
+            memcpy((void *)b, (void *)dat, len);
+            SET_VECTOR_ELT(vec,  lcur, rawVec);
+            UNPROTECT(1);
+          }
+          break;
 
         case SQLT_CLOB:
-        {
-          cetype_t    enc;
+          {
+            /* read LOB data */
+            RODBI_CHECK_RES(res, __FUNCTION__, 2, FALSE,
+                            roociReadLOBData(&(res->res_rodbiRes), &lob_len,
+                                             fcur, cid));
 
-          if ((res->res_rodbiRes).form_roociRes[cid] == SQLCS_NCHAR)
-            enc = CE_UTF8;
-          else
-            enc = CE_NATIVE;
-
-          /* read LOB data */
-          RODBI_CHECK_RES(res, __FUNCTION__, 2, FALSE,
-                          roociReadLOBData(&(res->res_rodbiRes), &lob_len,
-                                           fcur, cid));
-
-          /* make character element */
-          SET_STRING_ELT(vec, lcur, mkCharLenCE((const char *)
+              /* make character element */
+            SET_STRING_ELT(vec, lcur, mkCharLenCE((const char *)
                          ((res->res_rodbiRes).lobbuf_roociRes), lob_len, enc));
-        }
-        break;
+          }
+          break;
 
         case SQLT_BLOB:
         case SQLT_BFILE:
-        {
-          SEXP rawVec;
-          int  i;
-          Rbyte *b;
+          {
+            SEXP rawVec;
+            Rbyte *b;
 
-          /* read LOB data */
-          RODBI_CHECK_RES(res, __FUNCTION__, 3, FALSE,
-                          roociReadBLOBData(&(res->res_rodbiRes), &lob_len,
-                                            fcur, cid));
+            /* read LOB data */
+            RODBI_CHECK_RES(res, __FUNCTION__, 3, FALSE,
+                            roociReadBLOBData(&(res->res_rodbiRes), &lob_len,
+                                              fcur, cid));
 
-          PROTECT(rawVec = NEW_RAW(lob_len));
-          b = RAW(rawVec);
-          for (i=0; i<lob_len; i++)
-            b[i] = (res->res_rodbiRes).lobbuf_roociRes[i];
-          SET_VECTOR_ELT(vec,  lcur, rawVec);
-          UNPROTECT(1);
-        }
-        break;
+            PROTECT(rawVec = NEW_RAW(lob_len));
+            b = RAW(rawVec);
+            memcpy((void *)b, (void *)res->res_rodbiRes.lobbuf_roociRes,
+                   lob_len);
+            SET_VECTOR_ELT(vec,  lcur, rawVec);
+            UNPROTECT(1);
+          }
+          break;
 
         case SQLT_TIMESTAMP:
         case SQLT_TIMESTAMP_TZ:
           RODBI_CHECK_RES(res, __FUNCTION__, 4, FALSE,
-               roociReadDateTimeData(&(res->res_rodbiRes),
+            roociReadDateTimeData(&(res->res_rodbiRes),
                *(OCIDateTime **)dat, &tstm,
-               !strcmp(RODBI_NAME_INT((res->res_rodbiRes).typ_roociRes[cid]),
-                       RODBI_DATE_NM),
+                (res->res_rodbiRes.typ_roociRes[cid] == RODBI_DATE) ? 1 : 0,
                rodbiTypeExt((res->res_rodbiRes).typ_roociRes[cid]) ==
                             SQLT_TIMESTAMP_TZ));
           REAL(vec)[lcur] = tstm;
@@ -2093,7 +2534,7 @@ static void rodbiResAccum(rodbiRes *res)
         case SQLT_INTERVAL_DS:
           RODBI_CHECK_RES(res, __FUNCTION__, 5, FALSE,
                roociReadDiffTimeData(&(res->res_rodbiRes),
-               *(OCIInterval **)dat, &tstm));
+                                     *(OCIInterval **)dat, &tstm));
           REAL(vec)[lcur] = tstm;
           break;
 
@@ -2112,6 +2553,121 @@ static void rodbiResAccum(rodbiRes *res)
   res->fchBeg_rodbiRes = res->fchEnd_rodbiRes;
 } /* end rodbiResAccum */
 
+/* --------------------------- rodbiResAccumInCache ------------------------ */
+
+static void rodbiResAccumInCache(rodbiRes *res)
+{
+  int         rows = res->rows_rodbiRes;
+  int         fbeg = res->fchBeg_rodbiRes;
+  int         fend = res->fchEnd_rodbiRes;
+  int         fcur;
+  int         lcur;
+  int         cid  = 0;
+  double      tstm;
+
+  /* accumulate data */
+  for (cid = 0; cid < (res->res_rodbiRes).ncol_roociRes; cid++)
+  {
+    ub1  *dat = (ub1 *)(res->res_rodbiRes).dat_roociRes[cid]  +
+                       (fbeg * (res->res_rodbiRes).siz_roociRes[cid]);
+    rodbichdl *hdl = (rodbichdl *)0;
+    ub1        rtyp = RODBI_TYPE_R((res->res_rodbiRes).typ_roociRes[cid]);
+    ub2        etyp = rodbiTypeExt((res->res_rodbiRes).typ_roociRes[cid]);
+
+    if (res->pghdl_rodbiRes)
+    {
+       hdl = &res->pghdl_rodbiRes[cid];
+
+      if (!hdl->begpg_rodbichdl)
+        RODBI_CREATE_COL_HDL(hdl, RODBI_MAX_VAR_PAGE_SIZE);
+    }
+
+    for (fcur = fbeg, lcur = rows; fcur < fend; fcur++, lcur++)
+    {
+      /* copy data */
+      if ((res->res_rodbiRes).ind_roociRes[cid][fcur] == OCI_IND_NULL)
+      {
+        switch(rtyp)
+        {
+        case RODBI_R_INT:
+          RODBI_ADD_FIXED_DATA_ITEM(hdl, int, NA_INTEGER);
+          break;
+
+        case RODBI_R_NUM:
+        case RODBI_R_DAT:
+        case RODBI_R_DIF:
+          RODBI_ADD_FIXED_DATA_ITEM(hdl, double, NA_REAL);
+          break;
+
+        case RODBI_R_CHR:
+        case RODBI_R_RAW:
+          RODBI_ADD_VAR_DATA_ITEM(hdl, RODBI_VCOL_FLG_NULL, (void *)0, 0);
+          break;
+
+        default:
+          RODBI_FATAL(__FUNCTION__, 1, rtyp);
+          break;
+        }
+      }
+      else                                                      /* NOT NULL */
+      {
+        switch (etyp)
+        {
+        case SQLT_INT:
+          RODBI_ADD_FIXED_DATA_ITEM(hdl, int, *(int *)dat);
+          break;
+
+        case SQLT_BDOUBLE:
+        case SQLT_FLT:
+          RODBI_ADD_FIXED_DATA_ITEM(hdl, double, *(double *)dat);
+          break;
+
+        case SQLT_STR:
+        case SQLT_BIN:
+          RODBI_ADD_VAR_DATA_ITEM(hdl, RODBI_VCOL_FLG_NOTNULL, (void *)dat,
+                                  res->res_rodbiRes.len_roociRes[cid][fcur]);
+          break;
+
+        case SQLT_CLOB:
+        case SQLT_BLOB:
+        case SQLT_BFILE:
+          RODBI_FATAL(__FUNCTION__, 2, etyp);
+          break;
+
+        case SQLT_TIMESTAMP:
+        case SQLT_TIMESTAMP_TZ:
+          RODBI_CHECK_RES(res, __FUNCTION__, 4, FALSE,
+            roociReadDateTimeData(&(res->res_rodbiRes),
+                *(OCIDateTime **)dat, &tstm,
+                (res->res_rodbiRes.typ_roociRes[cid] == RODBI_DATE) ? 1 : 0,
+               rodbiTypeExt(res->res_rodbiRes.typ_roociRes[cid]) ==
+                            SQLT_TIMESTAMP_TZ));
+          RODBI_ADD_FIXED_DATA_ITEM(hdl, double, tstm);
+          break;
+
+        case SQLT_INTERVAL_DS:
+          RODBI_CHECK_RES(res, __FUNCTION__, 5, FALSE,
+               roociReadDiffTimeData(&(res->res_rodbiRes),
+                                     *(OCIInterval **)dat, &tstm));
+          RODBI_ADD_FIXED_DATA_ITEM(hdl, double, tstm);
+          break;
+
+        default:
+          RODBI_FATAL(__FUNCTION__, 3, etyp);
+          break;
+        }
+      }
+      /* next row */
+      dat += (res->res_rodbiRes).siz_roociRes[cid];
+    }
+  }
+
+  /* set state */
+  res->rows_rodbiRes  += res->fchEnd_rodbiRes - res->fchBeg_rodbiRes;
+  res->fchBeg_rodbiRes = res->fchEnd_rodbiRes;
+} /* end rodbiResAccumInCache */
+
+
 /* ----------------------------- rodbiResTrim ----------------------------- */
 
 static void rodbiResTrim(rodbiRes *res)
@@ -2122,14 +2678,156 @@ static void rodbiResTrim(rodbiRes *res)
   if (res->rows_rodbiRes == res->nrow_rodbiRes)
     return;
 
-  /* trim column vectors to the actual size */
-  for (cid = 0; cid < (res->res_rodbiRes).ncol_roociRes; cid++)
+  if (!res->pghdl_rodbiRes)
   {
-    SEXP vec = VECTOR_ELT(res->list_rodbiRes, cid);
-    vec = lengthgets(vec, res->rows_rodbiRes);
-    SET_VECTOR_ELT(res->list_rodbiRes, cid, vec);           /* protects vec */
+    /* trim column vectors to the actual size */
+    for (cid = 0; cid < (res->res_rodbiRes).ncol_roociRes; cid++)
+    {
+      SEXP vec = VECTOR_ELT(res->list_rodbiRes, cid);
+      vec = lengthgets(vec, res->rows_rodbiRes);
+      SET_VECTOR_ELT(res->list_rodbiRes, cid, vec);          /* protects vec */
+    }
   }
 } /* end rodbiResTrim */
+
+/* ---------------------------- rodbiResPopulate --------------------------- */
+
+static void rodbiResPopulate(rodbiRes *res)
+{
+  SEXP        list = res->list_rodbiRes;
+  int         lcur;
+  int         cid  = 0;
+  ub1        *conv_buf = (ub1 *)0;
+  int         conv_buf_len = 0;
+
+  /* populate data in R from cache */
+  for (cid = 0; cid < res->res_rodbiRes.ncol_roociRes; cid++)
+  {
+    rodbichdl *hdl  = &res->pghdl_rodbiRes[cid];
+    SEXP       vec  = VECTOR_ELT(list, cid);
+    ub1        rtyp = RODBI_TYPE_R(res->res_rodbiRes.typ_roociRes[cid]);
+    ub2        etyp = rodbiTypeExt(res->res_rodbiRes.typ_roociRes[cid]);
+    cetype_t   enc;
+
+    RODBI_REPOSITION_COL_HDL(hdl);
+
+    if (res->res_rodbiRes.form_roociRes[cid] == SQLCS_NCHAR)
+      enc = CE_UTF8;
+    else
+      enc = CE_NATIVE;
+
+    if ((rtyp == RODBI_R_CHR) || (rtyp == RODBI_R_RAW))
+    {
+      int tmplen;
+      RODBI_GET_MAX_VAR_ITEM_LEN(hdl, &tmplen);
+
+      if (tmplen > conv_buf_len)
+       {
+         if (conv_buf)
+           ROOCI_MEM_FREE(conv_buf);
+
+         conv_buf_len = tmplen;
+         ROOCI_MEM_MALLOC(conv_buf, conv_buf_len, sizeof(ub1));
+         if (!conv_buf)
+           RODBI_ERROR(RODBI_ERR_MEMORY_ALC);
+       }
+    }
+
+    for (lcur = 0; lcur < res->rows_rodbiRes; lcur++)
+    {
+      /* copy data */
+      switch (etyp)
+      {
+        case SQLT_INT:
+          RODBI_GET_FIXED_DATA_ITEM(hdl, int, &(INTEGER(vec)[lcur]));
+          break;
+
+        case SQLT_BDOUBLE:
+        case SQLT_FLT:
+        case SQLT_TIMESTAMP:
+        case SQLT_TIMESTAMP_TZ:
+        case SQLT_INTERVAL_DS:
+            RODBI_GET_FIXED_DATA_ITEM(hdl, double, &REAL(vec)[lcur]);
+          break;
+
+        case SQLT_STR:
+          {
+            ub1     *data;
+            int      len;
+
+            RODBI_GET_VAR_DATA_ITEM_BY_REF(hdl, (void **)&data, &len);
+            if (len == RODBI_VCOL_NULL)
+              SET_STRING_ELT(vec, lcur, NA_STRING);
+            else if (len == RODBI_VCOL_NO_REF)
+            {
+              len = RODBI_GET_VAR_DATA_ITEM(hdl,(void *)conv_buf,conv_buf_len);
+              SET_STRING_ELT(vec, lcur,
+                             Rf_mkCharLenCE((char *)conv_buf, len, enc));
+            }
+            else
+            {
+              SET_STRING_ELT(vec,lcur,Rf_mkCharLenCE((char *)data, len, enc));
+            }
+          }
+          break;
+
+        case SQLT_BIN:
+          {
+            SEXP   rawVec;
+            Rbyte *b;
+            ub1   *data;
+            int    len;
+
+            RODBI_GET_VAR_DATA_ITEM_BY_REF(hdl, (void **)&data, &len);
+            if (len == RODBI_VCOL_NULL)
+            {
+              int  len = 0;
+              SEXP rawVec;
+
+              PROTECT(rawVec = NEW_RAW(len));
+              SET_VECTOR_ELT(vec,  lcur, rawVec);
+              UNPROTECT(1);
+            }
+            else if (len == RODBI_VCOL_NO_REF)
+            {
+              len = RODBI_GET_VAR_DATA_ITEM(hdl,(void *)conv_buf,conv_buf_len);
+
+              PROTECT(rawVec = NEW_RAW(len));
+              b = RAW(rawVec);
+              memcpy((void *)b, (void *)conv_buf, len);
+              SET_VECTOR_ELT(vec,  lcur, rawVec);
+              UNPROTECT(1);
+            }
+            else
+            {
+              PROTECT(rawVec = NEW_RAW(len));
+              b = RAW(rawVec);
+              memcpy((void *)b, (void *)data, len);
+              SET_VECTOR_ELT(vec,  lcur, rawVec);
+              UNPROTECT(1);
+            }
+          }
+          break;
+
+        case SQLT_CLOB:
+        case SQLT_BLOB:
+        case SQLT_BFILE:
+          RODBI_FATAL(__FUNCTION__, 1, etyp);
+          break;
+
+        default:
+          RODBI_FATAL(__FUNCTION__, 2, etyp);
+          break;
+      }
+    }
+
+    /* next column */
+    RODBI_DESTROY_COL_HDL(hdl);
+  }
+
+  if (conv_buf)
+    ROOCI_MEM_FREE(conv_buf);
+} /* end rodbiResPopulate */
 
 /* -------------------------- rodbiResDataFrame --------------------------- */
 
@@ -2139,6 +2837,15 @@ static void rodbiResDataFrame(rodbiRes *res)
   SEXP cla; 
   int  ncol = (res->res_rodbiRes).ncol_roociRes;
   int  cid; 
+
+  if (res->pghdl_rodbiRes)
+  {
+    /* allocate output data frame */
+    rodbiResAlloc(res, res->rows_rodbiRes);
+
+    /* copy data from cache to vectors */
+    rodbiResPopulate(res);
+  }
 
   /* make datetime columns a POSIXct */
   for (cid = 0; cid < ncol; cid++)
@@ -2331,6 +3038,23 @@ static void rodbiResTerm(rodbiRes  *res)
                   roociResFree(&(res->res_rodbiRes)));
   (con->con_rodbiCon).num_roociCon--;
 
+  if (res->pghdl_rodbiRes)
+  {
+    int        cid;
+
+    /* Free any temporary cache memory */
+    for (cid = 0; cid < res->res_rodbiRes.ncol_roociRes; cid++)
+    {
+      rodbichdl *hdl  = &res->pghdl_rodbiRes[cid];
+
+      if (hdl->begpg_rodbichdl)
+        RODBI_DESTROY_COL_HDL(hdl);
+    }
+    
+    if (res->pghdl_rodbiRes)
+      ROOCI_MEM_FREE(res->pghdl_rodbiRes);
+  }
+
   ROOCI_MEM_FREE(res);
 } /* end rodbiResTerm */
   
@@ -2509,5 +3233,161 @@ ub1 rodbiTypeInt(ub2 ctyp, sb2 precision, sb1 scale, ub2 size,
 
   return ityp;
 } /* end rodbiTypeInt */
+
+
+static sword RODBI_ADD_VAR_DATA_ITEM(rodbichdl *hdl, ub1 flag,
+                                     void *data, int len)
+{
+  rodbivcol *col;
+  int        tmplen;
+  ub1       *datasrc;
+  ub1       *dat;
+
+  /* extend pages if necessary */
+  tmplen = (len + (int)sizeof(rodbivcol));
+  tmplen = (tmplen/(int)(hdl)->pgsize_rodbichdl) + 1;
+  if (hdl->extpgs_rodbichdl <= tmplen)
+    RODBI_EXTEND_PAGES(hdl, hdl->currpg_rodbichdl, tmplen+4);
+
+  if ((hdl->offset_rodbichdl + sizeof(rodbivcol)) > (hdl)->pgsize_rodbichdl)
+  {
+    hdl->currpg_rodbichdl = hdl->currpg_rodbichdl->next_rodbiPg;
+    hdl->totpgs_rodbichdl++;
+    hdl->extpgs_rodbichdl--;
+    hdl->offset_rodbichdl = 0;
+  }
+
+  if (len <= hdl->pgsize_rodbichdl)
+  {
+    int remaining = hdl->pgsize_rodbichdl - hdl->offset_rodbichdl -
+                    sizeof(rodbivcol);
+    if (remaining <= 5)
+    {
+      flag |= RODBI_VCOL_FLG_ELEM_IN_NEXT_PG;
+      flag |= RODBI_VCOL_FLG_ELEM_REF_ACCESS;
+    }
+    else if(remaining >= len)
+      flag |= RODBI_VCOL_FLG_ELEM_REF_ACCESS;
+  }
+
+  col=(rodbivcol *)&(hdl->currpg_rodbichdl->buf_rodbiPg[hdl->offset_rodbichdl]);
+
+  /* Keep data in single page to avoid memcpy during populate */
+  col->len_rodbivcol    = (len);
+  col->flag_rodbivcol   = flag;
+  if (flag & RODBI_VCOL_FLG_ELEM_IN_NEXT_PG)
+  {
+    hdl->totpgs_rodbichdl++;
+    hdl->extpgs_rodbichdl--;
+    hdl->offset_rodbichdl = 0;
+    hdl->currpg_rodbichdl = hdl->currpg_rodbichdl->next_rodbiPg;
+    dat = (ub1 *)&(hdl->currpg_rodbichdl->buf_rodbiPg[hdl->offset_rodbichdl]);
+  }
+  else
+  {
+    hdl->offset_rodbichdl += offsetof(struct rodbivcol, dat_rodbivcol);
+    dat    = (ub1 *)&col->dat_rodbivcol[0];
+  }
+
+  if (flag & RODBI_VCOL_FLG_NULL)
+  {
+    /* align offset to 4 or 8 byte boundary for next item to be added */
+    hdl->offset_rodbichdl += (sizeof(char *) - 
+                              (hdl->offset_rodbichdl % sizeof(char *)));
+    return 0;
+  }
+
+  hdl->actual_maxlen_rodbichdl = (hdl->actual_maxlen_rodbichdl > len ?
+                                  hdl->actual_maxlen_rodbichdl : len);
+  tmplen = len;
+  datasrc = (ub1 *)data;
+  while (tmplen > 0)
+  {
+    int nbytes = ((hdl)->pgsize_rodbichdl - hdl->offset_rodbichdl) > tmplen ?
+                        tmplen :
+                        ((hdl)->pgsize_rodbichdl - hdl->offset_rodbichdl);
+    memcpy(dat, datasrc, nbytes);
+    tmplen -= nbytes;
+    datasrc += nbytes;
+    if (tmplen)
+    {
+      hdl->currpg_rodbichdl = hdl->currpg_rodbichdl->next_rodbiPg;
+      hdl->totpgs_rodbichdl++;
+      hdl->extpgs_rodbichdl--;
+      hdl->offset_rodbichdl = 0;
+
+      dat = &hdl->currpg_rodbichdl->buf_rodbiPg[0];
+    }
+    else
+      hdl->offset_rodbichdl += nbytes;
+  }
+
+  /* align offset to 4 or 8 byte boundary for next item to be added */
+  hdl->offset_rodbichdl += (sizeof(char *) - 
+                            (hdl->offset_rodbichdl % sizeof(char *)));
+  return 0;
+} /* RODBI_ADD_VAR_DATA_ITEM */
+
+static int RODBI_GET_VAR_DATA_ITEM(rodbichdl *hdl, void *data, int len)
+{
+  rodbivcol *col;
+  int        tmplen;
+  ub1       *dat = (ub1 *)data;
+  ub1       *datsrc;
+
+  if ((hdl->offset_rodbichdl + sizeof(rodbivcol)) > (hdl)->pgsize_rodbichdl)
+  {
+    if (hdl->currpg_rodbichdl->next_rodbiPg)
+      hdl->currpg_rodbichdl = hdl->currpg_rodbichdl->next_rodbiPg;
+    else
+      return ROOCI_DRV_ERR_NO_DATA;
+    hdl->offset_rodbichdl = 0;
+  }
+  col=(rodbivcol *)&(hdl->currpg_rodbichdl->buf_rodbiPg[hdl->offset_rodbichdl]);
+  tmplen = col->len_rodbivcol;
+  if (col->flag_rodbivcol & RODBI_VCOL_FLG_ELEM_IN_NEXT_PG)
+  {
+    hdl->offset_rodbichdl = 0;
+    hdl->currpg_rodbichdl = hdl->currpg_rodbichdl->next_rodbiPg;
+    datsrc = (ub1 *)&hdl->currpg_rodbichdl->buf_rodbiPg[hdl->offset_rodbichdl];
+  }
+  else
+  {
+    hdl->offset_rodbichdl += offsetof(struct rodbivcol, dat_rodbivcol);
+    datsrc = &col->dat_rodbivcol[0];
+  }
+
+  if (col->flag_rodbivcol & RODBI_VCOL_FLG_NULL)
+  {
+    /* align offset to 4 or 8 byte boundary to access next item */
+    hdl->offset_rodbichdl += (sizeof(char *) - 
+                              (hdl->offset_rodbichdl % sizeof(char *)));
+    return RODBI_VCOL_NULL;
+  }
+
+  while (tmplen > 0)
+  {
+    int nbytes = ((hdl)->pgsize_rodbichdl - hdl->offset_rodbichdl) > tmplen ?
+                    tmplen : ((hdl)->pgsize_rodbichdl - hdl->offset_rodbichdl);
+    memcpy(dat, datsrc, nbytes);
+    tmplen -= nbytes;
+    dat += nbytes;
+    if (tmplen)
+    {
+      hdl->currpg_rodbichdl = hdl->currpg_rodbichdl->next_rodbiPg;
+      hdl->offset_rodbichdl = 0;
+      datsrc = &hdl->currpg_rodbichdl->buf_rodbiPg[0];
+    }
+    else
+      hdl->offset_rodbichdl += nbytes;
+  }
+
+  /* align offset to 4 or 8 byte boundary to access next item */
+  hdl->offset_rodbichdl += (sizeof(char *) - 
+                            (hdl->offset_rodbichdl % sizeof(char *)));
+
+  return (col->len_rodbivcol);
+} /* RODBI_GET_VAR_DATA_ITEM */
+
 
 /* end of file rodbi.c */
