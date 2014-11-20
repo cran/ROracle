@@ -11,6 +11,17 @@ All rights reserved.*/
    NOTES
 
    MODIFIED   (MM/DD/YY)
+   ssjaiswa    09/12/14 - add bulk_write support field nrows_write_roociRes
+   rpingte     05/21/14 - add time zone to connection
+   rpingte     05/02/14 - maintain date, time stamp, time stamp with time zone
+                          and time stamp with local time zone as string
+   rpingte     04/24/14 - remove epoch, temp_ts, diff, and inited unused fields
+                          from roociRes
+   rpingte     04/09/14 - change bsiz_roociRes is sb4
+   rpingte     04/03/14 - remove tzdiff unused field
+   rpingte     04/01/14 - remove secs_UTC_roociCon
+   rpingte     03/12/14 - add boolean for TX epoch initialization
+   rpingte     03/06/14 - lobinres_roociRes -> nocache_roociRes
    rpingte     01/09/14 - Copyright update
    rpingte     11/18/13 - add lobinres_roociRes
    rpingte     10/24/13 - Cache resultset in memory before transferring to R to
@@ -105,6 +116,17 @@ All rights reserved.*/
 #define ROOCI_QRY_NATIVE (ub1)0x02
 #define ROOCI_QRY_LATIN1 (ub1)0x04
 
+/*
+   Date and time string representation is: YYYY-MM-DD HH24:MM:SSXFF
+
+   Fixed value will be: "YYYY-MM-DD HH:MM:SS.FFFFFFFFF"
+
+   NOTE: Date will not have fdractional seconds and represents the maximum
+         length for Date, timestamp, timestamp with time zone and
+         timestamp with local time zone.
+*/
+#define ROOCI_DATE_TIME_STR_LEN 30
+
 /* forward declarations */
 struct roociCon;
 struct roociRes;
@@ -167,8 +189,6 @@ struct roociCon
   boolean            timesten_rociCon;          /* TIMESTEN connection flag */
   sb4                nlsmaxwidth_roociCon;    /* NLS max width of character */
   roociResAccess     acc_roociCon;       /* sequential traversal of results */
-  OCIInterval       *tzdiff_roociCon;    /* interval from UTC to session TZ */
-  double             secs_UTC_roociCon;     /* LocalTZ, UTC diff in seconds */
   /* TODO: add mutex when R is thread-safe */
 };
 typedef struct roociCon roociCon;
@@ -186,7 +206,7 @@ struct roociRes
   void           **bdat_roociRes;                      /* Bind DATa buffers */
   sb2            **bind_roociRes;                 /* Bind INDicator buffers */
   ub2            **alen_roociRes;                     /* Bind actual length */
-  ub2             *bsiz_roociRes;              /* Bind buffer maximum SIZes */
+  sb4             *bsiz_roociRes;              /* Bind buffer maximum SIZes */
   ub2             *btyp_roociRes;                      /* Bind buffer TYPes */
   /* ------------------------------- DEFINE ------------------------------- */
   int              ncol_roociRes;                      /* Number of COLumns */
@@ -198,13 +218,10 @@ struct roociRes
   sb4             *siz_roociRes;                    /* buffer maximum SIZes */
   ub1             *lobbuf_roociRes;                      /* temp LOB BUFfer */
   size_t           loblen_roociRes;               /* temp LOB buffer LENgth */
-  boolean          lobinres_roociRes;   /* TRUE - BLOB,CLOB,BFILE in result */
+  boolean          nocache_roociRes;   /* TRUE - do not cache result in mem */
   boolean          prefetch_roociRes;    /* TRUE - use OCI prefetch buffers */
   int              nrows_roociRes;     /* number of rows to fetch at a time */
-  OCIDateTime     *epoch_roociRes;             /* epoch from 1970/01/01 UTC */
-  OCIDateTime     *epoch_tz_roociRes;          /* epoch from 1970/01/01 UTC */
-  OCIDateTime     *temp_ts_roociRes;              /* temp TS for conversion */
-  OCIInterval     *diff_roociRes; /* time interval difference from 1970 UTC */
+  int              nrows_write_roociRes; /* # of elements to bind at a time */
   /* TODO: add mutex when R is thread-safe */
 };
 typedef struct roociRes roociRes;
@@ -261,7 +278,7 @@ sword roociRollbackCon(roociCon *pcon);
 /* Initialize result set oci context */
 sword roociInitializeRes(roociCon *pcon, roociRes *pres, text *qry, int qrylen,
                          ub1 qry_encoding, ub2 *styp, boolean prefetch,
-                         int bulk_read);
+                         int bulk_read, int bulk_write);
 
 /* ----------------------------- roociExecTTOpt --------------------------- */
 /* Execute TimesTen optimizer hints */
@@ -307,12 +324,13 @@ sword roociReadBLOBData(roociRes *pres, int *lob_len, int rowpos, int cid);
 
 /* -------------------------- rociReadDateTimeData ------------------------- */
 /* Read DateTime data */
-sword roociReadDateTimeData(roociRes *pres, OCIDateTime *tstm, double *date,
-                            boolean isDate, boolean isLTZ);
+sword roociReadDateTimeData(roociRes *pres, OCIDateTime *tstm, char *date_time,
+                            ub4 *date_time_len, boolean isDate);
 
 /* ------------------------- roociWriteDateTimeData ------------------------ */
 /* Write DateTime data */
-sword roociWriteDateTimeData(roociRes *pres, OCIDateTime *tstm, double date);
+sword roociWriteDateTimeData(roociRes *pres, OCIDateTime *tstm,
+                             const char *date_time, size_t date_time_len);
 
 /* -------------------------- rociReadDiffTimeData ------------------------- */
 /* Read DiffTime data */

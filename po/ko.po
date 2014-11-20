@@ -1,0 +1,49 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr "Project-Id-Version: PACKAGE VERSION\nReport-Msgid-Bugs-To: \nPOT-Creation-Date: 2012-05-10 14:03-0400\nPO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\nLast-Translator: Oracle\nLanguage-Team: Oracle\nLanguage: \nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\n"
+
+#: rodbi.c:96
+msgid "invalid driver"
+msgstr "부적합한 드라이버"
+
+#: rodbi.c:97
+msgid "invalid connection"
+msgstr "부적합한 접속"
+
+#: rodbi.c:98
+msgid "invalid result set"
+msgstr "부적합한 결과 집합"
+
+#: rodbi.c:99
+msgid "memory could not be allocated"
+msgstr "메모리를 할당할 수 없습니다."
+
+#: rodbi.c:100
+msgid "bind data has too many rows"
+msgstr "바인드 데이터에 행이 너무 많습니다."
+
+#: rodbi.c:101
+msgid "data does not match binds"
+msgstr "데이터가 바인드와 일치하지 않습니다."
+
+#: rodbi.c:102
+msgid "bind data is empty"
+msgstr "바인드 데이터가 비어 있습니다."
+
+#: rodbi.c:103
+msgid "unsupported bind type"
+msgstr "지원되지 않는 바인드 유형입니다."
+
+#: rodbi.c:104
+msgid "unsupported column type"
+msgstr "지원되지 않는 열 유형"
+
+#: rodbi.c:105
+#, c-format
+msgid "ROracle internal error [%s, %d, %d]"
+msgstr "ROracle 내부 오류 [%s, %d, %d]"

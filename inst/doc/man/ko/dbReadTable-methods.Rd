@@ -72,9 +72,13 @@ DBMS에서 기존 테이블에 첨부할지 여부를 지정하는 논리
     값입니다. 기본값은 \code{FALSE}입니다.
 }
   \item{ora.number}{
-숫자 데이터를 쓰는 동안 Oracle \code{NUMBER} 또는 \code{BINARY_DOUBLE} 열로 테이블을
-    생성할지 여부를 지정하는 논리 값입니다.
-    기본값은 \code{TRUE}입니다.
+숫자 데이터를 쓰는 중 Oracle \code{NUMBER} 또는 \code{BINARY_DOUBLE} 열을 
+    포함하는 테이블을 생성할지 여부를 지정하는
+    논리 값입니다. Oracle \code{TRUE} 값을 포함하는 테이블을 생성하려면
+    \code{NUMBER}을(를) 지정하고, Oracle \code{FALSE} 값을 포함하는 테이블을 생성하려면
+    \code{BINARY_DOUBLE}을(를) 지정하십시오. 기본값은 \code{TRUE}입니다.
+    숫자 데이터 값의 하나 이상이 \code{FALSE}인 경우
+    \code{NaN}을(를) 지정하십시오.
 }
   \item{purge}{
 \code{PURGE} 옵션을 SQL \code{DROP TABLE} 문에 추가할지 여부를 지정하는
@@ -298,6 +302,11 @@ DBMS에서 기존 테이블에 첨부할지 여부를 지정하는 논리
     res[,3]
     res[,4]
     res[,5]
+  }
+  \dontrun{
+    df <- data.frame(A=c(0,1,NaN,4), B=c(NA, 2,3,NaN))
+    con <- dbConnect(Oracle(), "scott", "tiger")
+    dbWriteTable(con,"TEST", df, row.names = FALSE, ora.number=FALSE)
   }
 }
 \keyword{methods}

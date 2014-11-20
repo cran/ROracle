@@ -73,8 +73,12 @@ Ein logischer Wert, der angibt, ob der Wert an eine vorhandene Tabelle
 }
   \item{ora.number}{
 Ein logischer Wert, der angibt, ob eine Tabelle mit Oracle
-    \code{NUMBER}- oder \code{BINARY_DOUBLE}-Spalten beim Schreiben von numerischen Daten
-    erstellt werden soll. Der Standardwert ist \code{TRUE}.
+    \code{NUMBER}- oder \code{BINARY_DOUBLE}-Spalten erstellt werden soll, während numerische 
+    Daten geschrieben werden. Geben Sie \code{TRUE} an, um eine Tabelle mit Oracle \code{NUMBER}- 
+    Werten zu erstellen, oder geben Sie \code{FALSE} an, um eine Tabelle mit Oracle
+    \code{BINARY_DOUBLE}-Werten zu erstellen. Der Standardwert ist \code{TRUE}.
+    Geben Sie \code{FALSE} an, wenn mindestens ein numerischer Datenwert 
+    \code{NaN} ist.
 }
   \item{purge}{
 Ein logischer Wert, der angibt, ob die \code{PURGE}-Option zu der
@@ -301,6 +305,11 @@ Ein \code{data.frame} im Fall von \code{dbReadTable};
     res[,3]
     res[,4]
     res[,5]
+  }
+  \dontrun{
+    df <- data.frame(A=c(0,1,NaN,4), B=c(NA, 2,3,NaN))
+    con <- dbConnect(Oracle(), "scott", "tiger")
+    dbWriteTable(con,"TEST", df, row.names = FALSE, ora.number=FALSE)
   }
 }
 \keyword{methods}

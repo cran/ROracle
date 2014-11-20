@@ -11,6 +11,21 @@ All rights reserved.*/
    NOTES
 
    MODIFIED   (MM/DD/YY)
+   ssjaiswa    09/10/14 - Add bulk_write
+   rpingte     06/24/14 - reset stmt hdl
+   rpingte     05/26/14 - add time zone to connection
+   rpingte     05/24/14 - maintain date, time stamp, time stamp with time zone
+                          and time stamp with local time zone as string
+   rpingte     05/24/14 - remove epoch, temp_ts, diff, and inited unused fields
+                          from roociRes
+   rpingte     05/22/14 - reset stmt hdl
+   rpingte     05/13/14 - fix compiler warning on Sparc
+   rpingte     04/21/14 - use SQLT_LVC & SQLT_LVB for large bind data
+   rpingte     04/12/14 - add more diagnostics for AIX srg
+   rpingte     04/03/14 - remove tzdiff unused field
+   rpingte     04/01/14 - remove secs_UTC_roociCon
+   rpingte     03/12/14 - add boolean for TX epoch initialization
+   rpingte     03/06/14 - lobinres_roociRes -> nocache_roociRes
    rpingte     02/12/14 - OCI_ATTR_DRIVER_NAME available only in 11g
    rpingte     01/09/14 - Copyright update
    rpingte     11/18/13 - add lobinres_roociRes
@@ -297,121 +312,6 @@ static int roociNewResID(roociCon *pcon)
   return resID;
 } /* end roociNewResID */
 
-/* ---------------------------- roociAllocateTZdescriptors ---------------- */
-
-static sword roociAllocateTZdescriptors(roociRes *pres, boolean isTZ)
-{
-  sword       rc    = OCI_SUCCESS;
-  roociCon   *pcon  = pres->con_roociRes;
-  roociCtx   *pctx  = pcon->ctx_roociCon;
-  void       *temp  = NULL;    /* pointer to remove strict-aliasing warning */
-
-  /* allocate POSIXct beginning datetime descriptor and interval descriptor */
-  if ((!pres->epoch_roociRes) && (!pres->diff_roociRes) &&
-      (!pres->temp_ts_roociRes))
-  {
-    rc = OCIDescriptorAlloc(pctx->env_roociCtx, (void **)&temp,
-                            OCI_DTYPE_TIMESTAMP, 0, NULL);
-    if (rc == OCI_ERROR)
-      return rc;
-    pres->epoch_roociRes  = temp;
-
-    temp = NULL;
-    rc = OCIDescriptorAlloc(pctx->env_roociCtx, (void **)&temp,
-                            OCI_DTYPE_INTERVAL_DS, 0, NULL);
-    if (rc == OCI_ERROR) 
-      return rc;
-    pres->diff_roociRes = temp;
-  
-    temp = NULL;   
-    rc = OCIDescriptorAlloc(pctx->env_roociCtx, (void **)&temp,
-                            OCI_DTYPE_TIMESTAMP, 0, NULL);
-    if (rc == OCI_ERROR) 
-      return rc;   
-    pres->temp_ts_roociRes = temp;
-
-    /* construct the beginning of 1970, this is in local time */
-    rc = OCIDateTimeFromText(pctx->env_roociCtx, pcon->err_roociCon,
-                             (const oratext *)"01-01-1970",
-                             (ub4)(sizeof("01-01-1970") - 1),
-                             (const oratext *)"DD-MM-YYYY",
-                             (ub4)(sizeof("DD-MM-YYYY") - 1),
-                             (const oratext *)"",
-                             0, pres->epoch_roociRes);
-    if (rc == OCI_ERROR)
-      return rc;
-  }
-
-  /*
-  ** allocate an interval for time difference between UTC and session's
-  ** timezone - this is required for sending and receiving OCIDateTime
-  ** values
-  */
-  if (!pcon->tzdiff_roociCon)
-  {
-    sb1          tzhr;
-    sb1          tzmm;
-    OCIDateTime *systime;
-
-    temp  = NULL;
-    rc = OCIDescriptorAlloc(pctx->env_roociCtx, (void **)&temp,
-                            OCI_DTYPE_INTERVAL_DS, 0, NULL);
-    if (rc == OCI_ERROR)
-      return rc;
-    pcon->tzdiff_roociCon = temp;
-
-    temp  = NULL;
-    rc = OCIDescriptorAlloc(pctx->env_roociCtx, (void **)&temp,
-                           OCI_DTYPE_TIMESTAMP_TZ, 0, NULL);
-    if (rc == OCI_ERROR)
-      return rc;
-    systime = temp;
-
-    /* get the current datetime containing the OCI environment's timezone */
-    rc = OCIDateTimeSysTimeStamp(pctx->env_roociCtx, pcon->err_roociCon,
-                                 systime);
-    if (rc == OCI_ERROR)
-    {
-      OCIDescriptorFree (systime, OCI_DTYPE_TIMESTAMP_TZ);
-      return rc;
-    }
-
-    /* get the offsets for the OCI environment's timezone */
-    rc = OCIDateTimeGetTimeZoneOffset(pctx->env_roociCtx, pcon->err_roociCon,
-                                      systime, &tzhr, &tzmm);
-    OCIDescriptorFree (systime, OCI_DTYPE_TIMESTAMP_TZ);
-    if (rc == OCI_ERROR)
-      return rc;
-
-    /* create the interval */
-    rc = OCIIntervalSetDaySecond(pctx->env_roociCtx, pcon->err_roociCon,
-                                 0, (sb4)tzhr, (sb4)tzmm, 0, 0,
-                                 pcon->tzdiff_roociCon);
-    if (rc == OCI_ERROR)
-     return rc;
-
-    /* this may be a positive or a negative value depending on local time */
-    pcon->secs_UTC_roociCon = ((double)tzhr * 3600.0) + ((double)tzmm * 60.0);
-  }
-
-  if (isTZ && !pres->epoch_tz_roociRes)
-  {
-    temp = NULL;
-    rc = OCIDescriptorAlloc(pctx->env_roociCtx, (void **)&temp,
-                            OCI_DTYPE_TIMESTAMP_TZ, 0, NULL);
-    if (rc == OCI_ERROR)
-      return rc;
-    pres->epoch_tz_roociRes  = temp;
-    
-    /* construct the beginning of 1970 (in the UTC timezone) */
-    rc = OCIDateTimeConstruct(pctx->env_roociCtx, pcon->err_roociCon,
-                              pres->epoch_tz_roociRes,
-                              1970, 1, 1, 0, 0, 0, 0, (OraText*)"UTC", 3);
-  }
-
-  return rc;
-} /* end of roociAllocateTZdescriptors */
-
 /* ----------------------------- roociInitializeCtx ----------------------- */
 
 sword roociInitializeCtx (roociCtx *pctx, void *epx, boolean interrupt_srv)
@@ -560,14 +460,14 @@ sword roociInitializeCon(roociCtx *pctx, roociCon *pcon,
   /* set connection string */
   ROOCI_MEM_ALLOC(pcon->cstr_roociCon, (strlen(cstr) + 1), sizeof(char));
   if (!(pcon->cstr_roociCon))
-    return ROOCI_DRV_ERR_CON_FAIL;
+    return ROOCI_DRV_ERR_MEM_FAIL;
   
   memcpy(pcon->cstr_roociCon, cstr, strlen(cstr));
 
   /* allocate result vector */
   ROOCI_MEM_ALLOC(pcon->res_roociCon, ROOCI_RES_DEF, sizeof(roociRes *));
   if (!(pcon->res_roociCon))
-    return ROOCI_DRV_ERR_CON_FAIL;
+    return ROOCI_DRV_ERR_MEM_FAIL;
 
   /* get character maximum byte size */
   rc = OCINlsNumericInfoGet(pctx->env_roociCtx, pcon->err_roociCon, 
@@ -596,17 +496,17 @@ sword roociGetError(roociCtx *pctx, roociCon *pcon, sb4 *errNum, text *errMsg)
   sword rc = OCI_ERROR;  
 
   /* if error handle defined */
-  if (pcon->err_roociCon)
+  if (pcon && pcon->err_roociCon)
   {
     rc =  OCIErrorGet(pcon->err_roociCon, 1, (text *)NULL, errNum, 
                       errMsg, ROOCI_ERR_LEN, (ub4)OCI_HTYPE_ERROR);
   } 
-  else if (pctx->env_roociCtx)             /* if environment handle defined */
+  else if (pctx && pctx->env_roociCtx)      /* if environment handle defined */
   {
     rc =  OCIErrorGet(pctx->env_roociCtx, 1, (text *)NULL, errNum, 
                       errMsg, ROOCI_ERR_LEN, (ub4)OCI_HTYPE_ENV);
   }
-  
+
   if (*errNum == 1403 || rc == OCI_NO_DATA)                /* no data found */ 
   {
     *errNum = 0;
@@ -665,7 +565,7 @@ sword roociGetConInfo(roociCon *pcon, text **user, ub4 *userLen,
 
 sword roociInitializeRes(roociCon *pcon, roociRes *pres, text *qry, int qrylen,
                          ub1 qry_encoding, ub2 *styp, boolean prefetch,
-                         int rows_per_fetch)
+                         int rows_per_fetch, int rows_per_write)
 {
   sword rc = OCI_ERROR;
 
@@ -676,8 +576,9 @@ sword roociInitializeRes(roociCon *pcon, roociRes *pres, text *qry, int qrylen,
   else
     pres->resID_roociRes = rc;
 
-  pres->prefetch_roociRes = prefetch;
-  pres->nrows_roociRes    = rows_per_fetch;
+  pres->prefetch_roociRes    = prefetch;
+  pres->nrows_roociRes       = rows_per_fetch;
+  pres->nrows_write_roociRes = rows_per_write;
 
   if (qry_encoding == ROOCI_QRY_NATIVE)
     /* prepare statement */
@@ -746,6 +647,7 @@ sword roociInitializeRes(roociCon *pcon, roociRes *pres, text *qry, int qrylen,
   {
     OCIStmtRelease(pres->stm_roociRes, pcon->err_roociCon,
                   (OraText *)NULL, 0, OCI_DEFAULT);
+    pres->stm_roociRes = NULL;
     return rc;
   }
 
@@ -757,6 +659,7 @@ sword roociInitializeRes(roociCon *pcon, roociRes *pres, text *qry, int qrylen,
   {
     OCIStmtRelease(pres->stm_roociRes, pcon->err_roociCon,
                    (OraText *)NULL, 0, OCI_DEFAULT);
+    pres->stm_roociRes = NULL;
     return rc;
   }
 
@@ -861,14 +764,6 @@ sword roociTerminateCon(roociCon *pcon, boolean validCon)
 
     /* free result vector */
     ROOCI_MEM_FREE(pcon->res_roociCon);
-  }
-
-  /* free tzdiff interval descriptor */
-  if (pcon->tzdiff_roociCon)
-  {
-    rc = OCIDescriptorFree(pcon->tzdiff_roociCon, OCI_DTYPE_INTERVAL_DS);
-    if (rc == OCI_ERROR)
-      return rc;
   }
 
   /* release service context session */
@@ -984,16 +879,15 @@ sword roociBindData(roociRes *pres, ub4 bufPos, ub1 form_of_use)
   rc = OCIBindByPos(pres->stm_roociRes, &bndp, pcon->err_roociCon, bufPos,
                     (void *)pres->bdat_roociRes[bufPos-1],
                     pres->bsiz_roociRes[bufPos-1],
-                    pres->btyp_roociRes[bufPos-1], 
+                    pres->btyp_roociRes[bufPos-1],
                     pres->bind_roociRes[bufPos-1],
-                    pres->alen_roociRes[bufPos-1], NULL, (ub4)0, NULL,
-                    OCI_DEFAULT);
+                    ((pres->btyp_roociRes[bufPos-1] == SQLT_LVC) ||
+                     (pres->btyp_roociRes[bufPos-1] == SQLT_LVB))
+                                               ? 0 :
+                                                 pres->alen_roociRes[bufPos-1],
+                    NULL, (ub4)0, NULL, OCI_DEFAULT);
   if (rc == OCI_ERROR)
     return rc;
-  else
-    rc = OCIBindArrayOfStruct(bndp, pcon->err_roociCon,
-                              pres->bsiz_roociRes[bufPos-1],
-                              sizeof(sb2), sizeof(ub2), 0);
 
   if (rc == OCI_ERROR)
     return rc;
@@ -1064,7 +958,7 @@ sword roociResDefine(roociRes *pres)
         (etyp == SQLT_BFILE))
     {
       dat = (ub1 *)pres->dat_roociRes[cid];
-      pres->lobinres_roociRes = TRUE;
+      pres->nocache_roociRes = TRUE;
 
       for (fcur = 0; fcur < nrows; fcur++)
       {
@@ -1079,7 +973,7 @@ sword roociResDefine(roociRes *pres)
     }
 
     /* allocate OCIDateTime locators */
-    if ((etyp == SQLT_TIMESTAMP_TZ) ||
+    if ((etyp == SQLT_TIMESTAMP_LTZ) ||
         (etyp == SQLT_TIMESTAMP)    ||
         (etyp == SQLT_INTERVAL_DS))
     {
@@ -1099,7 +993,7 @@ sword roociResDefine(roociRes *pres)
         }
         else
           rc = OCIDescriptorAlloc(pctx->env_roociCtx, (void **)tsdt,
-                 (etyp == SQLT_TIMESTAMP_TZ) ?  OCI_DTYPE_TIMESTAMP_TZ :
+                 (etyp == SQLT_TIMESTAMP_LTZ) ?  OCI_DTYPE_TIMESTAMP_LTZ :
                  (etyp == SQLT_TIMESTAMP) ? OCI_DTYPE_TIMESTAMP :
                                             OCI_DTYPE_INTERVAL_DS, 0, NULL);
         if (rc == OCI_ERROR)
@@ -1267,7 +1161,7 @@ sword roociDescCol(roociRes *pres, ub4 colId, ub2 *extTyp, oratext **colName,
         break;
 
       case SQLT_TIMESTAMP:
-      case SQLT_TIMESTAMP_TZ:
+      case SQLT_TIMESTAMP_LTZ:
         pres->siz_roociRes[colId-1] = sizeof(OCIDateTime *);
         break;
 
@@ -1385,7 +1279,7 @@ sword roociReadLOBData(roociRes *pres, int *lob_len, int rowpos, int cid)
   OCILobLocator   *lob_loc;
   roociCon        *pcon = pres->con_roociRes;
 
-  lob_loc = *(OCILobLocator **)(pres->dat_roociRes[cid] +
+  lob_loc = *(OCILobLocator **)((ub1 *)pres->dat_roociRes[cid] +
                                 (rowpos * pres->siz_roociRes[cid]));
 
   /* get lob length */
@@ -1393,7 +1287,13 @@ sword roociReadLOBData(roociRes *pres, int *lob_len, int rowpos, int cid)
                          lob_loc, &char_len);
   if (rc == OCI_ERROR)
     return rc;
-    
+
+  if (char_len == 0)
+  {
+    *lob_len = (int)char_len;
+    return rc;
+  }
+
   /* compute buffer size in bytes */
   len = char_len * (oraub8)(pcon->nlsmaxwidth_roociCon);
 
@@ -1433,7 +1333,7 @@ sword roociReadBLOBData(roociRes *pres, int *lob_len, int rowpos, int cid)
   roociCon        *pcon = pres->con_roociRes;
   ub2              exttye = rodbiTypeExt(pres->typ_roociRes[cid]);
 
-  lob_loc = *(OCILobLocator **)(pres->dat_roociRes[cid] +
+  lob_loc = *(OCILobLocator **)((ub1 *)pres->dat_roociRes[cid] +
                                 (rowpos * pres->siz_roociRes[cid]));
 
   if (exttye == SQLT_BFILE)
@@ -1449,7 +1349,13 @@ sword roociReadBLOBData(roociRes *pres, int *lob_len, int rowpos, int cid)
                          lob_loc, &len);
   if (rc == OCI_ERROR)
     return rc;
-    
+
+  if (len == 0)
+  {
+    *lob_len = (int)len;
+    return rc;
+  }
+
   if (!pres->lobbuf_roociRes || pres->loblen_roociRes < (size_t)len)
   {
     if (pres->lobbuf_roociRes)
@@ -1485,113 +1391,28 @@ sword roociReadBLOBData(roociRes *pres, int *lob_len, int rowpos, int cid)
 
 /* ------------------------- roociReadDateTimeData ------------------------ */
 
-sword roociReadDateTimeData(roociRes *pres, OCIDateTime *tstm, double *date,
-                            boolean isDateCol, boolean isTZ)
+sword roociReadDateTimeData(roociRes *pres, OCIDateTime *tstm,
+                            char *date_time, ub4 *date_time_len,
+                            boolean isDate)
 {
-  sword          rc = OCI_ERROR;
-  roociCon      *pcon = pres->con_roociRes;
-  roociCtx      *pctx = pcon->ctx_roociCon;
-  sb4            dy = 0;
-  sb4            hr = 0;
-  sb4            mm = 0;
-  sb4            ss = 0;
-  sb4            fsec = 0;
-
-  /* allocate POSIXct beginning datetime descriptor and interval descriptor */
-  rc = roociAllocateTZdescriptors(pres, isTZ);
-  if (rc == OCI_ERROR)
-    return rc;
-
-  if (isTZ)
-  {
-    /* compute the difference from the epoch */
-    rc = OCIDateTimeSubtract(pctx->env_roociCtx, pcon->err_roociCon,
-                             tstm, pres->epoch_tz_roociRes,
-                             pres->diff_roociRes);
-
-
-    /* extract interval components */
-    rc = OCIIntervalGetDaySecond(pctx->env_roociCtx, pcon->err_roociCon, &dy,
-                                 &hr, &mm, &ss, &fsec, pres->diff_roociRes);
-
-    if (rc == OCI_ERROR)
-      return rc;
-
-    /* number of seconds since the beginning of 1970 in UTC timezone */
-    ROOCI_SECONDS_FROM_DAYS(date, dy, hr, mm, ss, 0);
-
-    *date += (double)fsec/1e9;
-  }
-  else
-  {
-    rc = OCIDateTimeConvert(pctx->env_roociCtx, pcon->err_roociCon,
-                            tstm, pres->temp_ts_roociRes);
-    if (rc == OCI_ERROR)
-      return rc;
-
-    /* compute the difference from the epoch */
-    rc = OCIDateTimeSubtract(pctx->env_roociCtx, pcon->err_roociCon,
-                             pres->temp_ts_roociRes, pres->epoch_roociRes,
-                             pres->diff_roociRes);
-
-    /* extract interval components */
-    rc = OCIIntervalGetDaySecond(pctx->env_roociCtx, pcon->err_roociCon,
-                                 &dy, &hr, &mm, &ss, &fsec,
-                                 pres->diff_roociRes);
-    if (rc == OCI_ERROR)
-      return rc;
-
-    /* number of seconds since the beginning of 1970 in UTC timezone */
-    ROOCI_SECONDS_FROM_DAYS(date, dy, hr, mm, ss, 0);
-
-    *date = (*date) - pcon->secs_UTC_roociCon;
-
-    if (!isDateCol)
-      *date += (double)fsec/1e9;
-  }
-
-  return rc;
+  return (OCIDateTimeToText(pres->con_roociRes->usr_roociCon,
+                            pres->con_roociRes->err_roociCon,
+                            (const OCIDateTime *)tstm,
+                            (OraText*)"YYYY-MM-DD HH24:MI:SSXFF",
+                            24, (ub1)(isDate ? 0 : 9), (OraText*)0, 0,
+                            date_time_len, (OraText *)date_time));
 } /* end of roociReadDateTimeData */
 
 /* ------------------------- roociWriteDateTimeData ------------------------ */
 
-sword roociWriteDateTimeData(roociRes *pres, OCIDateTime *tstm, double date)
+sword roociWriteDateTimeData(roociRes *pres, OCIDateTime *tstm,
+                             const char *date_time, size_t date_time_len)
 {
-  sword          rc = OCI_ERROR;
-  roociCon      *pcon = pres->con_roociRes;
-  roociCtx      *pctx = pcon->ctx_roociCon;
-  sb4            dy = 0;
-  sb4            hr = 0;
-  sb4            mm = 0;
-  sb4            ss = 0;
-  sb4            fsec = 0; 
-
-  /* allocate POSIXct beginning datetime descriptor and interval descriptor */
-  rc = roociAllocateTZdescriptors(pres, FALSE);
-  if (rc == OCI_ERROR)
-    return rc;
-
-  date = (date) + pcon->secs_UTC_roociCon;
-
-  /* construct, day, hours, sec and fractional sec from date */
-  ROOCI_DAYS_FROM_SECONDS(date, dy, hr, mm, ss, fsec);
-
-  /* extract interval components */
-  rc = OCIIntervalSetDaySecond(pctx->env_roociCtx, pcon->err_roociCon,
-                               dy, hr, mm, ss, fsec, pres->diff_roociRes);
-  if (rc == OCI_ERROR)
-    return rc;
-
-  /* compute the difference from the epoch */
-  rc = OCIDateTimeIntervalAdd(pctx->env_roociCtx, pcon->err_roociCon,
-                              pres->epoch_roociRes, pres->diff_roociRes,
-                              pres->temp_ts_roociRes);
-  if (rc == OCI_ERROR)
-    return rc;
-
-  rc = OCIDateTimeConvert(pctx->env_roociCtx, pcon->err_roociCon,
-                          pres->temp_ts_roociRes, tstm);
-  return rc;
+  return (OCIDateTimeFromText(pres->con_roociRes->usr_roociCon,
+                   pres->con_roociRes->err_roociCon,
+                   (const OraText *)date_time, date_time_len,
+                   (const OraText *)"YYYY-MM-DD HH24:MI:SSXFF", 24,
+                   (OraText *)0, 0, tstm));
 } /* end of roociWriteDateTimeData */
 
 /* ------------------------- roociReadDiffTimeData ------------------------ */
@@ -1661,7 +1482,7 @@ sword roociResFree(roociRes *pres)
 {
   int           bid;
   int           cid;
-  sword         rc    = OCI_ERROR;
+  sword         rc    = OCI_SUCCESS;
   ub2           exttype;
   roociCon     *pcon  = pres->con_roociRes;
   ub1          *dat   = NULL;
@@ -1689,7 +1510,7 @@ sword roociResFree(roociRes *pres)
                              (pres->btyp_roociRes[bid] == SQLT_TIMESTAMP_TZ) ?
                                      OCI_DTYPE_TIMESTAMP_TZ :
                                      OCI_DTYPE_INTERVAL_DS);
-              if (rc == OCI_ERROR)
+              if (rc != OCI_SUCCESS)
                 return rc;
             }
           }
@@ -1759,14 +1580,14 @@ sword roociResFree(roociRes *pres)
               rc = OCIDescriptorFree(lob, (exttype == SQLT_BFILE) ?
                                                                OCI_DTYPE_FILE :
                                                                OCI_DTYPE_LOB);
-              if (rc == OCI_ERROR)
+              if (rc != OCI_SUCCESS)
                 return rc;
             }
           }
         }
 
         /* free OCIDateTime and OCIInterval data */
-        if ((exttype == SQLT_TIMESTAMP_TZ) ||
+        if ((exttype == SQLT_TIMESTAMP_LTZ) ||
             (exttype == SQLT_TIMESTAMP)    ||
             (exttype == SQLT_INTERVAL_DS))
         {
@@ -1778,10 +1599,10 @@ sword roociResFree(roociRes *pres)
             if (tsdt)
             {
               rc = OCIDescriptorFree(tsdt,
-                     (exttype == SQLT_TIMESTAMP_TZ) ?  OCI_DTYPE_TIMESTAMP_TZ :
-                     (exttype == SQLT_TIMESTAMP) ? OCI_DTYPE_TIMESTAMP :
-                                                   OCI_DTYPE_INTERVAL_DS);
-              if (rc == OCI_ERROR)
+                   (exttype == SQLT_TIMESTAMP_LTZ) ?  OCI_DTYPE_TIMESTAMP_LTZ :
+                   (exttype == SQLT_TIMESTAMP) ? OCI_DTYPE_TIMESTAMP :
+                                                 OCI_DTYPE_INTERVAL_DS);
+              if (rc != OCI_SUCCESS)
                 return rc;
             }
           }
@@ -1847,44 +1668,14 @@ sword roociResFree(roociRes *pres)
     ROOCI_MEM_FREE(pres->lobbuf_roociRes);
   }
 
-  /* free epoch time descriptor */
-  if (pres->epoch_roociRes)
-  {
-    rc = OCIDescriptorFree(pres->epoch_roociRes, OCI_DTYPE_TIMESTAMP);
-    if (rc == OCI_ERROR)
-      return rc;
-  }
-
-  /* free epoch tz time descriptor */
-  if (pres->epoch_tz_roociRes)
-  {
-    rc = OCIDescriptorFree(pres->epoch_tz_roociRes, OCI_DTYPE_TIMESTAMP_TZ);
-    if (rc == OCI_ERROR)
-      return rc;
-  }
-
-  /* free temp TS descriptor */
-  if (pres->temp_ts_roociRes)
-  {
-    rc = OCIDescriptorFree(pres->temp_ts_roociRes, OCI_DTYPE_TIMESTAMP);
-    if (rc == OCI_ERROR)
-      return rc;
-  }
-
-  /* free diff interval descriptor */
-  if (pres->diff_roociRes)
-  {
-    rc = OCIDescriptorFree(pres->diff_roociRes, OCI_DTYPE_INTERVAL_DS);
-    if (rc == OCI_ERROR)
-      return rc;
-  }
-
   /* release the statement */
   if (pres->stm_roociRes)
   {
     rc = OCIStmtRelease(pres->stm_roociRes, pcon->err_roociCon, 
                         (OraText *)NULL, 0, OCI_DEFAULT);
-    if (rc == OCI_ERROR)
+    pres->stm_roociRes = NULL;
+
+    if (rc != OCI_SUCCESS)
       return rc;
   }
 

@@ -1,0 +1,49 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr "Project-Id-Version: PACKAGE VERSION\nReport-Msgid-Bugs-To: \nPOT-Creation-Date: 2012-05-10 14:03-0400\nPO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\nLast-Translator: Oracle\nLanguage-Team: Oracle\nLanguage: \nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\n"
+
+#: rodbi.c:96
+msgid "invalid driver"
+msgstr "無效的驅動程式"
+
+#: rodbi.c:97
+msgid "invalid connection"
+msgstr "無效的連線"
+
+#: rodbi.c:98
+msgid "invalid result set"
+msgstr "無效的結果集"
+
+#: rodbi.c:99
+msgid "memory could not be allocated"
+msgstr "無法配置記憶體"
+
+#: rodbi.c:100
+msgid "bind data has too many rows"
+msgstr "連結資料具有太多資料列"
+
+#: rodbi.c:101
+msgid "data does not match binds"
+msgstr "資料與連結不符"
+
+#: rodbi.c:102
+msgid "bind data is empty"
+msgstr "連結資料空白"
+
+#: rodbi.c:103
+msgid "unsupported bind type"
+msgstr "不支援的連結類型"
+
+#: rodbi.c:104
+msgid "unsupported column type"
+msgstr "不支援的資料欄類型"
+
+#: rodbi.c:105
+#, c-format
+msgid "ROracle internal error [%s, %d, %d]"
+msgstr "ROracle 內部錯誤 [%s, %d, %d]"

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
 #
 #    NAME
 #      oci.R - OCI based implementaion for DBI
@@ -10,6 +10,13 @@
 #    NOTES
 #
 #    MODIFIED   (MM/DD/YY)
+#    ssjaiswa    09/10/14 - Add bulk_write
+#    rpingte     05/27/14 - use ORA_SDTZ to format binds
+#    rpingte     05/02/14 - Date and Time stamp(with zone and local) are
+#                           internally defined as datetime class
+#    lzhang      03/20/14 - bug 18263136: for POSIXct with integer internal
+#                         - type, convert to double internal first.
+#    rpingte     03/10/14 - add end of result
 #    rkanodia    10/03/13 - Add session mode
 #    rkanodia    08/30/13 - [17383542] Enhance .oci.WriteTable() to work on
 #                           tables of global space
@@ -86,7 +93,8 @@
 ###############################################################################
 
 .oci.Connect <- function(drv, username = "", password = "", dbname = "",
-                         prefetch = FALSE, bulk_read = 1000L, stmt_cache = 0L,
+                         prefetch = FALSE, bulk_read = 1000L,
+                         bulk_write = 1000L, stmt_cache = 0L,
                          external_credentials = FALSE, sysdba = FALSE)
 {
   # validate
@@ -110,6 +118,13 @@
   if (bulk_read < 1L)
     stop(gettextf("argument '%s' must be greater than 0", "bulk_read")) 
 
+
+  bulk_write <- as.integer(bulk_write)
+  if (length(bulk_write) != 1L)
+    stop(gettextf("argument '%s' must be a single integer", "bulk_write"))
+  if (bulk_write < 1L)
+    stop(gettextf("argument '%s' must be greater than 0", "bulk_write")) 
+
   stmt_cache <- as.integer(stmt_cache)
   if (length(stmt_cache) != 1L)
     stop(gettextf("argument '%s' must be a single integer", "stmt_cache"))
@@ -130,7 +145,8 @@
   # connect
   params <- c(username, password, dbname)
   hdl <- .Call("rociConInit", drv@handle, params, prefetch, bulk_read,
-               stmt_cache, external_credentials, sysdba, PACKAGE = "ROracle")
+                bulk_write, stmt_cache, external_credentials, sysdba,
+                PACKAGE = "ROracle")
   timesten <- (.Call("rociConInfo", hdl, 
                       PACKAGE = "ROracle")$serverType == "TimesTen IMDB")
   new("OraConnection", handle = hdl, timesten = timesten)
@@ -143,7 +159,7 @@
 }
 
 .oci.SendQuery <- function(con, stmt, data = NULL, prefetch = FALSE,
-                           bulk_read = 1000L)
+                           bulk_read = 1000L, bulk_write = 1000L)
 {
   #validate
   prefetch <- as.logical(prefetch)
@@ -156,19 +172,25 @@
   if (bulk_read < 1L)
     stop(gettextf("argument '%s' must be greater than 0", "bulk_read")) 
 
+  bulk_write <- as.integer(bulk_write)
+  if (length(bulk_write) != 1L)
+    stop(gettextf("argument '%s' must be a single integer", "bulk_write"))
+  if (bulk_write < 1L)
+    stop(gettextf("argument '%s' must be greater than 0", "bulk_write"))
+
   stmt <- as.character(stmt)
   .oci.ValidateString("statement",stmt)
 
   if (!is.null(data))
-    data <- .oci.data.frame(data)
+    data <- .oci.data.frame(data, TRUE)
 
   hdl <- .Call("rociResInit", con@handle, stmt, data, prefetch,
-               bulk_read, PACKAGE = "ROracle")
+               bulk_read, bulk_write, PACKAGE = "ROracle")
   new("OraResult", handle = hdl)
 }
 
 .oci.GetQuery <- function(con, stmt, data = NULL, prefetch = FALSE,
-                          bulk_read = 1000L)
+                          bulk_read = 1000L, bulk_write = 1000L)
 {
   #validate
   prefetch <- as.logical(prefetch)
@@ -181,18 +203,24 @@
   if (bulk_read < 1L)
     stop(gettextf("argument '%s' must be greater than 0", "bulk_read")) 
 
+  bulk_write <- as.integer(bulk_write)
+  if (length(bulk_write) != 1L)
+    stop(gettextf("argument '%s' must be a single integer", "bulk_write"))
+  if (bulk_write < 1L)
+    stop(gettextf("argument '%s' must be greater than 0", "bulk_write")) 
+
   stmt <- as.character(stmt)
   .oci.ValidateString("statement",stmt)
 
   if (!is.null(data))
-    data <- .oci.data.frame(data)
+    data <- .oci.data.frame(data, TRUE)
 
   hdl <- .Call("rociResInit", con@handle, stmt, data,
-               prefetch, bulk_read, PACKAGE = "ROracle")
+               prefetch, bulk_read, bulk_write, PACKAGE = "ROracle")
   res <- try(
   {
-    info <- .Call("rociResInfo", hdl, PACKAGE = "ROracle")
-    if (info["completed"][[1L]])
+    eof_res <- .Call("rociEOFRes", hdl, PACKAGE = "ROracle")
+    if (eof_res)
       TRUE
     else
       .Call("rociResFetch", hdl, -1L, PACKAGE = "ROracle")
@@ -200,6 +228,20 @@
   .Call("rociResTerm", hdl, PACKAGE = "ROracle")
   if (inherits(res, "try-error"))
     stop(res)
+
+  if (!is.null(res))
+  {
+    for (i in 1:length(res))
+    {
+      col <- res[[i]]
+      if (class(col) == "datetime")
+      {
+        class(col) <- "character"
+        res[[i]] <- as.POSIXct(strftime(col, "%Y-%m-%d %H:%M:%OS6"))
+        attr(res[[i]], "tzone") <- NULL
+      }
+    }
+  }
   res
 }
 
@@ -228,6 +270,7 @@
   cat("Results processed:    ", info$resTotal,      "\n")
   cat("OCI prefetch:         ", info$prefetch,      "\n")
   cat("Bulk read:            ", info$bulk_read,     "\n")
+  cat("Bulk write:           ", info$bulk_write,    "\n")
   cat("Statement cache size: ", info$stmt_cache,    "\n")
   cat("Open results:         ", info$resOpen,       "\n")
   invisible(info)
@@ -573,11 +616,32 @@
 
 .oci.fetch <- function(res, n = -1L)
 {
-  inf <- .Call("rociResInfo", res@handle, PACKAGE = "ROracle")
-  if (inf$completed)
+  eof_res <- .Call("rociEOFRes", res@handle, PACKAGE = "ROracle")
+  if (eof_res)
     stop("no more data to fetch")
 
-  .Call("rociResFetch", res@handle, n, PACKAGE = "ROracle")
+  df <- try(
+  {
+    .Call("rociResFetch", res@handle, n, PACKAGE = "ROracle")
+  }, silent = TRUE)
+
+  if (inherits(res, "try-error"))
+    stop(res)
+
+  if (!is.null(df))
+  {
+    for (i in 1:length(df))
+    {
+      col <- df[[i]]
+      if (class(col) == "datetime")
+      {
+        class(col) <- "character"
+        df[[i]] <- as.POSIXct(strftime(col, "%Y-%m-%d %H:%M:%OS6"))
+      }
+    }
+  }
+
+  df
 }
 
 .oci.ClearResult <- function(res)
@@ -594,6 +658,12 @@
   info
 }
 
+.oci.EOFResult <- function(res)
+{
+  eof_res <- .Call("rociEOFRes", res@handle, PACKAGE = "ROracle")
+  eof_res
+}
+
 .oci.ResultSummary <- function(res)
 {
   info <- .oci.ResultInfo(res)
@@ -604,6 +674,7 @@
   cat("Statement completed: ", info$completed,    "\n")
   cat("OCI prefetch:        ", info$prefetch,     "\n")
   cat("Bulk read:           ", info$bulk_read,    "\n")
+  cat("Bulk write:          ", info$bulk_write,   "\n")
   invisible(info)
 }
 
@@ -614,7 +685,7 @@
 .oci.execute <- function(res, data = NULL)
 {
   if (!is.null(data))
-    data <- .oci.data.frame(data)
+    data <- .oci.data.frame(data, TRUE)
 
   .Call("rociResExec", res@handle, data, PACKAGE = "ROracle")
 }
@@ -630,12 +701,14 @@
 .oci.dbTypeCheck <- function(obj)
 {
   (inherits(obj, c("logical", "integer", "numeric", "character",
-                   "POSIXct", "difftime")) ||
+                    "difftime")) ||
+   (inherits(obj, "POSIXct") && typeof(obj) == "double") ||
    (is.list(obj) && all(unlist(lapply(obj, is.raw), use.names = FALSE))))
 }
 
-.oci.data.frame <- function(obj)
+.oci.data.frame <- function(obj, datetime = FALSE)
 {
+  tzone <- FALSE
   if (!is.data.frame(obj))
     obj <- as.data.frame(obj)
   for (i in seq_len(ncol(obj)))
@@ -644,9 +717,51 @@
     if (!.oci.dbTypeCheck(col))
     {
       if (inherits(col, "Date"))
-        obj[[i]] <- as.POSIXct(as.POSIXlt(col), tz = "")  # use local time zone
+      {
+        if (!tzone)
+        {
+          .oci.ValidateZoneInEnv(FALSE)
+          tzone <- TRUE
+        }
+
+        if (datetime)
+        {
+          obj[[i]] <- strftime(col, "%Y-%m-%d %H:%M:%OS6")
+          class(obj[[i]]) <- "datetime"
+        }
+        else
+          obj[[i]] <- as.POSIXct(strptime(col, "%Y-%m-%d"))
+      }
+      else if (inherits(col, "POSIXct")) # integer storage mode
+      {
+        if (!tzone)
+        {
+          .oci.ValidateZoneInEnv(FALSE)
+          tzone <- TRUE
+        }
+
+
+        if (datetime)
+        {
+          obj[[i]] <- strftime(col, "%Y-%m-%d %H:%M:%OS6")
+          class(obj[[i]]) <- "datetime"
+        }
+        else
+          storage.mode(obj[[i]]) <- "double"
+      }
       else
         obj[[i]] <- as.character(col)
+    }
+    else if (inherits(col, "POSIXct") && datetime)
+    {
+      if (!tzone)
+      {
+        .oci.ValidateZoneInEnv(FALSE)
+        tzone <- TRUE
+      }
+
+      obj[[i]] <- strftime(col, "%Y-%m-%d %H:%M:%OS6")
+      class(obj[[i]]) <- "datetime"
     }
     else if (inherits(col, "difftime"))
       obj[[i]] <- as.difftime(as.numeric(col, units = "secs"), units = "secs")
@@ -730,6 +845,20 @@
   {
     if (all(!nchar(value)))
       stop(gettextf("'%s' must be non-empty strings", name))
+  }
+}
+
+.oci.ValidateZoneInEnv <- function(warning = TRUE)
+{
+  sdtz <- Sys.getenv("ORA_SDTZ")
+  tzone <- Sys.getenv("TZ")
+
+  if (!nchar(sdtz) || !nchar(tzone) || (sdtz != tzone))
+  {
+    if (warning)
+      warning(gettextf("environment variable 'ORA_SDTZ(%s)' must be set to the same time zone region as the the environment variable 'TZ(%s)'", sdtz, tzone))
+    else
+      stop(gettextf("environment variable 'ORA_SDTZ(%s)' must be set to the same time zone region as the the environment variable 'TZ(%s)'", sdtz, tzone))
   }
 }
 

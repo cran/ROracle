@@ -74,7 +74,11 @@ Valeur logique indiquant si des données doivent être ajoutées à la fin d'une
   \item{ora.number}{
 Valeur logique indiquant si une table doit être créée avec des colonnes
     \code{NUMBER} ou \code{BINARY_DOUBLE} Oracle lors de l'écriture de données
-    numériques. La valeur par défaut est \code{TRUE}.
+    numériques. Indiquez \code{TRUE} pour créer une table avec les valeurs \code{NUMBER} 
+    Oracle, ou indiquez \code{FALSE} pour créer une table avec les valeurs \code{BINARY_DOUBLE}
+    Oracle. La valeur par défaut est \code{TRUE}.
+    Indiquez \code{FALSE} si au moins une des valeurs de données numériques est
+    \code{NaN}.
 }
   \item{purge}{
 Valeur logique indiquant si l'option \code{PURGE} doit être ajoutée à
@@ -301,6 +305,11 @@ Les noms de table, de schéma et de colonne respectent les majuscules/minuscules
     res[,3]
     res[,4]
     res[,5]
+  }
+  \dontrun{
+    df <- data.frame(A=c(0,1,NaN,4), B=c(NA, 2,3,NaN))
+    con <- dbConnect(Oracle(), "scott", "tiger")
+    dbWriteTable(con,"TEST", df, row.names = FALSE, ora.number=FALSE)
   }
 }
 \keyword{methods}

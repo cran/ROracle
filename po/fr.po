@@ -1,0 +1,49 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr "Project-Id-Version: PACKAGE VERSION\nReport-Msgid-Bugs-To: \nPOT-Creation-Date: 2012-05-10 14:03-0400\nPO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\nLast-Translator: Oracle\nLanguage-Team: Oracle\nLanguage: \nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\n"
+
+#: rodbi.c:96
+msgid "invalid driver"
+msgstr "pilote non valide"
+
+#: rodbi.c:97
+msgid "invalid connection"
+msgstr "connexion non valide"
+
+#: rodbi.c:98
+msgid "invalid result set"
+msgstr "ensemble de résultats non valide"
+
+#: rodbi.c:99
+msgid "memory could not be allocated"
+msgstr "impossible d'allouer de la mémoire"
+
+#: rodbi.c:100
+msgid "bind data has too many rows"
+msgstr "les données de liaison contiennent trop de lignes"
+
+#: rodbi.c:101
+msgid "data does not match binds"
+msgstr "les données ne correspondent pas aux liaisons"
+
+#: rodbi.c:102
+msgid "bind data is empty"
+msgstr "les données de liaison sont vides"
+
+#: rodbi.c:103
+msgid "unsupported bind type"
+msgstr "type de liaison non pris en charge"
+
+#: rodbi.c:104
+msgid "unsupported column type"
+msgstr "type de colonne non pris en charge"
+
+#: rodbi.c:105
+#, c-format
+msgid "ROracle internal error [%s, %d, %d]"
+msgstr "erreur interne ROracle [%s, %d, %d]"

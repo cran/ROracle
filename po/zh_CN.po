@@ -1,0 +1,49 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr "Project-Id-Version: PACKAGE VERSION\nReport-Msgid-Bugs-To: \nPOT-Creation-Date: 2012-05-10 14:03-0400\nPO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\nLast-Translator: Oracle\nLanguage-Team: Oracle\nLanguage: \nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\n"
+
+#: rodbi.c:96
+msgid "invalid driver"
+msgstr "驱动程序无效"
+
+#: rodbi.c:97
+msgid "invalid connection"
+msgstr "连接无效"
+
+#: rodbi.c:98
+msgid "invalid result set"
+msgstr "结果集无效"
+
+#: rodbi.c:99
+msgid "memory could not be allocated"
+msgstr "无法分配内存"
+
+#: rodbi.c:100
+msgid "bind data has too many rows"
+msgstr "绑定数据具有太多行"
+
+#: rodbi.c:101
+msgid "data does not match binds"
+msgstr "数据与绑定不匹配"
+
+#: rodbi.c:102
+msgid "bind data is empty"
+msgstr "绑定数据为空"
+
+#: rodbi.c:103
+msgid "unsupported bind type"
+msgstr "不支持的绑定类型"
+
+#: rodbi.c:104
+msgid "unsupported column type"
+msgstr "不支持的列类型"
+
+#: rodbi.c:105
+#, c-format
+msgid "ROracle internal error [%s, %d, %d]"
+msgstr "ROracle 内部错误 [%s, %d, %d]"

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
 #
 #    NAME
 #      dbi.R - DBI implementation for Oracle RDBMS based on OCI
@@ -10,6 +10,8 @@
 #    NOTES
 #
 #    MODIFIED   (MM/DD/YY)
+#    ssjaiswa    09/10/14 - Add bulk_write
+#    rpingte     03/11/14 - add end of result
 #    rkanodia    10/03/13 - Add session mode
 #    rkanodia    08/30/13 - [17383542] Added schema argument to
 #                           .oci.WriteTable() & .oci.RemoveTable()
@@ -125,20 +127,20 @@ setClass("OraConnection",
 setMethod("dbConnect",
 signature(drv = "OraDriver"),
 function(drv, username = "", password = "", dbname = "", prefetch = FALSE,
-         bulk_read = 1000L, stmt_cache = 0L, external_credentials = FALSE,
-         sysdba = FALSE, ...)
+         bulk_read = 1000L, bulk_write= 1000L , stmt_cache = 0L,
+         external_credentials = FALSE, sysdba = FALSE, ...)
 .oci.Connect(.oci.drv(), username = username, password = password,
              dbname = dbname, prefetch = prefetch, bulk_read = bulk_read,
-             stmt_cache = stmt_cache,
+             bulk_write = bulk_write, stmt_cache = stmt_cache,
              external_credentials = external_credentials, sysdba = sysdba)
 )
 
 setMethod("dbConnect",
 signature(drv = "ExtDriver"),
-function(drv, prefetch = FALSE, bulk_read = 1000L, stmt_cache = 0L,
-         external_credentials = FALSE, sysdba = FALSE, ...)
+function(drv, prefetch = FALSE, bulk_read = 1000L, bulk_write= 1000L,
+         stmt_cache = 0L, external_credentials = FALSE, sysdba = FALSE, ...)
 .oci.Connect(.ext.drv(), prefetch = prefetch, bulk_read = bulk_read,
-             stmt_cache = stmt_cache, 
+             bulk_write = bulk_write, stmt_cache = stmt_cache,
              external_credentials = external_credentials, sysdba = sysdba)
 )
 
@@ -150,17 +152,17 @@ function(conn, ...) .oci.Disconnect(conn)
 setMethod("dbSendQuery",
 signature(conn = "OraConnection", statement = "character"),
 function(conn, statement, data = NULL, prefetch = FALSE, 
-         bulk_read = 1000L, ...)
+         bulk_read = 1000L, bulk_write = 1000L, ...)
 .oci.SendQuery(conn, statement, data = data, prefetch = prefetch,
-               bulk_read = bulk_read)
+               bulk_read = bulk_read , bulk_write = bulk_write)
 )
 
 setMethod("dbGetQuery",
 signature(conn = "OraConnection", statement = "character"),
 function(conn, statement, data = NULL, prefetch = FALSE, 
-         bulk_read = 1000L, ...)
+         bulk_read = 1000L, bulk_write = 1000L, ...)
 .oci.GetQuery(conn, statement, data = data, prefetch = prefetch,
-              bulk_read = bulk_read)
+              bulk_read = bulk_read, bulk_write = bulk_write)
 )
 
 setMethod("dbGetException",
@@ -292,7 +294,7 @@ function(res, ...) .oci.ResultInfo(res, "statement")[[1L]]
 
 setMethod("dbHasCompleted",
 signature(res = "OraResult"),
-function(res, ...) .oci.ResultInfo(res, "completed")[[1L]]
+function(res) .oci.EOFResult(res)
 )
 
 setMethod("dbGetRowsAffected",

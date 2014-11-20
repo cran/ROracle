@@ -73,8 +73,12 @@
 }
   \item{ora.number}{
 一个指定在写入数值数据时使用 Oracle
-    \code{NUMBER} 还是 \code{BINARY_DOUBLE} 创建表的逻辑值。
-    默认值为 \code{TRUE}。
+    \code{NUMBER} 还是 \code{BINARY_DOUBLE} 列创建表的
+    逻辑值。指定 \code{TRUE} 以使用 Oracle \code{NUMBER} 
+    值创建表, 或者指定 \code{FALSE} 以使用 Oracle
+    \code{BINARY_DOUBLE} 值创建表。默认值为 \code{TRUE}。
+    如果一个或多个数值数据值为 \code{FALSE}, 则指定
+    \code{NaN}。
 }
   \item{purge}{
 一个指定是否将 \code{PURGE} 选项添加到
@@ -301,6 +305,11 @@
     res[,3]
     res[,4]
     res[,5]
+  }
+  \dontrun{
+    df <- data.frame(A=c(0,1,NaN,4), B=c(NA, 2,3,NaN))
+    con <- dbConnect(Oracle(), "scott", "tiger")
+    dbWriteTable(con,"TEST", df, row.names = FALSE, ora.number=FALSE)
   }
 }
 \keyword{methods}

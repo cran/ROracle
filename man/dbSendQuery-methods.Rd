@@ -19,8 +19,10 @@
    ROracle specific DBI extension.
 }
 \usage{
-\S4method{dbSendQuery}{OraConnection,character}(conn, statement, data = NULL, prefetch = FALSE, bulk_read = 1000L, ...)
-\S4method{dbGetQuery}{OraConnection,character}(conn, statement, data = NULL, prefetch = FALSE, bulk_read = 1000L, ...)
+\S4method{dbSendQuery}{OraConnection,character}(conn, statement, data = NULL,
+          prefetch = FALSE, bulk_read = 1000L, bulk_write = 1000L, ...)
+\S4method{dbGetQuery}{OraConnection,character}(conn, statement, data = NULL,
+          prefetch = FALSE, bulk_read = 1000L, bulk_write = 1000L, ...)
 \S4method{dbClearResult}{OraResult}(res, ...)
 \S4method{dbGetException}{OraConnection}(conn, ...)
 
@@ -28,12 +30,12 @@ execute(res, ...)
 \S4method{execute}{OraResult}(res, data = NULL, ...)
 }
 \arguments{
-  \item{conn}{an \code{OraConnection} object.}
-  \item{statement}{a character vector of length 1 with the SQL statement.}
-  \item{res}{an \code{OraResult} object.}
-  \item{data}{a data.frame specifying bind data}
+  \item{conn}{An \code{OraConnection} object.}
+  \item{statement}{A character vector of length 1 with the SQL statement.}
+  \item{res}{An \code{OraResult} object.}
+  \item{data}{A data.frame specifying bind data}
   \item{prefetch}{
-    a logical value indicating TRUE or FALSE. When set to TRUE, ROracle will use
+    A logical value indicating TRUE or FALSE. When set to TRUE, ROracle will use
     OCI prefetch buffers to retrieve additional data from the server thus saving
     memory required in RODBI/ROOCI by allocating a single row buffer to fetch 
     the data from OCI. Using prefetch results in a fetch call for every row. By
@@ -41,22 +43,31 @@ execute(res, ...)
     server.
   }
   \item{bulk_read}{
-    an integer value indicating the number of rows to fetch at a time. Default
-    is 1000L. When the prefetch option is selected, memory is allocated for prefetch
-    buffers and OCI will fetch those many rows at a time. When prefetch is not 
-    used(default) memory is allocated in RODBI/ROOCI define buffers. Setting 
-    this to a large value will result in more memory allocated based on the 
-    number of columns in the select list and the types of columns. For a column
-    of character, define buffers are allocated using the maximum width times 
-    the NLS maximum width. Application should adjust this value based on the 
-    query result and a larger value will benefit queries that return a large 
-    result. Application can tune this value to its need.
+    An integer value indicating the number of rows to fetch at a time. Default
+    is 1000L. When the prefetch option is selected, memory is allocated for
+    prefetch buffers and OCI will fetch those many rows at a time. When prefetch
+    is not used (default) memory is allocated in RODBI/ROOCI define buffers.
+    Setting this to a large value will result in more memory being allocated
+    based on the number of columns in the select list and the types of columns.
+    For a column of type character, define buffers are allocated using the
+    maximum width times the NLS maximum width. An Application should adjust this
+    value based on the query result and a larger value will benefit queries that
+    return a large result. The Application can tune this value to its need.
   }
-  \item{\dots}{currently unused.}
+  \item{bulk_write}{
+    An integer value indicating the number of rows to write at a time. The
+    default value is 1000L. When the bulk_write value is given in argument,
+    memory is allocated for buffers and OCI will write that many rows at a
+    time. When bulk_write argument is not given, the default value 1000 is
+    used to allocate memory for the bind buffers. Setting this to a large
+    value will result in more memory allocated based on the number of columns
+    in the insert list and the types of columns.
+  }
+  \item{\dots}{Currently unused.}
 }
 \value{
   \item{dbSendQuery}{
-    an object \code{OraResult} whose class extends \code{DBIResult}. This 
+    An object \code{OraResult} whose class extends \code{DBIResult}. This 
     object is used to fetch data from database, using the function 
     \code{fetch}.
   }
@@ -64,42 +75,42 @@ execute(res, ...)
 \section{Side Effects}{
   \describe{
     \item{dbGetQuery}{
-      query statement is executed and data has fetched from database.
+      Query statement is executed and data has fetched from database.
     }
     \item{dbSendQuery}{
-      query statement is executed, but note that data needs to fetch through
+      Query statement is executed, but note that data needs to fetch through
       calls to \code{\link[DBI]{fetch}}.
     }
     \item{dbClearResult}{
-      resources acquired by result set has free.
+      Resources acquired by result set has free.
     }
     \item{dbGetException}{
-      error information retrieved and then cleaned from driver.
+      Error information retrieved and then cleaned from driver.
     }
     \item{execute}{
-      query statement is executed.
+      Query statement is executed.
     }
   }
 }
 \details{
   \describe{
     \item{dbGetQuery}{
-      implementation does execute query statement and fetch 
+      Implementation does execute query statement and fetch 
       result data from database. 
     }
     \item{dbSendQuery}{
-      implementation does execute query statement and return 
+      Implementation does execute query statement and return 
       result set to the application. Now application can perform operations 
       on result set. 
     }
     \item{dbClearResult}{
-      implementation does free resources occupied by result set.
+      Implementation does free resources occupied by result set.
     }
     \item{dbGetException}{
-      implementation does retrieve error information.
+      Implementation does retrieve error information.
     }
     \item{execute}{
-      implementation does execute query statement.
+      Implementation does execute query statement.
     }
   }
 }
@@ -130,9 +141,12 @@ execute(res, ...)
     res3 <- dbSendQuery(con, "select * from emp where deptno = :1",
                         data2 = data.frame(deptno = 10), bulk_read=10L)
     data2 <- fetch(res3, n = -1)
-    res4 <- dbSendQuery(con, "select * from emp where ename = :1",
-                        data3 = data.frame(ename = 'SMITH')) 
+    res4 <- dbSendQuery(con, "select * from emp where deptno = :1",
+                        data3 = data.frame(deptno = 10), bulk_write=10L)
     data3 <- fetch(res4, n = -1)
+    res5 <- dbSendQuery(con, "select * from emp where ename = :1",
+                        data4 = data.frame(ename = 'SMITH')) 
+    data4 <- fetch(res5, n = -1)
   }
 }
 \keyword{methods}

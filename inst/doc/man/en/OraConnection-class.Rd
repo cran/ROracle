@@ -14,8 +14,8 @@ Class \code{"DBIObject"}, by class \code{"DBIConnection"}, distance 2.
 \section{Methods}{
   \describe{
     \item{dbDisconnect}{\code{signature(conn = "OraConnection")}: ... }
-    \item{dbSendQuery}{\code{signature(conn = "OraConnection", statement = "character", prefetch = FALSE, bulk_read = 1000L)}: ... }
-    \item{dbGetQuery}{\code{signature(conn = "OraConnection", statement = "character", prefetch = FALSE, bulk_read = 1000L)}: ... }
+    \item{dbSendQuery}{\code{signature(conn = "OraConnection", statement = "character", prefetch = FALSE, bulk_read = 1000L, bulk_write = 1000L)}: ... }
+    \item{dbGetQuery}{\code{signature(conn = "OraConnection", statement = "character", prefetch = FALSE, bulk_read = 1000L, bulk_write = 1000L)}: ... }
     \item{dbGetException}{\code{signature(conn = "OraConnection")}: ... }
     \item{dbListResults}{\code{signature(conn = "OraConnection")}: ... }
     \item{dbListTables}{\code{signature(conn = "OraConnection")}: ... }

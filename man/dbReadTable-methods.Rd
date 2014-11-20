@@ -74,7 +74,11 @@
   \item{ora.number}{
     A logical value specifying whether to create a table with Oracle
     \code{NUMBER} or \code{BINARY_DOUBLE} columns while writing numeric
-    data. The default value is \code{TRUE}.
+    data. Specify \code{TRUE} to create a table with Oracle \code{NUMBER} 
+    values or specify \code{FALSE} to create a table with Oracle
+    \code{BINARY_DOUBLE} values. The default value is \code{TRUE}.
+    Specify \code{FALSE} if one or more of the numeric data values are
+    \code{NaN}.
   }
   \item{purge}{
     A logical value specifying whether to add the \code{PURGE} option to the
@@ -130,36 +134,139 @@
    environment variable or maps the OS time zone environment variable to its
    own, therefore the date will be displayed in this time zone format.
 
-   One can insert data into columns of the 4 data types listed above using a
+   One can insert data into columns of the four data types listed above using a
    string with the correct format or POSIXct representation. String data is
-   passed to the databse directly and ROracle relies on databse to convert it
-   to date time representation. POSIXct data will be converted to Oracle's
-   internal DateTime descriptor by adding the beginning of 1970 UTC to the
-   number of seconds obtained from R. Any POSIXct variables in insert
-   statement are bound as SQLT_TIMESTAMP_TZ.
+   passed to the database directly and ROracle relies on databse to convert it
+   to date time representation. ROracle driver converts the POSIXct
+   representation to a string representation using the format
+   "\%Y-\%m-\%d \%H:\%M:\%OS6" in a data frame that is used for DML operations.
+   Data in this format corresponds to NLS_TIMESTAMP_TZ_FORMAT
+   "YYYY-MM-DD HH24:MI:SSXFF" and is converted to SQLT_TIMESTAMP_LTZ to be
+   bound to the Oracle database. An intermediate class "datetime" is created
+   that represents character data to the ROracle driver internally.
 
-   When these data types are selected from Oracle they are converted to POSIXct
-   format by subtracting the start of 1970 UTC. When ROracle client and
-   database have different time zone version files and an application uses the
-   time zone data types it is recommended that they be the same as the region
-   may have changed its zone. ROracle will report an error in this situation as
-   it can cause data corruption or loss of information when operating on these
-   data types.
-
-   Columns having date and time stamp data type are fetched by ROracle using
-   the SQLT_TIMESTAMP data type. Columns having time stamp with time zone and
-   time stamp with local time zone data types are fetched using
-   SQLT_TIMESTAMP_TZ data type. Columns of datatype time zone with local time
+   Columns having a date and time stamp data type are fetched by ROracle using
+   the SQLT_TIMESTAMP data type. Columns having a time stamp with time zone or
+   a time stamp with local time zone data types are fetched using
+   SQLT_TIMESTAMP_LTZ data type. Columns of data type time zone with local time
    zone undergo conversion to the session time zone that the R application runs
-   in therefore setting the time zone environment TZ in R will affect the data
-   values in this column. ROracle driver does not map the TZ environment
-   variable to session time zone and
-   does not issue an alter DDL to set the session time zone. In order to
-   fetch data from columns with timestamp with time zone and timestamp with
-   local time zone the client and server must have the same time zone data
-   file else an error will be reported.
-   
-   Example below shows the effect of changing time zone in R environment:
+   in, therefore setting the time zone environment TZ in R will affect the data
+   values in this column. ROracle driver maps the TZ environment variable to
+   the session time zone and issues an alter DDL to set the session time zone
+   when the connection is made to the database.
+
+   To fetch data from columns with a timestamp with time zone or a timestamp
+   with local time zone, the client and server must have the same time zone
+   data file else an error will be reported.
+
+   When these data types are selected from the database, they are converted to
+   string representation using the NLS_TIMESTAMP_TZ_FORMAT
+   "YYYY-MM-DD HH24:MI:SSXFF" that corresponds to "\%Y-\%m-\%d \%H:\%M:\%OS6"
+   in R. An intermediate class "datetime" is created
+   to represent this character data in ROracle driver. ROracle driver then
+   converts it to POSIXct using the as.POSIXct() function. An R application
+   sees the data in POSIXct form in the data frame.
+
+   \preformatted{
+R session time zone:
+ R has the concept of a time zone in which the R engine operates. The time
+ zone can be set to a string such as 'PST8PDT', 'America/Los_Angeles' and so on.
+ These strings are self-explanatory and specify the time zone in which the
+ session is operating.
+ The R session time zone can be set in one of two ways:
+ 1. By entering the following on the Linux or Unix command line before starting
+    R:
+    setenv TZ = America/Los_Angeles on Linux/UNIX
+    NOTE: Do not use this option on Windows as it does not allow one to
+          set Oracle compatible timezone names for the environment variable TZ.
+ 2. By entering the following at the R prompt:
+    Sys.setenv(TZ = "PST8PDT")
+
+ We recommend using the option 2 as the R script works without any
+ porting issues on Linux/Unix as well as Windows. Option 2 also allows you
+ to specify Oracle compatible timezone names even on Windows.
+
+ The R session time zone determines the time zone for all POSIXct time
+ zone unqualified date-time types. It is also the time zone to which all
+ qualified date-time types are converted when they are displayed by R.
+
+ The following example demonstrates this.
+ Sys.setenv(TZ = "PST8PDT")
+ dt <- c(as.POSIXct("2010/3/13", tz = "PST8PDT"),
+         as.POSIXct("2010/3/13 3:47:30.123456", tz = "PST8PDT"),
+         as.POSIXct("2010/3/22", tz = "PST8PDT"),
+         as.POSIXct("2010/3/22 7:02:30", tz = "PST8PDT"),
+         as.POSIXct("2010/3/13"),
+         as.POSIXct("2010/3/13 3:47:30.123456"),
+         as.POSIXct("2010/3/22"),
+         as.POSIXct("2010/3/22 7:02:30"))
+ dt
+ [1] "2010-03-13 00:00:00.000000 PST" "2010-03-13 03:47:30.123456 PST"
+ [3] "2010-03-22 00:00:00.000000 PDT" "2010-03-22 07:02:30.000000 PDT"
+ [5] "2010-03-13 00:00:00.000000 PST" "2010-03-13 03:47:30.123456 PST"
+ [7] "2010-03-22 00:00:00.000000 PDT" "2010-03-22 07:02:30.000000 PDT"
+
+Note that the unqualified timestamps are also assumed to be in the R's
+session time zone when they are displayed by R. Of course, R is also smart
+enough to make the determination of whether the time falls into PST or PDT
+based on when US Daylight savings begins, and displays PST or PDT
+accordingly.
+
+The following example makes this more obvious.
+> Sys.setenv(TZ = "EST5EDT")
+> dt <- c(as.POSIXct("2010/3/13", tz = "PST8PDT"),
++         as.POSIXct("2010/3/13 3:47:30.123456", tz = "PST8PDT"),
++         as.POSIXct("2010/3/22", tz = "PST8PDT"),
++         as.POSIXct("2010/3/22 7:02:30", tz = "PST8PDT"),
++         as.POSIXct("2010/3/13"),
++         as.POSIXct("2010/3/13 3:47:30.123456"),
++         as.POSIXct("2010/3/22"),
++         as.POSIXct("2010/3/22 7:02:30"))
+
+> dt
+[1] "2010-03-13 03:00:00.000000 EST" "2010-03-13 06:47:30.123456 EST"
+[3] "2010-03-22 03:00:00.000000 EDT" "2010-03-22 10:02:30.000000 EDT"
+[5] "2010-03-13 00:00:00.000000 EST" "2010-03-13 03:47:30.123456 EST"
+[7] "2010-03-22 00:00:00.000000 EDT" "2010-03-22 07:02:30.000000 EDT"
+
+Note that all the time zone unqualified timestamps are assumed to be in
+the session time zone. However, even the time zone qualified timestamps
+are converted to session time zone and displayed. Note that all the
+values are displayed by R in the R session's time zone (with the
+timezone name also modified to EST or EDT to account for
+daylight savings as applicable). Refer to Date-Time Classes at
+http://stat.ethz.ch/R-manual/R-devel/library/base/html/DateTimeClasses.html
+and timezones at:
+http://stat.ethz.ch/R-manual/R-devel/library/base/html/timezones.html
+for details on how R handles dates and times and time zones)
+Let's take an example where we use a longer time zone name
+(often referred to as an 'Olson Name') as opposed to an abbreviation.
+> Sys.setenv(TZ = "America/Los_Angeles")
+> dt <- c(as.POSIXct("2010/3/13", tz = "PST8PDT"),
++         as.POSIXct("2010/3/13 3:47:30.123456", tz = "PST8PDT"),
++         as.POSIXct("2010/3/22", tz = "PST8PDT"),
++         as.POSIXct("2010/3/22 7:02:30", tz = "PST8PDT"),
++         as.POSIXct("2010/3/13"),
++         as.POSIXct("2010/3/13 3:47:30.123456"),
++         as.POSIXct("2010/3/22"),
++         as.POSIXct("2010/3/22 7:02:30"))
+> dt
+[1] "2010-03-13 00:00:00.000000 PST" "2010-03-13 03:47:30.123456 PST"
+[3] "2010-03-22 00:00:00.000000 PDT" "2010-03-22 07:02:30.000000 PDT"
+[5] "2010-03-13 00:00:00.000000 PST" "2010-03-13 03:47:30.123456 PST"
+[7] "2010-03-22 00:00:00.000000 PDT" "2010-03-22 07:02:30.000000 PDT"
+
+Note that in such a case, R doesn't use the long name when the
+values are displayed, but instead still displays the values using
+the abbreviations "PST" and "PDT". This is significant because Oracle
+doesn't necessarily like these abbreviations. For example, an Oracle
+databse doesn't recognize "PDT" as a valid time zone. See "R Time zone
+and Oracle session time zone" for details on valid time zones.
+}
+
+
+   The example below shows the effect of changing the time zone in R
+   environment:
    \preformatted{   R> Sys.timezone()
    [1] "PST8PDT"
    # Selecting data and displaying it
@@ -257,26 +364,26 @@
     if (dbExistsTable(con, "RORACLE_TEST", "SCOTT"))
       dbRemoveTable(con, "RORACLE_TEST")
 
-    # example of POSIXct usage
+    # Example of POSIXct usage.
     # A table is created using:
     createTab <- "create table RORACLE_TEST(row_num number, id1 date,
                  id2 timestamp, id3 timestamp with time zone, 
                  id4 timestamp with local time zone )"
 
     dbGetQuery(con, createTab)
-    # Insert statement
+    # Insert statement.
     insStr <- "insert into RORACLE_TEST values(:1, :2, :3, :4, :5)";
 
-    # Select statement
+    # Select statement.
     selStr <- "select * from RORACLE_TEST";
 
-    # Insert time stamp without time values in POSIXct form
+    # Insert time stamp without time values in POSIXct form.
     x <- 1; 
     y <- "2012-06-05";
     y <- as.POSIXct(y);
     dbGetQuery(con, insStr, data.frame(x, y, y, y, y));
 
-    # Insert date & times stamp with time values in POSIXct form
+    # Insert date & times stamp with time values in POSIXct form.
     x <- 2;
     y <- "2012-01-05 07:15:02";
     y <- as.POSIXct(y);
@@ -284,7 +391,7 @@
     z <- as.POSIXct(z);
     dbGetQuery(con, insStr, data.frame(x, y, z,  z, z));
 
-    # Insert list of date objects in POSIXct form
+    # Insert list of date objects in POSIXct form.
     x <- c(3, 4, 5, 6);
     y <- c('2012-01-05', '2011-01-05', '2013-01-05', '2020-01-05');
     y <- as.POSIXct(y);
@@ -292,13 +399,18 @@
 
     dbCommit (con)
 
-    # Selecting data and displaying it
+    # Selecting data and displaying it.
     res <- dbGetQuery(con, selStr)
     res[,1]
     res[,2]
     res[,3]
     res[,4]
     res[,5]
+  }
+  \dontrun{
+    df <- data.frame(A=c(0,1,NaN,4), B=c(NA, 2,3,NaN))
+    con <- dbConnect(Oracle(), "scott", "tiger")
+    dbWriteTable(con,"TEST", df, row.names = FALSE, ora.number=FALSE)
   }
 }
 \keyword{methods}

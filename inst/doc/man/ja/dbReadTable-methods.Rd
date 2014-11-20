@@ -74,7 +74,11 @@ DBMSの既存の表に付加するかどうかを指定する論理値。
   \item{ora.number}{
 数値データを書き込むときに、Oracleの
     \code{NUMBER}または\code{BINARY_DOUBLE}列を含む表を作成するかどうかを指定する論理値。
+    Oracle \code{TRUE}の値で表を作成するには\code{NUMBER}を指定し、
+    Oracle \code{FALSE}の値で表を作成するには\code{BINARY_DOUBLE}を指定します。
     デフォルト値は\code{TRUE}です。
+    1つ以上の量的データ値が\code{FALSE}である場合は、
+    \code{NaN}を指定します。
 }
   \item{purge}{
 \code{PURGE}オプションをSQL \code{DROP TABLE}文に追加するかどうかを
@@ -301,6 +305,11 @@ DBMSの既存の表に付加するかどうかを指定する論理値。
     res[,3]
     res[,4]
     res[,5]
+  }
+  \dontrun{
+    df <- data.frame(A=c(0,1,NaN,4), B=c(NA, 2,3,NaN))
+    con <- dbConnect(Oracle(), "scott", "tiger")
+    dbWriteTable(con,"TEST", df, row.names = FALSE, ora.number=FALSE)
   }
 }
 \keyword{methods}

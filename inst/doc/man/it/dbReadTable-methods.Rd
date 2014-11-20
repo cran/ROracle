@@ -73,8 +73,12 @@ Valore logico che specifica se aggiungere i dati a una tabella esistente
 }
   \item{ora.number}{
 Valore logico che specifica se creare una tabella con colonne
-    Oracle \code{NUMBER} o \code{BINARY_DOUBLE} durante la scrittura dei dati numerici.
-    Il valore predefinito è \code{TRUE}.
+    \code{NUMBER} o \code{BINARY_DOUBLE} Oracle durante la scrittura dei dati numerici.
+    Specificare \code{TRUE} per creare una tabella con i valori \code{NUMBER} 
+    Oracle oppure specificare \code{FALSE} per creare una tabella con
+    i valori \code{BINARY_DOUBLE} Oracle. Il valore predefinito è \code{TRUE}.
+    Specificare \code{FALSE} se uno o più valori di dati numerici sono
+    \code{NaN}.
 }
   \item{purge}{
 Valore logico che specifica se aggiungere l'opzione \code{PURGE}
@@ -301,6 +305,11 @@ I nomi delle tabelle, degli schemi e delle colonne distinguono tra maiuscole
     res[,3]
     res[,4]
     res[,5]
+  }
+  \dontrun{
+    df <- data.frame(A=c(0,1,NaN,4), B=c(NA, 2,3,NaN))
+    con <- dbConnect(Oracle(), "scott", "tiger")
+    dbWriteTable(con,"TEST", df, row.names = FALSE, ora.number=FALSE)
   }
 }
 \keyword{methods}

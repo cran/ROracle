@@ -71,9 +71,13 @@
     預設值為 \code{FALSE}.
 }
   \item{ora.number}{
-指定是否要在寫入數字資料時建立一個含有 Oracle
+指定是否要在寫入數值資料時建立一個含有 Oracle
     \code{NUMBER} 或 \code{BINARY_DOUBLE} 資料欄之表格的邏輯值.
-    預設值為 \code{TRUE}.
+    指定 \code{TRUE} 以建立含有 Oracle \code{NUMBER} 
+    值的表格, 或指定 \code{FALSE} 以建立含有 Oracle
+    \code{BINARY_DOUBLE} 值的表格. 預設值為 \code{TRUE}.
+    若一或多個數值資料值為 \code{FALSE},
+    請指定 \code{NaN}.
 }
   \item{purge}{
 指定是否要將 \code{PURGE} 選項新增至 SQL \code{DROP TABLE} 敘述句的
@@ -300,6 +304,11 @@
     res[,3]
     res[,4]
     res[,5]
+  }
+  \dontrun{
+    df <- data.frame(A=c(0,1,NaN,4), B=c(NA, 2,3,NaN))
+    con <- dbConnect(Oracle(), "scott", "tiger")
+    dbWriteTable(con,"TEST", df, row.names = FALSE, ora.number=FALSE)
   }
 }
 \keyword{methods}

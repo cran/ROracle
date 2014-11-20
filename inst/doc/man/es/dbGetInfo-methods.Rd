@@ -31,7 +31,7 @@ Estos métodos son implantaciones sencillas de las funciones
 \S4method{dbGetRowCount}{OraResult}(res, ...)
 \S4method{dbGetRowsAffected}{OraResult}(res, ...)
 \S4method{dbColumnInfo}{OraResult}(res, ...)
-\S4method{dbHasCompleted}{OraResult}(res, ...)
+\S4method{dbHasCompleted}{OraResult}(res)
 }
 \arguments{
   \item{dbObj}{

@@ -1,3 +1,39 @@
+Version 1.1-12 (2014-06-04)
+
+* Add bulk_write parameter to specify number of rows to bind at a time to
+  improve performance for dbWriteTable and DML operations.
+
+* Date, Timestamp, Timestamp with time zone and Timestamp with local time zone
+  data are maintained in R and Oracle's session time zone. Oracle session time
+  zone environment variable ORA_SDTZ and R's environment variable TZ must be
+  the same for this to work else an error is reported when operating on any of
+  these column types.
+
+* bug 16198839 - Allow selecting data from time stamp with time zone and time
+                 stamp with local time zone without reporting error 1805
+
+* bug 18316008 - increases the bind limit from 4000 to 2GB for inserting data
+                 into BLOB, CLOB and 32K VARCHAR and RAW data types. Changes
+                 describe lengths to NA for all types except for CHAR,
+                 VARCHAR2, and RAW
+
+* Fix unnecessary adjustment to UTC when converting from epoch to Oracle types
+  and vice versa
+ 
+* Performance improvements and address issue with fetch
+
+* bug 18404532 - Fetching LOB data with an empty BLOB/CLOB (0 LENGTH) results
+                 in ORA-24801 error
+
+* bug 18404569 - Fetch method will result in extra instructions when size
+                 exceeds bulk read limit
+
+* bug 18908645 - Follow base::.set_row_names convention when forming data.frame
+                 objects at the C level.
+
+* bug 16686948 - Updated ROracle document with use of ora.number argument of 
+                 dbWriteTable()
+
 Version 1.1-11 (2014-01-09)
 
 * Performance improvements for RAW data type and large result sets
