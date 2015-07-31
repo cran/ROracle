@@ -5,25 +5,38 @@
 現行の\RセッションからのOracleクライアントのインスタンス化
 }
 \description{
-この関数は、現行の\RセッションからOracleクライアントを作成およびインスタンス化します。これによって、1つ以上のOracleサーバーへの接続を可能にするオブジェクトが返されます。
+この関数は、現行の\RセッションからOracleクライアントを作成および
+  初期化します。また、1つ以上のOracleサーバーへの接続を可能にする
+  オブジェクトを返します。
 }
 \usage{
-  Oracle(interruptible = FALSE)
+  Oracle(interruptible = FALSE, unicode_as_utf8 = TRUE,
+         ora.attributes = FALSE)
   Extproc(extproc.ctx = NULL)
 }
 \arguments{
   \item{interruptible}{
-長時間実行の問合せでユーザー割込みを許可するかどうかを示す論理値。
+長時間実行の問合せでユーザー割込みを許可するかどうかを示す
+    論理値。
 }
   \item{extproc.ctx}{
 extprocコンテキストをラップする外部ポインタ。
 }
+  \item{unicode_as_utf8}{
+UTF8でエンコードされたNCHAR、NVARCHARおよびNCLOBのデータを
+    フェッチするかどうかを示す論理値。
+}
+  \item{ora.attributes}{
+属性\code{ora.encoding}、\code{ora.type}および\code{ora.maxlength}を、\code{dbGetQuery}および\code{fetch}によって
+    返されるデータ・フレームに含めるかどうかを示す
+    論理値。
+}
 }
 \value{
-\code{OraDriver}の場合はクラス\code{Oracle}のオブジェクト。
-  \code{ExtDriver}の場合は\code{Extproc}。このクラスは\code{DBIDriver}を拡張します。
-  このオブジェクトは、関数\code{dbConnect}を使用した、1つ以上の
-  Oracleデータベース・エンジンに対する接続の作成に使用されます。
+クラス\code{OraDriver}(\code{Oracle}の場合)または\code{ExtDriver}(\code{Extproc}の場合)の
+  オブジェクト(そのクラスは\code{DBIDriver}を拡張します)。
+  このオブジェクトは、関数\code{dbConnect}を使用して、1つ以上のOracle
+  データベース・エンジンとの接続を確立するために使用されます。
 }
 \section{Side Effects}{
   The \R client part of the database communication is initialized,
@@ -32,21 +45,31 @@ extprocコンテキストをラップする外部ポインタ。
 }
 
 
+
+
 \details{
-このオブジェクトはシングルトンで、以降の起動では同じ
-  初期化済オブジェクトを返します。
-  この実装によって、複数のホスト・サーバーに接続し、複数の
-  接続を各サーバーで同時に実行できます。interruptibleが
-  TRUEに設定されていると、スレッドの問合せを実行することで、
-  サーバー上の長時間実行の問合せへの割込みが可能です。
+このオブジェクトはシングルトンです。つまり、以降の起動では
+  同じ初期化済オブジェクトを返します。
+  この実装によって、複数のホスト・サーバーに接続し、
+  複数の接続を各サーバーで同時に実行できます。
+  \code{interruptible}がTRUEに設定されていると、スレッドで問合せを実行することで、
+  サーバー上の長時間実行の問合せへの割込みが可能になります。
   メイン・スレッドは[Ctrl]-[C]をチェックし、OCIBreak/OCIResetを発行して
-  サーバー上の操作を取り消します。デフォルトでinterruptibleはFALSEです。
+  サーバー上の操作を取り消します。デフォルトでは、\code{interruptible}はFALSEです。
+  \code{unicode_as_utf8}がFALSEに設定されていると、NCHAR、NVARCHARおよびNCLOBのデータが
+  NLS_LANG設定を使用している文字セットを使用してフェッチされます。
+  デフォルトでは、\code{unicode_as_utf8}はTRUEに設定されています。
+  \code{ora.attributes}がTRUEに設定されていると、属性\code{ora.encoding}、
+  \code{ora.type}および\code{ora.maxlength}がdbGetQueryおよびフェッチから
+  返される結果データ・フレームに追加されます。ソース表からフェッチされるときに、
+  Oracle DBMSと同じデータ型を作成するには、dbWriteTableとともに使用する必要が
+  あります。
 }
 \section{Oracle user authentication}{
   In order to establish a connection to an Oracle server users need to provide
   a user name, a password, and possibly a connect identifier (for more
-  informations refer to chapter 8 (Configuring Naming Methods) of Oracle
-  Database Net Services Administrator's Guide). This is the same as part
+  information refer to chapter 8 (Configuring Naming Methods) of Oracle
+  Database Net Services Administrator's Guide). This is the same as the part
   of the SQL*Plus connect string that follows the '@' sign.
 
   Connections to an Oracle TimesTen IMDB instance are established using the OCI
@@ -65,15 +88,15 @@ extprocコンテキストをラップする外部ポインタ。
   with \code{\link[DBI]{dbGetQuery}}.
 
   Notice that Oracle (and ANSI/ISO compliant DBMS) transactions are 
-  implicitly started when data definition SQL are executed (create
+  implicitly started when data definition SQL statements are executed (create
   table, etc.), which helper functions like \code{\link[DBI]{dbWriteTable}}
   may execute behind the scenes. You may want or need to commit
   or roll back your work before issuing any of these helper functions.
 }
 
 \section{References}{
-  For the Oracle Database documentation see
-  \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
+  For Oracle Database documentation, see
+  \url{ http://docs.oracle.com/en/database/}.
 }
 \author{David A. James and Denis Mukhin}
 \seealso{

@@ -18,8 +18,10 @@ Estes métodos são implementações simples das funções genéricas
    correspondentes, exceto pelo método \code{execute}, que é uma extensão DBI específica para ROracle.
 }
 \usage{
-\S4method{dbSendQuery}{OraConnection,character}(conn, statement, data = NULL, prefetch = FALSE, bulk_read = 1000L, ...)
-\S4method{dbGetQuery}{OraConnection,character}(conn, statement, data = NULL, prefetch = FALSE, bulk_read = 1000L, ...)
+\S4method{dbSendQuery}{OraConnection,character}(conn, statement, data = NULL,
+          prefetch = FALSE, bulk_read = 1000L, bulk_write = 1000L, ...)
+\S4method{dbGetQuery}{OraConnection,character}(conn, statement, data = NULL,
+          prefetch = FALSE, bulk_read = 1000L, bulk_write = 1000L, ...)
 \S4method{dbClearResult}{OraResult}(res, ...)
 \S4method{dbGetException}{OraConnection}(conn, ...)
 
@@ -28,44 +30,53 @@ execute(res, ...)
 }
 \arguments{
   \item{conn}{
-um objeto \code{OraConnection}.
+Um objeto \code{OraConnection}.
 }
   \item{statement}{
-um vetor de caractere de comprimento 1 com a instrução SQL.
+Um vetor de caractere de comprimento 1 com a instrução SQL.
 }
   \item{res}{
-um objeto \code{OraResult}.
+Um objeto \code{OraResult}.
 }
   \item{data}{
-um data.frame especificando os dados de bind
+Um data.frame especificando dados de bind
 }
   \item{prefetch}{
-um valor lógico que indica TRUE ou FALSE. Quando definido como TRUE, o ROracle usará
-    buffers de pré-extração do OCI para recuperar dados adicionais do servidor, salvando, assim,
-    a memória necessária no RODBI/ROOCI alocando um único buffer de linha para extrair 
+Um valor lógico que indica TRUE ou FALSE. Quando definido como TRUE, o ROracle usará
+    buffers de pré-extração do OCI para recuperar dados adicionais do servidor, com isso economizando
+    a memória necessária no RODBI/ROOCI ao alocar um único buffer de linha para extrair 
     os dados do OCI. Usando os resultados de pré-extração em uma chamada de extração para cada linha. Por
     padrão, a pré-extração é FALSE e a extração da array é usada para recuperar os dados do
     servidor.
 }
   \item{bulk_read}{
-um valor inteiro que indica o número de linhas a serem extraídas por vez. O padrão
-    é 1000L. Quando a opção de pré-extração for selecionada, a memória será alocada para
-    buffers de pré-extração e o OCI extrairá essa quantidade de linhas por vez. Quando a pré-extração não for 
-    usada (padrão) a memória será alocada nos buffers de definição do RODBI/ROOCI. Definir
-    essa opção para um valor grande resultará em mais memória alocada com base no 
-    número de colunas na lista de seleção e nos tipos de colunas. Para uma coluna
-    de caracteres, os buffers de definição são alocados usando a largura máxima vezes 
-    a largura máxima de NLS. A aplicação deve ajustar esse valor com base no resultado 
-    da consulta w um valor maior beneficiará as consultas que retornarem um
-    resultado grande. A aplicação pode ajustar esse valor conforme necessário.
+Um valor inteiro que indica o número de linhas a serem extraídas por vez. O padrão
+    é 1000L. Quando a opção de pré-extração é selecionada, a memória é alocada para
+    buffers de pré-extração e o OCI extrairá essas muitas linhas por vez. Quando a pré-extração
+    não for usada (padrão) a memória será alocada nos buffers de definição do RODBI/ROOCI.
+    Definir essa opção com um valor grande resultará em mais memória sendo alocada
+    com base no número de colunas da lista de seleção e nos tipos de colunas.
+    Para uma coluna de caractere de tipo, buffers de definição são alocados usando a
+    a largura máxima vezes a largura máxima de NLS. Uma Aplicação deve ajustar esse
+    valor com base no resultado da consulta e um valor maior beneficiará as consultas que
+    retornarem um resultado grande. A Aplicação pode ajustar esse valor conforme necessário.
+}
+  \item{bulk_write}{
+Um valor inteiro que indica o número de linhas a serem gravadas por vez. O
+    valor padrão é 1000L. Quando o valor bulk_write é informado no argumento,
+    a memória é alocada para buffers e o OCI gravará várias linhas de uma
+    vez. Quando o argumento bulk_write é informado, o valor padrão 1000 é
+    usado para alocar memória para os buffers de bind. A definição com um valor
+    grande resultará em mais memória alocada com base no número de colunas
+    da lista de inserção e nos tipos de colunas.
 }
   \item{\dots}{
-não utilizado no momento.
+Não utilizado no momento.
 }
 }
 \value{
 \item{dbSendQuery}{
-    um objeto \code{OraResult} cuja classe estende \code{DBIResult}. Esse 
+    Um objeto \code{OraResult} cuja classe estende \code{DBIResult}. Esse 
     objeto é usado para extrair dados do banco de dados, usando a função 
     \code{fetch}.
   }
@@ -73,42 +84,41 @@ não utilizado no momento.
 \section{Side Effects}{
   \describe{
     \item{dbGetQuery}{
-      query statement is executed and data has fetched from database.
+      Query statement is executed and data has fetched from database.
     }
     \item{dbSendQuery}{
-      query statement is executed, but note that data needs to fetch through
+      Query statement is executed, but note that data needs to fetch through
       calls to \code{\link[DBI]{fetch}}.
     }
     \item{dbClearResult}{
-      resources acquired by result set has free.
+      Resources acquired by result set has free.
     }
     \item{dbGetException}{
-      error information retrieved and then cleaned from driver.
+      Error information retrieved and then cleaned from driver.
     }
     \item{execute}{
-      query statement is executed.
+      Query statement is executed.
     }
   }
 }
 \details{
 \\describe{
     \item{dbGetQuery}{
-      A implementação executa a instrução de consulta e extrai 
-      os dados de resultado do banco de dados. 
+      Essa função executa uma instrução de consulta e extrai os dados resultantes
+      do banco de dados.
     }
     \item{dbSendQuery}{
-      A implementação executa a instrução de consulta e retorna 
-      o conjunto de resultados para a aplicação. Agora, a aplicação pode executar as operações 
-      no conjunto de resultados. 
+      Essa função executa a instrução de consulta e retorna um conjunto de resultados para a 
+      aplicação. Agora, a aplicação pode executar operações no conjunto de resultados.
     }
     \item{dbClearResult}{
-      A implementação libera os recursos ocupados pelo conjunto de resultados.
+      Essa função libera os recursos ocupados pelo conjunto de resultados.
     }
     \item{dbGetException}{
-      A implementação recupera as informações de erro.
+      Essa função recupera informações de erro.
     }
     \item{execute}{
-      A implementação executa a instrução de consulta.
+      Essa função executa a instrução de consulta especificada.
     }
   }
 }
@@ -139,9 +149,12 @@ não utilizado no momento.
     res3 <- dbSendQuery(con, "select * from emp where deptno = :1",
                         data2 = data.frame(deptno = 10), bulk_read=10L)
     data2 <- fetch(res3, n = -1)
-    res4 <- dbSendQuery(con, "select * from emp where ename = :1",
-                        data3 = data.frame(ename = 'SMITH')) 
+    res4 <- dbSendQuery(con, "select * from emp where deptno = :1",
+                        data3 = data.frame(deptno = 10), bulk_write=10L)
     data3 <- fetch(res4, n = -1)
+    res5 <- dbSendQuery(con, "select * from emp where ename = :1",
+                        data4 = data.frame(ename = 'SMITH')) 
+    data4 <- fetch(res5, n = -1)
   }
 }
 \keyword{methods}

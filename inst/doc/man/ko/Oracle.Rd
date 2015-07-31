@@ -10,22 +10,33 @@
   객체를 반환합니다.
 }
 \usage{
-  Oracle(interruptible = FALSE)
+  Oracle(interruptible = FALSE, unicode_as_utf8 = TRUE,
+         ora.attributes = FALSE)
   Extproc(extproc.ctx = NULL)
 }
 \arguments{
   \item{interruptible}{
-사용자가 장기 실행 질의를 중단할 수 있는지 여부를 나타내는 논리입니다.
+사용자가 장기 실행 질의를 중단할 수 있는지 여부를 나타내는
+    논리입니다.
 }
   \item{extproc.ctx}{
 extproc 컨텍스트를 래핑하는 외부 포인터입니다.
+}
+  \item{unicode_as_utf8}{
+UTF8로 인코딩된 NCHAR, NVARCHAR 및 NCLOB 데이터를 인출할지 여부를 나타내는
+    논리입니다.
+}
+  \item{ora.attributes}{
+\code{ora.encoding} 및 \code{ora.type}에서 반환된 데이터 프레임에 \code{ora.maxlength},
+    \code{dbGetQuery} 및 \code{fetch} 속성을 포함할지 여부를 나타내는
+    논리입니다.
 }
 }
 \value{
 해당 클래스가 \code{OraDriver}을(를) 확장하는 \code{Oracle}에 대한 \code{ExtDriver}
   클래스 또는 \code{Extproc}에 대한 \code{DBIDriver} 클래스의 객체입니다.
-  이 객체는 \code{dbConnect} 함수를 사용하여 한 개 또는 여러 개의
-  Oracle Database 엔진에 대한 접속을 생성하는 데 사용됩니다.
+  이 객체는 \code{dbConnect} 함수를 사용하여 하나 이상의 Oracle 데이터베이스 엔진에
+  대한 접속을 생성하는 데 사용됩니다.
 }
 \section{Side Effects}{
   The \R client part of the database communication is initialized,
@@ -34,20 +45,31 @@ extproc 컨텍스트를 래핑하는 외부 포인터입니다.
 }
 
 
+
+
 \details{
-이 객체는 단일체입니다. 즉, 이후에 호출 시 똑같이 초기화된 객체를
-  반환합니다. 이 구현을 통해 여러 호스트 서버에 접속하고 각 서버에서
+이 객체는 단일 객체입니다. 즉 후속 호출 시 동일한
+  초기화된 객체가 반환됩니다.
+  이 구현에서는 여러 호스트 서버에 접속하고 각 서버에서
   여러 접속을 동시에 실행할 수 있습니다.
-  interruptible이 TRUE로 설정된 경우 서버에서 장기 실행 중인 질의를
-  스레드에서 실행하여 중단할 수 있습니다. 주 스레드는 Ctrl-C를 검사하고
-  OCIBreak/OCIReset을 발행하여 서버의 작업을 취소합니다.
-  기본적으로 interruptible은 FALSE입니다.
+  \code{interruptible}이(가) TRUE로 설정된 경우 서버에서 스레드에 질의를
+  실행하여 장기 실행 질의를 중단할 수 있습니다. 기본 스레드는
+  Ctrl-C를 검사하고 OCIBreak/OCIReset을 실행하여 서버에서 작업을
+  취소합니다. 기본적으로 \code{interruptible}은(는) FALSE입니다.
+  \code{unicode_as_utf8}이(가) FALSE로 설정된 경우 NLS_LANG 설정에 의해
+  문자 집합을 사용하여 NCHAR, NVARCHAR 및 NCLOB
+  데이터가 인출됩니다. 기본적으로 \code{unicode_as_utf8}은(는) TRUE로 설정됩니다.
+  \code{ora.attributes}이(가) TRUE로 설정된 경우 \code{ora.encoding},
+  \code{ora.type} 및 \code{ora.maxlength} 속성이 dbGetQuery 및 인출에서 반환된 결과 데이터 프레임에
+  추가됩니다. dbWriteTable과 함께 사용되어 소스 테이블에서
+  인출된 대로 Oracle DBMS에서 동일한 데이터 유형을
+  생성해야 합니다.
 }
 \section{Oracle user authentication}{
   In order to establish a connection to an Oracle server users need to provide
   a user name, a password, and possibly a connect identifier (for more
-  informations refer to chapter 8 (Configuring Naming Methods) of Oracle
-  Database Net Services Administrator's Guide). This is the same as part
+  information refer to chapter 8 (Configuring Naming Methods) of Oracle
+  Database Net Services Administrator's Guide). This is the same as the part
   of the SQL*Plus connect string that follows the '@' sign.
 
   Connections to an Oracle TimesTen IMDB instance are established using the OCI
@@ -66,15 +88,15 @@ extproc 컨텍스트를 래핑하는 외부 포인터입니다.
   with \code{\link[DBI]{dbGetQuery}}.
 
   Notice that Oracle (and ANSI/ISO compliant DBMS) transactions are 
-  implicitly started when data definition SQL are executed (create
+  implicitly started when data definition SQL statements are executed (create
   table, etc.), which helper functions like \code{\link[DBI]{dbWriteTable}}
   may execute behind the scenes. You may want or need to commit
   or roll back your work before issuing any of these helper functions.
 }
 
 \section{References}{
-  For the Oracle Database documentation see
-  \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
+  For Oracle Database documentation, see
+  \url{ http://docs.oracle.com/en/database/}.
 }
 \author{David A. James and Denis Mukhin}
 \seealso{

@@ -5,27 +5,38 @@
 Instanciar um Cliente Oracle com base na sessão \R atual
 }
 \description{
-Esta função cria e inicializa um cliente Oracle com base na
-  sessão \R atual. Ela retorna um objeto que permite conexão com
-  um ou diversos servidores Oracle.
+Essa função cria e inicializa um cliente Oracle na
+  sessão do \R atual. Ela retorna um objeto que permite conexão com
+  um ou mais servidores Oracle.
 }
 \usage{
-  Oracle(interruptible = FALSE)
+  Oracle(interruptible = FALSE, unicode_as_utf8 = TRUE,
+         ora.attributes = FALSE)
   Extproc(extproc.ctx = NULL)
 }
 \arguments{
   \item{interruptible}{
-Valor lógico que indica se o usuário terá permissão de interromper consultas de longa execução.
+Um valor lógico que indica se o usuário tem permissão para interromper consultas de
+     execução longa.
 }
   \item{extproc.ctx}{
 Um ponteiro externo que encapsula o contexto extproc.
+}
+  \item{unicode_as_utf8}{
+Um valor lógico que indica se dados NCHAR, NVARCHAR e NCLOB
+    codificados em UTF8 devem ser extraídos.
+}
+  \item{ora.attributes}{
+Um valor lógico que indica se os atributos \code{ora.encoding},
+    \code{ora.type} e \code{ora.maxlength} devem ser incluídos nos quadros de dados retornados por
+    \code{dbGetQuery} e \code{fetch}.
 }
 }
 \value{
 Um objeto da classe \code{OraDriver} para \code{Oracle} ou
   \code{ExtDriver} para \code{Extproc} cuja classe estende \code{DBIDriver}.
   Esse objeto é usado para criar conexões, usando a função
-  \code{dbConnect}, para um ou diversos mecanismos de banco de dados Oracle.
+  \code{dbConnect}, para um ou mais motores de banco de dados Oracle.
 }
 \section{Side Effects}{
   The \R client part of the database communication is initialized,
@@ -34,22 +45,31 @@ Um objeto da classe \code{OraDriver} para \code{Oracle} ou
 }
 
 
+
+
 \details{
-Este objeto é um singleton, ou seja, em chamadas subsequentes,
-ele retorna o mesmo objeto inicializado. 
-Esta implementação permite que você estabeleça conexão com vários
-servidores e execute várias conexões em cada servidor simultaneamente.
-Quando definida como TRUE, a opção interrompível permite interromper
-consultas de longa execução no servidor ao processar a consulta em um thread.
-O thread principal
-verifica se a sequência Ctrl-C foi utilizada e emite OCIBreak/OCIReset para
-cancelar a operação no servidor. Por padrão, a opção interrompível é FALSE.
+Esse objeto é um singleton, ou seja, nas chamadas subsequentes,
+  ele retorna o mesmo objeto inicializado. 
+  Essa implementação permite que você se conecte a vários servidores host e
+  execute diversas conexões em cada servidor simultaneamente.
+  Quando \code{interruptible} é definido como TRUE, ele permite a interrupção
+  de consultas de execução longa no servidor, executando a consulta em um thread. O
+  thread principal verifica Ctrl-C e emite OCIBreak/OCIReset para cancelar a operação
+  no servidor. Por padrão, \code{interruptible} é FALSE.
+  Quando \code{unicode_as_utf8} é definido como FALSE, os dados NCHAR, NVARCHAR e NCLOB
+  são extraídos usando o conjunto de caracteres que utiliza a definição NLS_LANG. Por padrão,
+  \code{unicode_as_utf8} é definido como TRUE.
+  Quando \code{ora.attributes} é definido como TRUE, os atributos \code{ora.encoding},
+  \code{ora.type} e \code{ora.maxlength} são adicionados no quadro de dados de resultado
+  retornados de dbGetQuery e da extração. Eles deverão ser usados com dbWriteTable para
+  criar os mesmos tipos de dados que no Oracle DBMS conforme extraídos da tabela
+  de origem.
 }
 \section{Oracle user authentication}{
   In order to establish a connection to an Oracle server users need to provide
   a user name, a password, and possibly a connect identifier (for more
-  informations refer to chapter 8 (Configuring Naming Methods) of Oracle
-  Database Net Services Administrator's Guide). This is the same as part
+  information refer to chapter 8 (Configuring Naming Methods) of Oracle
+  Database Net Services Administrator's Guide). This is the same as the part
   of the SQL*Plus connect string that follows the '@' sign.
 
   Connections to an Oracle TimesTen IMDB instance are established using the OCI
@@ -68,15 +88,15 @@ cancelar a operação no servidor. Por padrão, a opção interrompível é FALS
   with \code{\link[DBI]{dbGetQuery}}.
 
   Notice that Oracle (and ANSI/ISO compliant DBMS) transactions are 
-  implicitly started when data definition SQL are executed (create
+  implicitly started when data definition SQL statements are executed (create
   table, etc.), which helper functions like \code{\link[DBI]{dbWriteTable}}
   may execute behind the scenes. You may want or need to commit
   or roll back your work before issuing any of these helper functions.
 }
 
 \section{References}{
-  For the Oracle Database documentation see
-  \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
+  For Oracle Database documentation, see
+  \url{ http://docs.oracle.com/en/database/}.
 }
 \author{David A. James and Denis Mukhin}
 \seealso{

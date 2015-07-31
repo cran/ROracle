@@ -6,19 +6,30 @@ Instancier un client Oracle à partir de la session \R en cours
 }
 \description{
 Cette fonction crée et initialise un client Oracle à partir de la
-  session \R en cours. Elle renvoie un objet qui vous permet de vous connecter à
+  session \R en cours. Elle renvoie un objet qui permet de vous connecter à
   des serveurs Oracle.
 }
 \usage{
-  Oracle(interruptible = FALSE)
+  Oracle(interruptible = FALSE, unicode_as_utf8 = TRUE,
+         ora.attributes = FALSE)
   Extproc(extproc.ctx = NULL)
 }
 \arguments{
   \item{interruptible}{
-Elément logique indiquant si les interruptions utilisateur ou les requêtes à longue durée d'exécution doivent être autorisées.
+Elément logique indiquant si les interruptions utilisateur doivent être autorisées
+    sur les requêtes à longue durée d'exécution.
 }
   \item{extproc.ctx}{
 Pointeur externe encapsulant le contexte extproc.
+}
+  \item{unicode_as_utf8}{
+Logique indiquant si les données NCHAR, NVARCHAR et NCLOB
+    encodées en UTF8 doivent être extraites.
+}
+  \item{ora.attributes}{
+Logique indiquant si les attributs \code{ora.encoding},
+    \code{ora.type} et \code{ora.maxlength} doivent être inclus dans les structures de données renvoyées par
+    \code{dbGetQuery} et \code{fetch}.
 }
 }
 \value{
@@ -34,21 +45,31 @@ Objet de la classe \code{OraDriver} pour \code{Oracle} ou
 }
 
 
+
+
 \details{
-Cet objet est un singleton, c'est-à-dire que lors des appels suivants,
+Cet objet est un singleton, c'est-à-dire que lors des appels consécutifs,
   il renvoie le même objet initialisé. 
-  Cette implémentation vous permet de vous connecter à plusieurs serveurs hôte et
+  Cette implémentation permet de vous connecter à plusieurs serveurs hôte et
   d'exécuter simultanément plusieurs connexions sur chaque serveur.
-  Si l'élément interruptible a la valeur TRUE, il permet l'interruption de requêtes
+  Si \code{interruptible} a la valeur TRUE, il permet d'interrompre des requêtes
   à longue durée d'exécution sur le serveur en exécutant la requête dans un thread. Le thread principal
   recherche Ctrl-C et émet OCIBreak/OCIReset pour annuler l'opération sur
-  le serveur. Par défaut, l'élément interruptible a la valeur FALSE.
+  le serveur. Par défaut, \code{interruptible} a la valeur FALSE.
+  Si \code{unicode_as_utf8} est défini sur FALSE, les données NCHAR, NVARCHAR et NCLOB
+  sont extraites à l'aide du jeu de caractères via le paramètre NLS_LANG. Par défaut
+  \code{unicode_as_utf8} est défini sur TRUE.
+  Si \code{ora.attributes} est défini sur TRUE, les attributs \code{ora.encoding},
+  \code{ora.type} et \code{ora.maxlength} sont ajoutés dans la structure de données de résultat
+  renvoyée à partir de dbGetQuery et extraits. Il doit être utilisé avec dbWriteTable pour
+  créer les mêmes types de données que dans le SGBD Oracle, comme ceux extraits de la table
+  source.
 }
 \section{Oracle user authentication}{
   In order to establish a connection to an Oracle server users need to provide
   a user name, a password, and possibly a connect identifier (for more
-  informations refer to chapter 8 (Configuring Naming Methods) of Oracle
-  Database Net Services Administrator's Guide). This is the same as part
+  information refer to chapter 8 (Configuring Naming Methods) of Oracle
+  Database Net Services Administrator's Guide). This is the same as the part
   of the SQL*Plus connect string that follows the '@' sign.
 
   Connections to an Oracle TimesTen IMDB instance are established using the OCI
@@ -67,15 +88,15 @@ Cet objet est un singleton, c'est-à-dire que lors des appels suivants,
   with \code{\link[DBI]{dbGetQuery}}.
 
   Notice that Oracle (and ANSI/ISO compliant DBMS) transactions are 
-  implicitly started when data definition SQL are executed (create
+  implicitly started when data definition SQL statements are executed (create
   table, etc.), which helper functions like \code{\link[DBI]{dbWriteTable}}
   may execute behind the scenes. You may want or need to commit
   or roll back your work before issuing any of these helper functions.
 }
 
 \section{References}{
-  For the Oracle Database documentation see
-  \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
+  For Oracle Database documentation, see
+  \url{ http://docs.oracle.com/en/database/}.
 }
 \author{David A. James and Denis Mukhin}
 \seealso{

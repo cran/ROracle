@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 #    NAME
 #      oci.R - OCI based implementaion for DBI
@@ -10,6 +10,16 @@
 #    NOTES
 #
 #    MODIFIED   (MM/DD/YY)
+#    ssjaiswa    04/29/15 - [20964968] copying attributes back to object after 
+#                           as.character() strips them
+#    rpingte     03/31/15 - add ora.attributes
+#    rpingte     03/30/15 - remove attrib from ListFields
+#    ssjaiswa    03/23/15 - [16017358] add .oci.Connect(), .oci.GetQuery() and 
+#                           .oci.SendQuery() parameters validation
+#    ssjaiswa    03/22/15 - [15937661] [20603162] add attribute support
+#    rpingte     02/16/15 - add attribute support
+#    rpingte     01/29/15 - add unicode_as_utf8 parameter to dbDriver
+#    ssjaiswa    12/16/14 - [16907374] Add date argument in .oci.WriteTable
 #    ssjaiswa    09/10/14 - Add bulk_write
 #    rpingte     05/27/14 - use ORA_SDTZ to format binds
 #    rpingte     05/02/14 - Date and Time stamp(with zone and local) are
@@ -53,10 +63,11 @@
 ##  (*) OraDriver                                                            ##
 ###############################################################################
 
-.oci.Driver <- function(drv, interruptible = FALSE, extproc.ctx = NULL)
+.oci.Driver <- function(drv, interruptible = FALSE, extproc.ctx = NULL,
+                        unicode_as_utf8 = TRUE, ora.attributes = FALSE)
 {
-  .Call("rociDrvInit", drv@handle, interruptible, extproc.ctx,
-        PACKAGE = "ROracle")
+  .Call("rociDrvInit", drv@handle, interruptible, extproc.ctx, unicode_as_utf8,
+        ora.attributes, PACKAGE = "ROracle")
   drv
 }
 
@@ -79,12 +90,14 @@
 .oci.DriverSummary <- function(drv)
 {
   info <- .oci.DriverInfo(drv)
-  cat("Driver name:           ", info$driverName,    "\n")
-  cat("Driver version:        ", info$driverVersion, "\n")
-  cat("Client version:        ", info$clientVersion, "\n")
-  cat("Connections processed: ", info$conTotal,      "\n")
-  cat("Open connections:      ", info$conOpen,       "\n")
-  cat("Interruptible:         ", info$interruptible, "\n")
+  cat("Driver name:            ", info$driverName,      "\n")
+  cat("Driver version:         ", info$driverVersion,   "\n")
+  cat("Client version:         ", info$clientVersion,   "\n")
+  cat("Connections processed:  ", info$conTotal,        "\n")
+  cat("Open connections:       ", info$conOpen,         "\n")
+  cat("Interruptible:          ", info$interruptible,   "\n")
+  cat("Unicode data as utf8:   ", info$unicode_as_utf8, "\n")
+  cat("Oracle type attributes: ", info$ora_attributes, "\n")
   invisible(info)
 }
 
@@ -97,20 +110,42 @@
                          bulk_write = 1000L, stmt_cache = 0L,
                          external_credentials = FALSE, sysdba = FALSE)
 {
-  # validate
-  username <- as.character(username)
-  if (length(username) != 1L)
-    stop("'username' must be a single string")
-  password <- as.character(password)
-  if (length(password) != 1L)
-    stop("'password' must be a single string")
-  dbname <- as.character(dbname)
-  if (length(dbname) != 1L)
-    stop("'dbname' must be a single string")
+  # validate if not ExtDriver
+  if (class(drv)[1] != "ExtDriver")
+  {
+    username <- as.character(username)
+    if (length(username) != 1L)
+      stop("'username' must be a single string")
+    password <- as.character(password)
+    if (length(password) != 1L)
+      stop("'password' must be a single string")
+    dbname <- as.character(dbname)
+    if (length(dbname) != 1L)
+      stop("'dbname' must be a single string")
+  }
+  else
+  {
+    if (!is.character(username) || nzchar(username))
+      stop("'username' must not given for ExtDriver")
+    if (!is.character(password) || nzchar(password))
+      stop("'password' must not be given for ExtDriver")
+    if (!is.character(dbname) || nzchar(dbname))
+      stop("'dbname' must not be given for ExtDriver")
+  }
+
+  if (!is.logical(prefetch))
+    stop(gettextf(
+         "argument '%s' must be a single logical value and cannot be '%s'",
+         "prefetch", prefetch))
 
   prefetch <- as.logical(prefetch)
   if (length(prefetch) != 1L)
     stop(gettextf("argument '%s' must be a single logical value", "prefetch"))
+
+  if (!is.numeric(bulk_read))
+    stop(gettextf(
+         "argument '%s' must be a single integer value and cannot be '%s'",
+         "bulk_read", bulk_read))
 
   bulk_read <- as.integer(bulk_read)
   if (length(bulk_read) != 1L)
@@ -118,12 +153,22 @@
   if (bulk_read < 1L)
     stop(gettextf("argument '%s' must be greater than 0", "bulk_read")) 
 
+  if (!is.numeric(bulk_write))
+    stop(
+     gettextf(
+      "argument '%s' must be a single integer value and cannot be '%s'",
+      "bulk_write", bulk_write))
 
   bulk_write <- as.integer(bulk_write)
   if (length(bulk_write) != 1L)
     stop(gettextf("argument '%s' must be a single integer", "bulk_write"))
   if (bulk_write < 1L)
     stop(gettextf("argument '%s' must be greater than 0", "bulk_write")) 
+
+  if (!is.integer(stmt_cache))
+    stop(gettextf(
+      "argument '%s' must be a single a single integer and cannot be '%s'",
+      "stmt_cache", stmt_cache))
 
   stmt_cache <- as.integer(stmt_cache)
   if (length(stmt_cache) != 1L)
@@ -132,12 +177,22 @@
     stop(gettextf("argument '%s' must be a positive integer", "stmt_cache"))
 
   # Validate external_credentials parameter 
+  if (!is.logical(external_credentials))
+    stop(gettextf(
+       "argument '%s' must be a single a single integer and cannot be '%s'",
+       "external_credentials", external_credentials))
+
   external_credentials <- as.logical(external_credentials)
   if (length(external_credentials) != 1L)
     stop(gettextf("argument '%s' must be a single logical value",
                   "external_credentials"))
   
   # Validate sysdba parameter 
+  if (!is.logical(sysdba))
+    stop(gettextf(
+       "argument '%s' must be a single a single logical and cannot be '%s'",
+       "sysdba", sysdba))
+
   sysdba <- as.logical(sysdba)
   if (length(sysdba) != 1L)
     stop(gettextf("argument '%s' must be a single logical value", "sysdba"))
@@ -162,15 +217,31 @@
                            bulk_read = 1000L, bulk_write = 1000L)
 {
   #validate
+  if (!is.logical(prefetch))
+    stop(gettextf(
+         "argument '%s' must be a single logical value and cannot be '%s'",
+         "prefetch", prefetch))
+
   prefetch <- as.logical(prefetch)
   if (length(prefetch) != 1L)
     stop(gettextf("argument '%s' must be a single logical value", "prefetch"))
+
+  if (!is.numeric(bulk_read))
+    stop(gettextf(
+         "argument '%s' must be a single integer value and cannot be '%s'",
+         "bulk_read", bulk_read))
 
   bulk_read <- as.integer(bulk_read)
   if (length(bulk_read) != 1L)
     stop(gettextf("argument '%s' must be a single integer", "bulk_read"))
   if (bulk_read < 1L)
     stop(gettextf("argument '%s' must be greater than 0", "bulk_read")) 
+
+  if (!is.numeric(bulk_write))
+    stop(
+     gettextf(
+      "argument '%s' must be a single integer value and cannot be '%s'",
+      "bulk_write", bulk_write))
 
   bulk_write <- as.integer(bulk_write)
   if (length(bulk_write) != 1L)
@@ -193,15 +264,31 @@
                           bulk_read = 1000L, bulk_write = 1000L)
 {
   #validate
+  if (!is.logical(prefetch))
+    stop(gettextf(
+         "argument '%s' must be a single logical value and cannot be '%s'",
+         "prefetch", prefetch))
+
   prefetch <- as.logical(prefetch)
   if (length(prefetch) != 1L)
     stop(gettextf("argument '%s' must be a single logical value", "prefetch"))
+
+  if (!is.numeric(bulk_read))
+    stop(gettextf(
+         "argument '%s' must be a single integer value and cannot be '%s'",
+         "bulk_read", bulk_read))
 
   bulk_read <- as.integer(bulk_read)
   if (length(bulk_read) != 1L)
     stop(gettextf("argument '%s' must be a single integer", "bulk_read"))
   if (bulk_read < 1L)
     stop(gettextf("argument '%s' must be greater than 0", "bulk_read")) 
+
+  if (!is.numeric(bulk_write))
+    stop(
+     gettextf(
+      "argument '%s' must be a single integer value and cannot be '%s'",
+      "bulk_write", bulk_write))
 
   bulk_write <- as.integer(bulk_write)
   if (length(bulk_write) != 1L)
@@ -375,7 +462,7 @@
 
 .oci.WriteTable <- function(con, name, value, row.names = FALSE,
                             overwrite = FALSE, append = FALSE,
-                            ora.number = TRUE, schema = NULL)
+                            ora.number = TRUE, schema = NULL, date = FALSE)
 {
   # commit
   .oci.Commit(con)
@@ -406,8 +493,11 @@
   value <- .oci.data.frame(value)
 
   # get column names and types
-  ctypes <- sapply(head(value,0), .oci.dbType, ora.number = ora.number, 
-                   timesten = con@timesten)
+  if (con@timesten)
+    ctypes <- sapply(head(value,0), .oci.dbType, ora.number = ora.number, TRUE, date)
+  else
+    ctypes <- sapply(value, .oci.dbType, ora.number = ora.number, FALSE, date)
+
   cnames <- sprintf('"%s"', names(value))
 
   # create table
@@ -750,7 +840,15 @@
           storage.mode(obj[[i]]) <- "double"
       }
       else
+      {
+        typ <- attr(col, "ora.type")
+        enc <- attr(col, "ora.encoding")
+        mxl <- attr(col, "ora.maxlength")
         obj[[i]] <- as.character(col)
+        attr(obj[[i]], "ora.type") <- typ
+        attr(obj[[i]], "ora.encoding") <- enc
+        attr(obj[[i]], "ora.maxlength") <- mxl
+      }
     }
     else if (inherits(col, "POSIXct") && datetime)
     {
@@ -769,7 +867,7 @@
   obj
 }
 
-.oci.dbType <- function(obj, ora.number = FALSE, timesten = FALSE)
+.oci.dbType <- function(obj, ora.number = FALSE, timesten = FALSE, date = FALSE)
 {
 
   if (timesten)
@@ -785,7 +883,12 @@
                        else
                          "tt_integer",
            double  = if (inherits(obj, "POSIXct"))
+                     {
+                      if (date)
+                       "date"
+                      else
                        "timestamp"
+                     }
                      else if (ora.number)
                        "number"
                      else
@@ -797,20 +900,108 @@
   }
   else
   {
+
+    oratype = attr(obj, "ora.type", exact=TRUE)
+    enc = attr(obj, "ora.encoding", exact=TRUE)
+    if (is.null(enc))
+      enc = "unknown"
+
     # Oracle type map
     switch(typeof(obj),
            logical   =,
            integer   = "integer",
            double  = if (inherits(obj, "POSIXct"))
-                       "timestamp"
+                     {
+                       if (date)
+                         "date"
+                       else if (!is.null(oratype))
+                       {
+                         if (oratype == "timestamp with time zone")
+                         {
+                          fsec = attr(obj, "ora.fractional_seconds_precision",
+                                      exact=TRUE)
+                          if (!is.null(fsec))
+                           sprintf('timestamp(%d) with time zone', fsec)
+                          else
+                           "timestamp with time zone"
+                         }
+                         else if (oratype == "timestamp with local time zone")
+                         { 
+                           fsec = attr(obj, "ora.fractional_seconds_precision",
+                                       exact=TRUE)
+                           if (!is.null(fsec))
+                            sprintf('timestamp(%d) with local time zone', fsec)
+                           else
+                            "timestamp with local time zone"
+                         }
+                       }
+                       else
+                        "timestamp"
+                     }
                      else if (inherits(obj, "difftime"))
                        "interval day to second"
                      else if (ora.number)
                        "number"
                      else
                        "binary_double",
-           character = "varchar2(4000)",
-           list      = "raw(2000)",
+           character = if(is.null(oratype))
+                       {
+                         maxlen = attr(obj, "ora.maxlength", exact=TRUE)
+                         if (is.null(maxlen))
+                         {
+                          if (enc == "UTF-8")
+                            maxlen = 2000
+                          else
+                            maxlen = 4000
+                         }
+                         if (enc == "UTF-8")
+                          sprintf('nvarchar2(%d)', maxlen)
+                         else
+                          sprintf('varchar2(%d)', maxlen)
+                       }
+                       else if (oratype == "clob")
+                       {
+                        maxlen = attr(obj, "ora.maxlength", exact=TRUE)
+                        if (is.null(maxlen))
+                        {
+                         if (enc == "UTF-8")
+                          "nclob"
+                         else
+                          "clob"
+                        }
+                        else
+                         stop(gettextf("attribute '%s' must not be specified for CLOB", "ora.maxlength"))
+                       }
+                       else if (oratype == "char")
+                       {
+                        maxlen = attr(obj, "ora.maxlength", exact=TRUE)
+                        if (is.null(maxlen))
+                        {
+                         if (enc == "UTF-8")
+                          maxlen = 1000
+                         else
+                          maxlen = 2000
+                        }
+                        if (enc == "UTF-8")
+                         sprintf('nchar(%d)', maxlen)
+                        else
+                         sprintf('char(%d)', maxlen)
+                       }, 
+           list      = if (!is.null(oratype) && (oratype == "blob"))
+                       {
+                         maxlen = attr(obj, "ora.maxlength", exact=TRUE)
+                         if (is.null(maxlen))
+                           "blob"
+                         else
+                           stop(gettextf("attribute '%s' must not be specified for BLOB", "ora.maxlength"))
+                       }
+                       else
+                       {
+                         maxlen = attr(obj, "ora.maxlength", exact=TRUE)
+                         if (is.null(maxlen))
+                           maxlen = 2000
+                         sprintf('raw(%d)', maxlen)
+                       },
            stop(gettextf("ROracle internal error [%s, %d, %s]",
                          ".oci.dbType", 1L, class(obj))))
   }

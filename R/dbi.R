@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
 #
 #    NAME
 #      dbi.R - DBI implementation for Oracle RDBMS based on OCI
@@ -10,6 +10,9 @@
 #    NOTES
 #
 #    MODIFIED   (MM/DD/YY)
+#    rpingte     03/31/15 - add ora.attributes
+#    rpingte     01/29/15 - add unicode_as_utf8
+#    ssjaiswa    12/16/14 - [16907374] Add date argument in .oci.WriteTable
 #    ssjaiswa    09/10/14 - Add bulk_write
 #    rpingte     03/11/14 - add end of result
 #    rkanodia    10/03/13 - Add session mode
@@ -37,9 +40,12 @@ setClass("OraDriver",
   contains = "DBIDriver"
 )
 
-Oracle <- function(interruptible = FALSE)
+Oracle <- function(interruptible = FALSE, unicode_as_utf8 = TRUE,
+                   ora.attributes = FALSE)
 {
-  .oci.Driver(.oci.drv(), interruptible = interruptible)
+  .oci.Driver(.oci.drv(), interruptible = interruptible,
+              unicode_as_utf8 = unicode_as_utf8,
+              ora.attributes = ora.attributes)
 }
 
 setMethod("dbUnloadDriver",
@@ -218,10 +224,10 @@ function(conn, name, schema = NULL, row.names = NULL, ...)
 setMethod("dbWriteTable",
 signature(conn = "OraConnection", name = "character", value = "data.frame"),
 function(conn, name, value, row.names = FALSE, overwrite = FALSE,
-         append = FALSE, ora.number = TRUE, schema = NULL, ...)
+         append = FALSE, ora.number = TRUE, schema = NULL, date = FALSE, ...)
 .oci.WriteTable(conn, name, value, row.names = row.names,
                 overwrite = overwrite, append = append,
-                ora.number = ora.number, schema = schema)
+                ora.number = ora.number, schema = schema, date = date)
 )
 
 setMethod("dbExistsTable",

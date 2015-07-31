@@ -7,7 +7,7 @@
 Database Interface (DBI)のクラスおよびドライバのOracle実装
 }
 \description{
-Oracleドライバの初期化およびクローズ
+Oracleドライバの初期化およびクローズ。
 }
 \usage{
 \S4method{dbUnloadDriver}{OraDriver}(drv, ...)
@@ -15,18 +15,19 @@ Oracleドライバの初期化およびクローズ
 }
 \arguments{
   \item{drv}{
-\code{OraDriver}によって作成され、\code{ExtDriver}または\code{dbDriver}
-    を継承するオブジェクト。
+\code{OraDriver}または\code{ExtDriver}を継承するオブジェクト
+    (\code{dbDriver}によって作成)。
 }
+
   \item{...}{
-その他の引数はドライバ\code{drvName}に渡されます。
+ドライバ\code{drvName}に渡されるその他の引数。
 }
 }
 \value{
 \item{dbDriver}{
-    クラスが\code{OraDriver}を拡張する、オブジェクト\code{ExtDriver}または\code{DBIDriver}。
-    このオブジェクトは、関数\code{dbConnect}を使用して、1つまたは複数の
-    Oracleデータベース・エンジンとの接続を確立するために使用されます。
+    オブジェクト\code{OraDriver}または\code{ExtDriver} (そのクラスは\code{DBIDriver}を拡張します)。
+    このオブジェクトは、関数\code{dbConnect}を使用して、1つ以上のOracle 
+    Databaseエンジンとの接続を確立するために使用されます。
   }
   \item{dbUnloadDriver}{
     ドライバ・オブジェクトによって占有されたすべてのリソースを解放します。
@@ -40,33 +41,43 @@ Oracleドライバの初期化およびクローズ
       calls to \code{\link[DBI]{dbConnect}}.
     }
     \item{dbUnloadDriver}{
-      Remove communication link between \R client and database.
+      Remove the communication link between the \R client and the database.
     }
   }
 }
+
+
+
 
 
 \details{
 \\describe{
     \item{dbDriver}{
-      オブジェクトはシングルトンで、以降の起動では同じ
-      初期化済オブジェクトを返します。
-      この実装によって、複数のホスト・サーバーに接続し、複数の
-      接続を各サーバーで同時に実行できます。interruptibleが
-      TRUEに設定されていると、スレッドの問合せを実行することで、
-      サーバー上の長時間実行の問合せへの割込みが可能です。
+       このオブジェクトはシングルトンです。つまり、以降の\code{dbDriver}の起動では
+       同じ初期化済オブジェクトを返します。
+      この実装によって、複数のホスト・サーバーに接続し、
+      複数の接続を各サーバーで同時に実行できます。
+      \code{interruptible}がTRUEに設定されていると、スレッドで問合せを実行することで、
+      サーバー上の長時間実行の問合せへの割込みが可能になります。
       メイン・スレッドは[Ctrl]-[C]をチェックし、OCIBreak/OCIResetを発行して
-      サーバー上の操作を取り消します。デフォルトでinterruptibleはFALSEです。
+      サーバー上の操作を取り消します。デフォルトでは、\code{interruptible}はFALSEです。
+      \code{unicode_as_utf8}がFALSEに設定されていると、NCHAR、NVARCHARおよびNCLOBの
+      データがNLS_LANG設定によって指定された文字セットを使用して
+      フェッチされます。デフォルトでは、\code{unicode_as_utf8}はTRUEに設定されています。
+      \code{ora.attributes}がTRUEに設定されていると、
+      \code{dbGetQuery}および\code{fetch}からの結果セットには、
+      対応する列に対するDBMS固有の属性
+      (\code{ora.encoding}、\code{ora.type}、\code{ora.maxlength}など)が含まれます。
     }
     \item{dbUnloadDriver}{
-      実装によって、\Rクライアントとデータベースの間の接続リンク
-      が削除されます。すべての接続と、それらの接続オブジェクトに関連付けられている
+      この実装によって、\Rクライアントとデータベースの間の通信リンクが
+      削除されます。また、すべての接続と、それらの接続オブジェクトに関連付けられている
       すべての結果セットが解放されます。
     }
   }
 }
 \section{References}{
-  For the Oracle Database documentaion see
+  For Oracle Database documentation, see
   \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
 }
 \seealso{

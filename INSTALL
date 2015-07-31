@@ -74,7 +74,7 @@
   Client, change LD_LIBRARY_PATH as follows:
 
   export LD_LIBRARY_PATH=/usr/lib/oracle/11.2/client64/lib:$LD_LIBRARY_PATH
-  R CMD INSTALL ROracle_1.1-12.tar.gz
+  R CMD INSTALL ROracle_1.2-1.tar.gz
  
   Alternatively, you can extract Oracle Instant Client from a zip package. In
   this case, a symbolic link libclntsh.so needs to be created manually before
@@ -91,13 +91,13 @@
   
   export OCI_LIB=/scratch/instantclient_11_2
   export LD_LIBRARY_PATH=/scratch/instantclient_11_2:$LD_LIBRARY_PATH
-  R CMD INSTALL ROracle_1.1-12.tar.gz
+  R CMD INSTALL ROracle_1.2-1.tar.gz
 
   Alternatively, if using the --with-oci-lib configure option, you can do the
   following:
 
   export LD_LIBRARY_PATH=/scratch/instantclient_11_2:$LD_LIBRARY_PATH
-  R CMD INSTALL --configure-args='--with-oci-lib=/scratch/instantclient_11_2' ROracle_1.1-12.tar.gz
+  R CMD INSTALL --configure-args='--with-oci-lib=/scratch/instantclient_11_2' ROracle_1.2-1.tar.gz
 
   Both methods assume that Basic and SDK packages were unzipped into the same
   directory and Oracle Client headers are located under $OCI_LIB/sdk/include. 
@@ -111,7 +111,7 @@
   Oracle Client libraries. Additionally, set ORACLE_HOME. Then install the
   ROracle package by running
 
-  R CMD INSTALL ROracle_1.1-12.tar.gz
+  R CMD INSTALL ROracle_1.2-1.tar.gz
 
 
   Windows
@@ -145,69 +145,85 @@
   Windows - Instant Client
   ------------------------
 
-  When building both the 32-bit and 64-bit of ROracle on a 64-bit platform both
-  32-bit and 64-bit Instant Client Basic or Basic Lite and SDK packages should
-  be downloaded and unzipped into separate locations. The example below assumes
-  11.2 Instant Client. For example, let us assume that the 32-bit packages will
-  be unzipped into c:/instantclient/i386 and 64-bit into c:/instantclient/x64
-  using Oracle Instant Client. As a result oci.dll library will be located at
-  c:/instantclient/i386/instantclient_11_2 and
-  c:/instantclient/x64/instantclient_11_2 respectively. The header files will
-  be at c:/instantclient/i386/instantclient_11_2/sdk/include and
-  c:/instantclient/x64/instantclient_11_2/sdk/include (you can use either set
-  of header files for both 32-bit and 64-bit builds).
-
-  To build on a 32-bit platform only the 32-bit Oracle Instant Client package
-  is needed. To build only 64-bit R on a 64-bit platform, only the 64-bit
-  Oracle Instant Client package is needed.
-
-  Set the OCI_LIB32 and OCI_LIB64 environment variables as described below.
-  OCI_LIB32 should specify
-  the location of 32-bit libraries and OCI_LIB64 the location of 64-bit
-  libraries. If header files are not located in the sdk/include subdirectory of
-  the Instant Client directory (the directory that contains the libraries),
-  then set the OCI_INC environment variable to locate the header files.
-
-  Additionally on a 64-bit platform, set the PATH environment variable
-  appropriately. On a 64-bit platform, add
-  c:\instantclient\x64\instantclient_11_2 to the PATH environment variable. On
-  a 32-bit platform, add c:\instantclient\i386\instantclient_11_2 to the PATH
-  environment variable. This should be added to the system variables path.
-  Setting the environment variable is Windows operating system specific. On
-  Windows XP and Windows Server 2003, it can be set using "System" in the
-  control panel or the properties of "My Computer" (under the "Advanced" tab).
-  In Windows Vista, 7 or Server 2008, go to "User Accounts" in the Control
-  Panel, and select your account and then "Change my environment variables".
-  Restart the command window after making this change. 
-
-  To build both 32-bit and 64-bit versions of ROracle, add both the 32-bit and
-  64-bit versions of instant client to the PATH environment variable step. Once
-  ROracle is built and installed, 64-bit version of R will use the 64-bit
-  version of Oracle Instant Client and 32-bit of R the 32-bit version of Oracle
-  Instant Client.
-
-  To build with --merge-multiarch
-
-  set OCI_LIB32=c:/instantclient/i386/instantclient_11_2
-  set OCI_LIB64=c:/instantclient/x64/instantclient_11_2
-  set PATH=c:\instantclient\i386\instantclient_11_2;c:\instantclient\x64\instantclient_11_2;%PATH%
-  R CMD INSTALL --build --merge-multiarch ROracle_1.1-12.tar.gz
-
-  To build only 32-bit version
-
-  set OCI_LIB32=c:/instantclient/i386/instantclient_11_2
-  set PATH=c:\instantclient\i386\instantclient_11_2;%PATH%
-  R CMD INSTALL --build ROracle_1.1-12.tar.gz
-
-  To build only the 64-bit version
-
-  set OCI_LIB64=c:/instantclient/x64/instantclient_11_2
-  set PATH=c:\instantclient\x64\instantclient_11_2;%PATH%
-  R CMD INSTALL --build ROracle_1.1-12.tar.gz
-
-  To set OCI_INC
-
-  set OCI_INC=c:/instantclient/x64/instantclient_11_2/sdk/include
+  To use 64-bit version of instant Client, create an installation directory for
+  the Oracle R Enterprise client components. 
+  For example: c:\oreclient_install_dir 
+  Go to the Oracle Database Instant Client page on the Oracle Technology 
+  Network: 
+  http://www.oracle.com/technetwork/database/features/instant-client/ Opens a 
+  new window.
+  Select See Instant Client downloads for all platforms.
+  On the Instant Client Downloads page, select Instant Client for Microsoft 
+  Windows (x64).
+  On the Instant Client Downloads for Microsoft Windows (x64) page, accept the 
+  license agreement.
+  Choose Instant Client Package - Basic or Basic Lite Instant Client Package -
+  for your version of Oracle Database.
+  Save the file in the installation directory that you created in Step 1. For 
+  example: 
+  c:\oreclient_install_dir\instantclient-basic-windows.x64-11.2.0.1.0.zip 
+  Unzip the file.The files are extracted into a subdirectory called 
+  instantclient_version, where version is your version of Oracle Database. For 
+  example: 
+  c:\oreclient_install_dir\instantclient_11_2 
+  Return to the Instant Client Downloads for Microsoft Windows (x64) page: 
+  http://www.oracle.com/technetwork/topics/winx64soft-089540.html 
+  Opens a new window 
+  Accept the license agreement and select Instant Client Package - SDK for your 
+  version of Oracle Database. 
+  Save the file in the installation directory that you created in Step 1. 
+  c:\oreclient_install_dir\instantclient-sdk-windows.x64-11.2.0.1.0.zip 
+  Unzip the file. The files are extracted into the instantclient_version 
+  subdirectory. 
+  Add the full path of the Instant Client to the environment variables 
+  OCI_LIB64 and PATH. 
+  The following steps set the variables to the path used in this example, 
+  c:\myoreclient\instantclient_11_2. 
+  In Windows Control Panel, choose System, then click Advanced system settings.
+  On the Advanced tab, click Environment Variables. 
+  Under System variables, create OCI_LIB64 if it does not already exist. Set 
+  the value of OCI_LIB64 to c:\oreclient\instantclient_11_2. 
+  Under System variables, edit PATH to include c:\oreclient\instantclient_11_2.
+  
+  To use 32-bit version of instant Client, create an installation directory for
+  the Oracle R Enterprise client components.
+  For example: c:\oreclient_install_dir
+  Go to the Oracle Database Instant Client page on the Oracle Technology
+  Network:
+  http://www.oracle.com/technetwork/database/features/instant-client/ opens a
+  new window.
+  Select See Instant Client downloads for all platforms.
+  On the Instant Client Downloads page, select Instant Client for Microsoft
+  Windows (i386).
+  On the Instant Client Downloads for Microsoft Windows (i386) page, accept the
+  license agreement.
+  Choose Instant Client Package - Basic or Basic Lite Instant Client Package -
+  for your version of Oracle Database.
+  Save the file in the installation directory that you created in Step 1. For
+  example:
+  c:\oreclient_install_dir\instantclient-basic-windows.i386-11.2.0.1.0.zip
+  Unzip the file.The files are extracted into a subdirectory called
+  instantclient_version, where version is your version of Oracle Database. For
+  example:
+  c:\oreclient_install_dir\instantclient_11_2
+  Return to the Instant Client Downloads for Microsoft Windows (i386) page:
+  http://www.oracle.com/technetwork/topics/wini386soft-089540.html opens a new
+  window.
+  Accept the license agreement and select Instant Client Package - SDK for your
+  version of Oracle Database.
+  Save the file in the installation directory that you created in Step 1.
+  c:\oreclient_install_dir\instantclient-sdk-windows.i386-11.2.0.1.0.zip
+  Unzip the file. The files are extracted into the instantclient_version
+  subdirectory.
+  Add the full path of the Instant Client to the environment variables
+  OCI_LIB32 and PATH.
+  The following steps set the variables to the path used in this example,
+  c:\myoreclient\instantclient_11_2.
+  In Windows Control Panel, choose System, then click Advanced system settings.
+  On the Advanced tab, click Environment Variables.
+  Under System variables, create OCI_LIB32 if it does not already exist. Set
+  the value of OCI_LIB32 to c:\oreclient\instantclient_11_2.
+  Under System variables, edit PATH to include c:\oreclient\instantclient_11_2.
 
   Windows - Oracle Client (Oracle home based client)
   --------------------------------------------------
@@ -228,7 +244,7 @@
 
   Build the ROracle package using:
 
-  R CMD INSTALL ROracle_1.1-12.tar.gz
+  R CMD INSTALL ROracle_1.2-1.tar.gz
 
   To build both 32-bit and 64-bit versions of ROracle, add both the 32-bit and
   64-bit versions of Oracle Client to the path environment variable before
@@ -241,7 +257,7 @@
   set OCI_INC=C:/app/xyz/product/11.2.0/32_bit_client_1/oci/include
   set OCI_LIB32=C:/app/xyz/product/11.2.0/32_bit_client_1/bin
   set OCI_LIB64=C:/app/xyz/product/11.2.0/64_bit_client_1/bin
-  R CMD INSTALL --build --merge-multiarch ROracle_1.1-12.tar.gz
+  R CMD INSTALL --build --merge-multiarch ROracle_1.2-1.tar.gz
 
   When mixing Oracle Instant Client and Oracle home-based Client, above
   environment variables must be set carefully to point to the specific Client
@@ -258,7 +274,7 @@
   c:/TimesTen/tt1122_64 directory: then issue the following commands:
   
   set OCI_LIB64=c:/TimesTen/tt1122_64/ttoracle_home/instantclient_11_2
-  R CMD INSTALL --build ROracle_1.1-12.tar.gz
+  R CMD INSTALL --build ROracle_1.2-1.tar.gz
   
   At runtime the directories for both the TimesTen Instant Client shared 
   libraries and the TimesTen database shared libraries must be present on the

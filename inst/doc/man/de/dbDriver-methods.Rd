@@ -4,11 +4,10 @@
 \alias{dbUnloadDriver,OraDriver-method}
 \alias{dbUnloadDriver,ExtDriver-method}
 \title{
-Oracle-Implementierung der Database Interface-(DBI-)Klassen 
-  und -Treiber
+Oracle-Implementierung der Database Interface-(DBI-)Klassen und -Treiber
 }
 \description{
-Oracle-Treiberinitialisierung und -schließung
+Oracle-Treiberinitialisierung und -schließung.
 }
 \usage{
 \S4method{dbUnloadDriver}{OraDriver}(drv, ...)
@@ -16,21 +15,22 @@ Oracle-Treiberinitialisierung und -schließung
 }
 \arguments{
   \item{drv}{
-ein Objekt, das aus \code{OraDriver} oder \code{ExtDriver} erbt,
+Ein Objekt, das aus \code{OraDriver} oder \code{ExtDriver} erbt,
     wie mit \code{dbDriver}.
 }
+
   \item{...}{
-andere Argumente werden an den Treiber übergeben \code{drvName}.
+Weitere Argumente, die an den Treiber \code{drvName} übergeben werden sollen.
 }
 }
 \value{
 \item{dbDriver}{
     Ein Objekt \code{OraDriver} oder \code{ExtDriver}, dessen Klasse \code{DBIDriver} erweitert.
     Dieses Objekt wird verwendet, um mit der Funktion \code{dbConnect}
-    Verbindung zu mindestens einer Oracle-Datenbank-Engine herzustellen.
+    Verbindung zu mindestens einer Oracle Database Engine herzustellen.
   }
   \item{dbUnloadDriver}{
-    gibt alle Ressourcen frei, die von dem Treiberobjekt belegt werden.
+    Gibt alle Ressourcen frei, die von dem Treiberobjekt belegt werden.
   }
 }
 \section{Side Effects}{
@@ -41,33 +41,43 @@ andere Argumente werden an den Treiber übergeben \code{drvName}.
       calls to \code{\link[DBI]{dbConnect}}.
     }
     \item{dbUnloadDriver}{
-      Remove communication link between \R client and database.
+      Remove the communication link between the \R client and the database.
     }
   }
 }
+
+
+
 
 
 \details{
 \\describe{
     \item{dbDriver}{
-      Objekt ist ein Einzelobjekt, d.h. bei nachfolgenden Aufrufen wird dasselbe
-      initialisierte Objekt zurückgegeben.
-      Mit dieser Implementierung können Sie mehrere Hostserver verbinden und 
-      mehrere Verbindungen auf jedem Server gleichzeitig ausführen.
-      Wenn "Interruptible" auf TRUE gesetzt ist, können Abfragen mit langer Ausführungsdauer
-      auf dem Server unterbrochen werden, indem die Abfrage in einem Thread ausgeführt wird. 
-      Der Hauptthread prüft auf Strg-C und gibt OCIBreak/OCIReset aus, um den Vorgang auf
-      dem Server abzubrechen. Standardmäßig ist "Interruptible" FALSE.
+       Dies ist ein Einzelobjekt. Das bedeutet, dass nachfolgende Aufrufe von
+       \code{dbDriver} dasselbe initialisierte Objekt zurückgeben.
+      Mit dieser Implementierung können Sie Verbindungen zu mehreren Hostservern herstellen
+      und auf jedem Server mehrere Verbindungen gleichzeitig ausführen.
+      Wenn \code{interruptible} auf TRUE gesetzt ist, können Abfragen mit langer Ausführungszeit
+      auf dem Server durch Ausführen der Abfrage in einem Thread unterbrochen werden.
+      Der Haupthread prüft auf STRG-C und gibt OCIBreak/OCIReset aus, um den Vorgang
+      auf dem Server abzubrechen. Standardmäßig ist \code{interruptible} FALSE.
+      Wenn \code{unicode_as_utf8} auf FALSE gesetzt ist, werden NCHAR-, NVARCHAR- und NCLOB-
+      Daten über die in der NLS_LANG-Einstellung angegebene Zeichenfolge
+      abgerufen. Standardmäßig ist \code{unicode_as_utf8} auf TRUE gesetzt.
+      Wenn \code{ora.attributes} auf TRUE gesetzt ist, enthält die Ergebnismenge von
+      \code{dbGetQuery} und \code{fetch} DBMS-spezifische Attribute wie
+      \code{ora.encoding}, \code{ora.type} und \code{ora.maxlength} für die
+      entsprechende Spalte.
     }
     \item{dbUnloadDriver}{
-      Die Implementierung entfernt den Kommunikationslink zwischen \R-Client und 
-      Datenbank. Sie gibt alle Verbindungen und Ergebnismengen frei, die mit diesen
-      Verbindungsobjekten verknüpft sind.
+      Diese Implementierung entfernt Kommunikationslinks zwischen dem \R-Client und
+      der Datenbank. Sie gibt alle Verbindungen und alle mit den dazugehörigen
+      Verbindungsobjekten verknüpften Ergebnismengen frei.
     }
   }
 }
 \section{References}{
-  For the Oracle Database documentaion see
+  For Oracle Database documentation, see
   \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
 }
 \seealso{

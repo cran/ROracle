@@ -1,4 +1,4 @@
-/* Copyright (c) 2011, 2014, Oracle and/or its affiliates. 
+/* Copyright (c) 2011, 2015, Oracle and/or its affiliates. 
 All rights reserved.*/
 
 /*
@@ -11,6 +11,9 @@ All rights reserved.*/
    NOTES
 
    MODIFIED   (MM/DD/YY)
+   rpingte     03/25/15 - add NCHAR, NVARCHAR2 and NCLOB
+   rpingte     01/29/15 - add unicode_as_utf8
+   rpingte     12/04/14 - NLS support
    ssjaiswa    09/10/14 - Add bulk_write
    rpingte     06/24/14 - reset stmt hdl
    rpingte     05/26/14 - add time zone to connection
@@ -314,7 +317,8 @@ static int roociNewResID(roociCon *pcon)
 
 /* ----------------------------- roociInitializeCtx ----------------------- */
 
-sword roociInitializeCtx (roociCtx *pctx, void *epx, boolean interrupt_srv)
+sword roociInitializeCtx (roociCtx *pctx, void *epx, boolean interrupt_srv,
+                          boolean unicode_as_utf8)
 {
   sword    rc = OCI_ERROR;
 
@@ -326,8 +330,30 @@ sword roociInitializeCtx (roociCtx *pctx, void *epx, boolean interrupt_srv)
     pctx->extproc_roociCtx = TRUE;
   }
   else
-    rc = OCIEnvCreate(&pctx->env_roociCtx, OCI_DEFAULT | OCI_OBJECT, NULL, 
-                      NULL, NULL, NULL, (size_t)0, (void **)NULL);
+  {
+    ub2 csid;
+
+    if (unicode_as_utf8)
+    {
+      rc = OCINlsEnvironmentVariableGet((void *)&csid, sizeof(csid),
+                                        (ub2)OCI_NLS_CHARSET_ID, (ub2)0,
+                                        (size_t *)0);
+
+      if (rc == OCI_SUCCESS)
+        /* Create env handle using default chracater set & AL32UTF8 NCHAR */
+        rc = OCIEnvNlsCreate(&pctx->env_roociCtx, OCI_DEFAULT, NULL,
+                             NULL, NULL, NULL, (size_t)0, (void **)NULL,
+                             csid, (ub2)873);
+      else
+        /* On failure use OCIEnvCreate */
+        rc = OCIEnvCreate(&pctx->env_roociCtx, OCI_DEFAULT | OCI_OBJECT, NULL, 
+                          NULL, NULL, NULL, (size_t)0, (void **)NULL);
+    }
+    else
+      rc = OCIEnvCreate(&pctx->env_roociCtx, OCI_DEFAULT | OCI_OBJECT, NULL, 
+                        NULL, NULL, NULL, (size_t)0, (void **)NULL);
+  }
+
   if (rc == OCI_SUCCESS)
   {  
     /* get OCI client version */
@@ -589,6 +615,7 @@ sword roociInitializeRes(roociCon *pcon, roociRes *pres, text *qry, int qrylen,
   {
     text   *xlatqry;
     size_t  xlatqrylen;
+    boolean conv_needed = FALSE;
     ub2     envcsid;
     ub2     cnvcid        = 0;
 
@@ -599,13 +626,26 @@ sword roociInitializeRes(roociCon *pcon, roociRes *pres, text *qry, int qrylen,
       return rc;
 
     if (qry_encoding == ROOCI_QRY_UTF8)
+    {
       cnvcid = OCINlsCharSetNameToId(pcon->ctx_roociCon->env_roociCtx,
                                      (const oratext *)"AL32UTF8");
+      conv_needed = (boolean)(envcsid != cnvcid);
+    }
      else if (qry_encoding == ROOCI_QRY_LATIN1)
+    {
       cnvcid = OCINlsCharSetNameToId(pcon->ctx_roociCon->env_roociCtx,
                                      (const oratext *)"WE8ISO8859P1");
 
-    if (envcsid != cnvcid)
+      if (envcsid != cnvcid)
+      {
+        cnvcid = OCINlsCharSetNameToId(pcon->ctx_roociCon->env_roociCtx,
+                                       (const oratext *)"WE8MSWIN1252");
+        if (envcsid != cnvcid)
+          conv_needed = TRUE;
+      }
+    }
+
+    if (conv_needed)
     {
       /* FIXME: Multiply by ratio of 4. There is no OCI API to get max width */
       ROOCI_MEM_ALLOC(xlatqry, qrylen * 4, sizeof(ub1));
@@ -1027,35 +1067,23 @@ sword roociResDefine(roociRes *pres)
 /* ------------------------- roociDescCol --------------------------------- */
 
 sword roociDescCol(roociRes *pres, ub4 colId, ub2 *extTyp, oratext **colName,
-                   ub4 *colNameLen, ub4 *maxColDataSizeInByte, 
-                   sb2 *colpre, sb1 *colsca, ub1 *nul, ub1 *form)
+                   ub4 *colNameLen, ub4 *maxColDataSizeInByte, sb2 *colpre,
+                   sb1 *colsca, ub1 *nul, ub1 *form)
 {
   sword       rc        = OCI_ERROR;
-  OCIParam   *colhd     = NULL;                            /* column handle */
-  ub2         colTyp    = 0;                                 /* column type */
-  ub2         collen    = 0;                               /* column length */
-  sb4         coldisplen= 0;                       /* column display length */
-  sb2         precision = 0;                         /* precision of column */
-  sb1         scale     = 0;                             /* scale of column */
-  ub2         size      = 0;                     /* size in bytes of column */
+  OCIParam   *colhd;                                       /* column handle */
+  ub2         size;                              /* size in bytes of column */
+  ub1         tmpform;
+  sb2         precision;
+  sb1         scale;
+ 
   roociCon   *pcon      = pres->con_roociRes;
-  void       *temp      = NULL;/* pointer to remove strict-aliasing warning */
 
   /* get column parameters */
   rc = OCIParamGet(pres->stm_roociRes, OCI_HTYPE_STMT, pcon->err_roociCon, 
-                   (void **)&temp, colId);
+                   (void **)&colhd, colId);
   if (rc == OCI_ERROR)
       return rc;
-  colhd = temp;
-
-  /* get column type */
-  rc = OCIAttrGet(colhd, OCI_DTYPE_PARAM, &colTyp, NULL,
-                  OCI_ATTR_DATA_TYPE, pcon->err_roociCon);
-  if (rc == OCI_ERROR)
-  {
-    OCIDescriptorFree(colhd, OCI_DTYPE_PARAM);    
-    return rc;
-  }
 
   /* get column name */
   if (colName && colNameLen)
@@ -1070,7 +1098,7 @@ sword roociDescCol(roociRes *pres, ub4 colId, ub2 *extTyp, oratext **colName,
   }
 
   /* get maximum column data size in bytes */
-  if (maxColDataSizeInByte || pcon->timesten_rociCon)
+  if (extTyp || maxColDataSizeInByte)
   {
     rc = OCIAttrGet(colhd, OCI_DTYPE_PARAM, &size,
                     NULL, OCI_ATTR_DATA_SIZE, pcon->err_roociCon);
@@ -1081,35 +1109,37 @@ sword roociDescCol(roociRes *pres, ub4 colId, ub2 *extTyp, oratext **colName,
     }
 
     if (maxColDataSizeInByte)
-      *maxColDataSizeInByte = size;
+      *maxColDataSizeInByte = (ub4)size;
   }
 
   /* get precision */
-  rc = OCIAttrGet(colhd, OCI_DTYPE_PARAM, &precision,
-                  NULL, OCI_ATTR_PRECISION, pcon->err_roociCon);
-  if (rc == OCI_ERROR)
-  {
-    OCIDescriptorFree(colhd, OCI_DTYPE_PARAM);    
-    return rc;
-  }
+  if (!colpre && extTyp)
+    colpre = &precision;
 
   if (colpre)
   {
-    *colpre = precision;
+    rc = OCIAttrGet(colhd, OCI_DTYPE_PARAM, colpre,
+                    NULL, OCI_ATTR_PRECISION, pcon->err_roociCon);
+    if (rc == OCI_ERROR)
+    {
+      OCIDescriptorFree(colhd, OCI_DTYPE_PARAM);    
+      return rc;
+    }
   }
 
   /* get scale */
-  rc = OCIAttrGet(colhd, OCI_DTYPE_PARAM, &scale,
-                  NULL, OCI_ATTR_SCALE, pcon->err_roociCon);
-  if (rc == OCI_ERROR)
-  {
-    OCIDescriptorFree(colhd, OCI_DTYPE_PARAM);    
-    return rc;
-  }
+  if (!colsca && extTyp)
+    colsca = &scale;
 
   if (colsca)
   {
-    *colsca = scale;
+    rc = OCIAttrGet(colhd, OCI_DTYPE_PARAM, colsca,
+                    NULL, OCI_ATTR_SCALE, pcon->err_roociCon);
+    if (rc == OCI_ERROR)
+    {
+      OCIDescriptorFree(colhd, OCI_DTYPE_PARAM);    
+      return rc;
+    }
   }
 
   /* is Null */
@@ -1125,26 +1155,37 @@ sword roociDescCol(roociRes *pres, ub4 colId, ub2 *extTyp, oratext **colName,
   }
 
   /* get form of use */
-  if (form)
+  if (!form)
+    form = &tmpform;
+
+  rc = OCIAttrGet(colhd, OCI_DTYPE_PARAM, (void *)form,
+                  NULL, OCI_ATTR_CHARSET_FORM, pcon->err_roociCon);
+  if (rc == OCI_ERROR)
   {
-    rc = OCIAttrGet(colhd, OCI_DTYPE_PARAM, (void *)form,
-                    NULL, OCI_ATTR_CHARSET_FORM, pcon->err_roociCon);
+    OCIDescriptorFree(colhd, OCI_DTYPE_PARAM);
+    return rc;
+  }
+
+  if (extTyp)
+  {
+    ub2  colTyp     = 0;                                      /* column type */
+    ub2  collen     = 0;                                    /* column length */
+    sb4  coldisplen = 0;                            /* column display length */
+
+    /* get column type */
+    rc = OCIAttrGet(colhd, OCI_DTYPE_PARAM, &colTyp, NULL,
+                    OCI_ATTR_DATA_TYPE, pcon->err_roociCon);
     if (rc == OCI_ERROR)
     {
-      OCIDescriptorFree(colhd, OCI_DTYPE_PARAM);
+      OCIDescriptorFree(colhd, OCI_DTYPE_PARAM);    
       return rc;
     }
-  }
 
-  if (pres->typ_roociRes)
-  {
     /* get internal data type */
-    pres->typ_roociRes[colId-1] = rodbiTypeInt(colTyp, precision, scale, size,
-                                               pcon->timesten_rociCon);
-  }
+    pres->typ_roociRes[colId-1] = rodbiTypeInt(colTyp, *colpre, *colsca,
+                                               size, pcon->timesten_rociCon,
+                                               *form);
 
-  if (pres->typ_roociRes && extTyp && pres->siz_roociRes)
-  {
     /* get external type */
     *extTyp = rodbiTypeExt(pres->typ_roociRes[colId-1]);
 
@@ -1196,7 +1237,7 @@ sword roociDescCol(roociRes *pres, ub4 colId, ub2 *extTyp, oratext **colName,
           OCIDescriptorFree(colhd, OCI_DTYPE_PARAM);    
           return rc;
         }
-                
+
         /* adjust for NULL terminator & account for NLS expansion */
         pres->siz_roociRes[colId-1] = (size_t)((coldisplen + 1) *
                                              pcon->nlsmaxwidth_roociCon);
@@ -1398,7 +1439,7 @@ sword roociReadDateTimeData(roociRes *pres, OCIDateTime *tstm,
   return (OCIDateTimeToText(pres->con_roociRes->usr_roociCon,
                             pres->con_roociRes->err_roociCon,
                             (const OCIDateTime *)tstm,
-                            (OraText*)"YYYY-MM-DD HH24:MI:SSXFF",
+                            (OraText*)"YYYY-MM-DD HH24:MI:SS.FF",
                             24, (ub1)(isDate ? 0 : 9), (OraText*)0, 0,
                             date_time_len, (OraText *)date_time));
 } /* end of roociReadDateTimeData */
@@ -1411,7 +1452,7 @@ sword roociWriteDateTimeData(roociRes *pres, OCIDateTime *tstm,
   return (OCIDateTimeFromText(pres->con_roociRes->usr_roociCon,
                    pres->con_roociRes->err_roociCon,
                    (const OraText *)date_time, date_time_len,
-                   (const OraText *)"YYYY-MM-DD HH24:MI:SSXFF", 24,
+                   (const OraText *)"YYYY-MM-DD HH24:MI:SS.FF", 24,
                    (OraText *)0, 0, tstm));
 } /* end of roociWriteDateTimeData */
 

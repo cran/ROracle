@@ -10,15 +10,25 @@ Diese Funktion erstellt und initialisiert einen Oracle-Client von der
   Verbindung zu einem oder mehreren Oracle-Servern herstellen können.
 }
 \usage{
-  Oracle(interruptible = FALSE)
+  Oracle(interruptible = FALSE, unicode_as_utf8 = TRUE,
+         ora.attributes = FALSE)
   Extproc(extproc.ctx = NULL)
 }
 \arguments{
   \item{interruptible}{
-Logikoperator, der angibt, ob bei lange laufenden Abfragen Benutzer-Interrupts zulässig sein sollen.
+Ein Logikoperator, der angibt, ob bei lange laufenden Abfragen Benutzer-Interrupts zulässig sein sollen.
 }
   \item{extproc.ctx}{
 Ein externer Pointer, der extproc-Kontext umschließt.
+}
+  \item{unicode_as_utf8}{
+Ein Logikoperator, der angibt, ob NCHAR-, NVARCHAR- und NCLOB-Daten
+    mit einer UTF8-Verschlüsselung abgerufen werden sollen.
+}
+  \item{ora.attributes}{
+Ein Logikoperator, der angibt, ob die Attribute \code{ora.encoding},
+    \code{ora.type} und \code{ora.maxlength} in die von 
+    \code{dbGetQuery} und \code{fetch} zurückgegebenen Datenframes aufgenommen werden sollen.
 }
 }
 \value{
@@ -34,21 +44,31 @@ Ein Objekt der Klasse \code{OraDriver} für \code{Oracle} oder
 }
 
 
+
+
 \details{
-Dieses Objekt ist ein Singleton, d.h. dass es bei nachfolgenden Aufrufen
-dasselbe initialisierte Objekt zurückgibt. 
-Mit dieser Implementierung können Sie eine Verbindung zu mehreren Hostservern herstellen und
-auf jedem Server gleichzeitig mehrere Verbindungen ausführen.
-Wenn "Unterbrechbar" auf TRUE gesetzt wird, können lange laufende
-Abfragen auf dem Server unterbrochen werden, indem die Abfrage in einem Thread ausgeführt wird.
-Der Hauptthread prüft auf Strg-C und gibt einen OCIBreak/OCIReset aus, um den Vorgang auf
-dem Server abzubrechen. Standardmäßig ist "Unterbrechbar" auf FALSE gesetzt.
+Dies ist ein Einzelobjekt. Bei nachfolgenden Aufrufen wird also
+  dasselbe initialisierte Objekt zurückgegeben. 
+  Mit dieser Implementierung können Sie Verbindungen zu mehreren Hostservern herstellen
+  und auf jedem Server mehrere Verbindungen gleichzeitig ausführen.
+  Wenn \code{interruptible} auf TRUE gesetzt ist, können Abfragen mit langer Ausführungszeit
+  auf dem Server durch Ausführen der Abfrage in einem Thread unterbrochen werden.
+  Der Hauptthread prüft auf STRG-C und gibt den Befehl OCIBreak/OCIReset aus, um den Vorgang
+  auf dem Server abzubrechen. Standardmäßig ist \code{interruptible} FALSE.
+  Wenn \code{unicode_as_utf8} auf FALSE gesetzt ist, werden NCHAR-, NVARCHAR- und NCLOB-Daten
+  über den in der Einstellung NLS_LANG definierten Zeichensatz abgerufen. Standardmäßig
+  ist \code{unicode_as_utf8} auf TRUE gesetzt.
+  Wenn \code{ora.attributes} auf TRUE gesetzt ist, werden die Attribute \code{ora.encoding},
+  \code{ora.type} und \code{ora.maxlength} zum Ergebnisdatenframe hinzugefügt, der von
+  dbGetQuery und FETCH zurückgegeben wird. Muss mit dbWriteTable verwendet werden,
+  um dieselben Datentypen zu erstellen, die im Oracle DBMS von der Quelltabelle
+  abgerufen wurden.
 }
 \section{Oracle user authentication}{
   In order to establish a connection to an Oracle server users need to provide
   a user name, a password, and possibly a connect identifier (for more
-  informations refer to chapter 8 (Configuring Naming Methods) of Oracle
-  Database Net Services Administrator's Guide). This is the same as part
+  information refer to chapter 8 (Configuring Naming Methods) of Oracle
+  Database Net Services Administrator's Guide). This is the same as the part
   of the SQL*Plus connect string that follows the '@' sign.
 
   Connections to an Oracle TimesTen IMDB instance are established using the OCI
@@ -67,15 +87,15 @@ dem Server abzubrechen. Standardmäßig ist "Unterbrechbar" auf FALSE gesetzt.
   with \code{\link[DBI]{dbGetQuery}}.
 
   Notice that Oracle (and ANSI/ISO compliant DBMS) transactions are 
-  implicitly started when data definition SQL are executed (create
+  implicitly started when data definition SQL statements are executed (create
   table, etc.), which helper functions like \code{\link[DBI]{dbWriteTable}}
   may execute behind the scenes. You may want or need to commit
   or roll back your work before issuing any of these helper functions.
 }
 
 \section{References}{
-  For the Oracle Database documentation see
-  \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
+  For Oracle Database documentation, see
+  \url{ http://docs.oracle.com/en/database/}.
 }
 \author{David A. James and Denis Mukhin}
 \seealso{

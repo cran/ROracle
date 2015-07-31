@@ -11,11 +11,11 @@
 \alias{dbGetException,OraConnection-method}
 \alias{execute,OraResult-method}
 \title{
-  Execute a statement on a given database connection
+  Execute a Statement on a Given Database Connection
 }
 \description{
    These methods are straight-forward implementations of the corresponding
-   generic functions except for the \code{execute} method which is an
+   generic functions except for the \code{execute} method, which is an
    ROracle specific DBI extension.
 }
 \usage{
@@ -39,29 +39,29 @@ execute(res, ...)
     OCI prefetch buffers to retrieve additional data from the server thus saving
     memory required in RODBI/ROOCI by allocating a single row buffer to fetch 
     the data from OCI. Using prefetch results in a fetch call for every row. By
-    default, prefetch is FALSE and array fetch is used to retrive the data from
-    server.
+    default, prefetch is FALSE and array fetch is used to retrieve the data from
+    the server.
   }
   \item{bulk_read}{
     An integer value indicating the number of rows to fetch at a time. Default
     is 1000L. When the prefetch option is selected, memory is allocated for
-    prefetch buffers and OCI will fetch those many rows at a time. When prefetch
+    prefetch buffers and OCI will fetch that many rows at a time. When prefetch
     is not used (default) memory is allocated in RODBI/ROOCI define buffers.
     Setting this to a large value will result in more memory being allocated
     based on the number of columns in the select list and the types of columns.
     For a column of type character, define buffers are allocated using the
-    maximum width times the NLS maximum width. An Application should adjust this
+    maximum width times the NLS maximum width. An application should adjust this
     value based on the query result and a larger value will benefit queries that
-    return a large result. The Application can tune this value to its need.
+    return a large result. The application can tune this value as needed.
   }
   \item{bulk_write}{
     An integer value indicating the number of rows to write at a time. The
-    default value is 1000L. When the bulk_write value is given in argument,
-    memory is allocated for buffers and OCI will write that many rows at a
-    time. When bulk_write argument is not given, the default value 1000 is
-    used to allocate memory for the bind buffers. Setting this to a large
-    value will result in more memory allocated based on the number of columns
-    in the insert list and the types of columns.
+    default value is 1000L. When a bulk_write value is specified, memory is 
+    allocated for buffers and OCI will write that many rows at a time. If the
+    bulk_write argument is not used, then the default value 1000 is used to 
+    allocate memory for the bind buffers. Setting bulk_write to a large value 
+    will result in more memory allocated based on the number of columns in the 
+    insert list and the types of columns.
   }
   \item{\dots}{Currently unused.}
 }
@@ -75,17 +75,17 @@ execute(res, ...)
 \section{Side Effects}{
   \describe{
     \item{dbGetQuery}{
-      Query statement is executed and data has fetched from database.
+      Query statement is executed and data is fetched from database.
     }
     \item{dbSendQuery}{
-      Query statement is executed, but note that data needs to fetch through
+      Query statement is executed, but data needs to be fetched through
       calls to \code{\link[DBI]{fetch}}.
     }
     \item{dbClearResult}{
-      Resources acquired by result set has free.
+      Resources acquired by the result set are freed.
     }
     \item{dbGetException}{
-      Error information retrieved and then cleaned from driver.
+      Error information is retrieved and then cleaned from the driver.
     }
     \item{execute}{
       Query statement is executed.
@@ -95,22 +95,21 @@ execute(res, ...)
 \details{
   \describe{
     \item{dbGetQuery}{
-      Implementation does execute query statement and fetch 
-      result data from database. 
+      This function executes a query statement and fetches the result data
+      from the database.
     }
     \item{dbSendQuery}{
-      Implementation does execute query statement and return 
-      result set to the application. Now application can perform operations 
-      on result set. 
+      This function executes a query statement and returns a result set to the 
+      application. The application can then perform operations on the result set.
     }
     \item{dbClearResult}{
-      Implementation does free resources occupied by result set.
+      This function frees resources used by result set.
     }
     \item{dbGetException}{
-      Implementation does retrieve error information.
+      This function retrieves error information.
     }
     \item{execute}{
-      Implementation does execute query statement.
+      This function executes the specified query statement.
     }
   }
 }
@@ -135,18 +134,25 @@ execute(res, ...)
                        data = data.frame(deptno = 10))
     data <- fetch(res, n = -1)
     res2 <- dbSendQuery(con, "select * from emp where deptno = :1",
-                        data1 = data.frame(deptno = 10), prefetch=TRUE,
+                        data1 <- data.frame(deptno = 10), prefetch=TRUE,
                         bulk_read=2L)
     data1 <- fetch(res2, n = -1)
+    data1
+
     res3 <- dbSendQuery(con, "select * from emp where deptno = :1",
-                        data2 = data.frame(deptno = 10), bulk_read=10L)
+                        data2 <- data.frame(deptno = 10), bulk_read=10L)
     data2 <- fetch(res3, n = -1)
+    data2
+
     res4 <- dbSendQuery(con, "select * from emp where deptno = :1",
-                        data3 = data.frame(deptno = 10), bulk_write=10L)
+                        data3 <- data.frame(deptno = 10), bulk_write=10L)
     data3 <- fetch(res4, n = -1)
+    data3
+
     res5 <- dbSendQuery(con, "select * from emp where ename = :1",
-                        data4 = data.frame(ename = 'SMITH')) 
+                        data4 <- data.frame(ename = 'SMITH')) 
     data4 <- fetch(res5, n = -1)
+    data4
   }
 }
 \keyword{methods}

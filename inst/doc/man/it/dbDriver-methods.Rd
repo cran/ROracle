@@ -4,11 +4,10 @@
 \alias{dbUnloadDriver,OraDriver-method}
 \alias{dbUnloadDriver,ExtDriver-method}
 \title{
-Implementazione Oracle di classi e driver DBI 
-  (Database Interface)
+Implementazione Oracle di classi e driver DBI (Database Interface)
 }
 \description{
-Inizializzazione e chiusura di driver Oracle
+Inizializzazione e chiusura di driver Oracle.
 }
 \usage{
 \S4method{dbUnloadDriver}{OraDriver}(drv, ...)
@@ -19,8 +18,9 @@ Inizializzazione e chiusura di driver Oracle
 Oggetto che eredita da \code{OraDriver} o \code{ExtDriver}
     creato da \code{dbDriver}.
 }
+
   \item{...}{
-qualsiasi altro argomento passato al driver \code{drvName}.
+Qualsiasi altro argomento da passare al driver \code{drvName}.
 }
 }
 \value{
@@ -41,23 +41,33 @@ qualsiasi altro argomento passato al driver \code{drvName}.
       calls to \code{\link[DBI]{dbConnect}}.
     }
     \item{dbUnloadDriver}{
-      Remove communication link between \R client and database.
+      Remove the communication link between the \R client and the database.
     }
   }
 }
 
 
+
+
+
 \details{
 \\describe{
     \item{dbDriver}{
-      Questo oggetto è un singleton: ciò significa che restituisce lo stesso
-      oggetto inizializzato nei richiami successivi.
+      Questo oggetto è un singleton: ciò significa che i richiami successivi
+      dell'oggetto \code{dbDriver} restituiscono lo stesso oggetto inizializzato.
       Questa implementazione consente di connettersi a più server host
       e di stabilire contemporaneamente più connessioni a ogni server.
-      Quando è impostato su TRUE, interruptible consente l'interruzione delle query con
+      Quando \code{interruptible} è impostato su TRUE, consente l'interruzione delle query con
       tempi di esecuzione lunghi sul server mediante l'esecuzione della query in un
       thread. Il thread principale controlla Ctrl-C ed esegue OCIBreak/OCIReset per
-      annullare l'operazione sul server. interruptible è FALSE per impostazione predefinita.
+      annullare l'operazione sul server. Per impostazione predefinita, \code{interruptible} è FALSE.
+      Quando \code{unicode_as_utf8} è impostato su FALSE, i dati NCHAR, NVARCHAR e NCLOB
+      vengono recuperati utilizzando il set di caratteri specificato
+      dall'impostazione NLS_LANG. Per impostazione predefinita, \code{unicode_as_utf8} è impostato su TRUE.
+      Quando \code{ora.attributes} è impostato su TRUE, il set di risultati ottenuto da
+      \code{dbGetQuery} e \code{fetch} contiene attributi specifici di DBMS come
+      \code{ora.encoding}, \code{ora.type} e \code{ora.maxlength} per la
+      colonna corrispondente.
     }
     \item{dbUnloadDriver}{
       L'implementazione rimuove il collegamento di comunicazione tra il client \R 
@@ -67,7 +77,7 @@ qualsiasi altro argomento passato al driver \code{drvName}.
   }
 }
 \section{References}{
-  For the Oracle Database documentaion see
+  For Oracle Database documentation, see
   \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
 }
 \seealso{

@@ -10,15 +10,26 @@
   Oracle 服务器的对象。
 }
 \usage{
-  Oracle(interruptible = FALSE)
+  Oracle(interruptible = FALSE, unicode_as_utf8 = TRUE,
+         ora.attributes = FALSE)
   Extproc(extproc.ctx = NULL)
 }
 \arguments{
   \item{interruptible}{
-一个逻辑值, 该值指示是否允许用户中断长时间运行的查询。
+一个逻辑值, 该值指示是否允许用户中断长时间运行的
+    查询。
 }
   \item{extproc.ctx}{
 一个包装 extproc 上下文的外部指针。
+}
+  \item{unicode_as_utf8}{
+一个逻辑值, 该值指示是否提取 UTF8 编码的 NCHAR, NVARCHAR 和
+    NCLOB 数据。
+}
+  \item{ora.attributes}{
+一个逻辑值, 该值指示是否在 \code{ora.encoding} 和 \code{ora.type} 返回的
+    数据框架中包括属性 \code{ora.maxlength},
+    \code{dbGetQuery} 和 \code{fetch}。
 }
 }
 \value{
@@ -34,21 +45,31 @@
 }
 
 
+
+
 \details{
-此对象是单例, 即在后续调用中
-它将返回同一已初始化对象。
-此实现允许您同时连接到多个主机服务器
-并同时在每个服务器上运行多个连接。
-当“可中断”设置为 TRUE 时, 可以通过在一个线程中执行查询
-来中断服务器上长时间运行的查询。主线程
-检查是否有 Ctrl-C, 并且发出 OCIBreak/OCIReset 来取消
-服务器上的操作。默认情况下,“可中断”为 FALSE。
+此对象是单例对象, 即在后续调用中
+  它将返回同一已初始化对象。
+  此实施允许您同时连接到多个主机服务器
+  并同时在每个服务器上运行多个连接。
+  当 \code{interruptible} 设置为 TRUE 时, 可以通过在一个线程中
+  执行查询来中断服务器上长时间运行的查询。主
+  线程检查是否有 Ctrl-C, 并且发出 OCIBreak/OCIReset 来取消
+  服务器上的操作。默认情况下, \code{interruptible} 为 FALSE。
+  当 \code{unicode_as_utf8} 设置为 FALSE 时, 将使用采用 NLS_LANG 设置的
+  字符集提取 NCHAR, NVARCHAR 和 NCLOB 数据。默认情况下,
+  \code{unicode_as_utf8} 设置为 TRUE。
+  当 \code{ora.attributes} 设置为 TRUE 时, 属性 \code{ora.encoding},
+  \code{ora.type} 和 \code{ora.maxlength} 将添加到从 dbGetQuery 和提取操作
+  返回的结果数据框架中。应与 dbWriteTable 一起使用
+  以创建与 Oracle DBMS 中从源表提取的相同
+  数据类型。
 }
 \section{Oracle user authentication}{
   In order to establish a connection to an Oracle server users need to provide
   a user name, a password, and possibly a connect identifier (for more
-  informations refer to chapter 8 (Configuring Naming Methods) of Oracle
-  Database Net Services Administrator's Guide). This is the same as part
+  information refer to chapter 8 (Configuring Naming Methods) of Oracle
+  Database Net Services Administrator's Guide). This is the same as the part
   of the SQL*Plus connect string that follows the '@' sign.
 
   Connections to an Oracle TimesTen IMDB instance are established using the OCI
@@ -67,15 +88,15 @@
   with \code{\link[DBI]{dbGetQuery}}.
 
   Notice that Oracle (and ANSI/ISO compliant DBMS) transactions are 
-  implicitly started when data definition SQL are executed (create
+  implicitly started when data definition SQL statements are executed (create
   table, etc.), which helper functions like \code{\link[DBI]{dbWriteTable}}
   may execute behind the scenes. You may want or need to commit
   or roll back your work before issuing any of these helper functions.
 }
 
 \section{References}{
-  For the Oracle Database documentation see
-  \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
+  For Oracle Database documentation, see
+  \url{ http://docs.oracle.com/en/database/}.
 }
 \author{David A. James and Denis Mukhin}
 \seealso{

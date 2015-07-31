@@ -16,7 +16,7 @@
 \alias{dbColumnInfo,OraResult-method}
 \alias{dbHasCompleted,OraResult-method}
 \title{
-  Database interface meta-data
+  Database interface Metadata
 }
 \description{
    These methods are straight-forward implementations of the corresponding
@@ -57,11 +57,15 @@
     \item {\$conTotal} The number of connections instantiated by the driver
     \item {\$conOpen} The number of connections open currently
     \item {\$interruptible} TRUE when a long-running query can be interrupted
+    \item {\$unicode_as_utf8} TRUE when character data is to be fetched in UTF8
+                              encoded format
+    \item {\$ora_attributes} TRUE when each column in a result set data frame
+                             has corresponding Oracle DBMS attributes
     \item {\$connections} Information about each connection currently open, see
-                          dbGetInfo of connection object for details
+                          \code{dbGetInfo} of connection object for details
   }
-  The \pkg{ROracle} method \code{dbGetInfo} provides following details about
-  the connection object:
+  The \pkg{ROracle} method \code{dbGetInfo} provides following the details
+  about the connection object:
   \itemize{
     \item {\$username} The name of the user on this connection
     \item {\$dbname} The connect alias or the connect string used
@@ -74,12 +78,12 @@
     \item {\$bulk_write} The number of rows to write at a time to DBMS
     \item {\$stmt_cache} TRUE when the statement cache is used
     \item {\$results} Information about each result set currently open, see
-                      dbGetInfo of result set for details
+                      \code{dbGetInfo} of result set for details
   }
   The \pkg{ROracle} method \code{dbGetInfo} provides the following details
   about the result set object:
   \itemize{
-    \item {\$statement} SQL statment used to produce the result set object
+    \item {\$statement} SQL statement used to produce the result set object
     \item {\$isSelect} TRUE when a select statement is specified
     \item {\$rowsAffected} The number of rows affected by DML statment
     \item {\$rowCount} The number of rows in result set currently
@@ -88,7 +92,7 @@
     \item {\$bulk_read} The number of rows to fetch at a time from DBMS
     \item {\$bulk_write} The number of rows to write at a time to DBMS
     \item {\$fields} Information about each column in the the result set, see
-                     dbColumnInfo for details
+                     \code{dbColumnInfo} for details
   }
   The \pkg{ROracle} method  \code{dbColumnInfo} provides following details
   about each column in the result set:
@@ -104,7 +108,7 @@
     \item {\$nullOK} TRUE when a NULL value can be present in the column
   }
 
-   Example below shows the driver, connection, result set, and column
+   The example below shows the driver, connection, result set, and column
    information for a table containing:
  \preformatted{
    create table foo(
@@ -150,6 +154,12 @@ $conOpen
 
 $interruptible
 [1] FALSE
+
+$unicode_as_utf8
+[1] TRUE
+
+$ora_attributes
+[1] TRUE
 
 $connections
 $connections[[1]]

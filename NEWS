@@ -1,3 +1,29 @@
+Version 1.2-1  (2014-12-05)
+
+* ROracle on client now support NATIVE, UTF8 and LATIN1 encoded data in query
+  and results. Please refer to man page. ROracle works with character sets that
+  are supported by both R and Oracle NLS on the host platform. UTF-8 encoded
+  character sets are usually supported on many Unix-like platforms.
+
+* bug 16017358 - Misuse of Extproc driver in embedded R can cause a
+                 segmentation fault
+
+* enhancement 20603162 - CLOB/BLOB enhancement on ROracle. Please refer to man
+                         page regarding the following attributes:
+   1) Attribute Name: ora.type
+   2) Attribute Name: ora.encoding
+   3) Attribute Name: ora.maxlength
+   4) Attribute Name: ora.fractional_seconds_precision
+
+* bug 15937661 - Allow mapping BLOB, CLOB, NCLOB, NCHAR, NVARCHAR2,  TIME STAMP
+                 WITH TIME ZONE, TIME STAMP WITH LOCAL TIME ZONE columns
+                 correctly for dbWriteTable
+
+* bug 16907374 - ROracle creates time stamp column for R Date with dbWriteTable
+
+* ROracle now displays NCHAR, NVARCHAR2 and NCLOB data types defined for
+  columns in the server using dbColumnInfo and dbGetInfo
+
 Version 1.1-12 (2014-06-04)
 
 * Add bulk_write parameter to specify number of rows to bind at a time to

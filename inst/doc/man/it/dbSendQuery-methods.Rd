@@ -19,8 +19,10 @@ Questi metodi sono implementazioni semplici delle corrispondenti
    specifica di Oracle R.
 }
 \usage{
-\S4method{dbSendQuery}{OraConnection,character}(conn, statement, data = NULL, prefetch = FALSE, bulk_read = 1000L, ...)
-\S4method{dbGetQuery}{OraConnection,character}(conn, statement, data = NULL, prefetch = FALSE, bulk_read = 1000L, ...)
+\S4method{dbSendQuery}{OraConnection,character}(conn, statement, data = NULL,
+          prefetch = FALSE, bulk_read = 1000L, bulk_write = 1000L, ...)
+\S4method{dbGetQuery}{OraConnection,character}(conn, statement, data = NULL,
+          prefetch = FALSE, bulk_read = 1000L, bulk_write = 1000L, ...)
 \S4method{dbClearResult}{OraResult}(res, ...)
 \S4method{dbGetException}{OraConnection}(conn, ...)
 
@@ -29,19 +31,19 @@ execute(res, ...)
 }
 \arguments{
   \item{conn}{
-oggetto \code{OraConnection}.
+Oggetto \code{OraConnection}.
 }
   \item{statement}{
-vettore di caratteri di lunghezza 1 con l'istruzione SQL.
+Vettore di caratteri di lunghezza 1 con l'istruzione SQL.
 }
   \item{res}{
-oggetto \code{OraResult}.
+Oggetto \code{OraResult}.
 }
   \item{data}{
-data.frame che specifica dati di bind
+data.frame che specifica i dati di bind
 }
   \item{prefetch}{
-valore logico che indica TRUE o FALSE. Quando è impostato su TRUE, ROracle usa
+Valore logico che indica TRUE o FALSE. Quando è impostato su TRUE, ROracle usa
     i buffer di recupero preliminare OCI per recuperare ulteriori dati dal server, risparmiando
     in questo modo la memoria richiesta in RODBI/ROOCI mediante l'allocazione di un buffer
     con riga singola per recuperare i dati da OCI. L'uso della funzione di recupero preliminare
@@ -49,24 +51,33 @@ valore logico che indica TRUE o FALSE. Quando è impostato su TRUE, ROracle usa
     recupero preliminare è FALSE e per recuperare i dati dal server si utilizza un array fetch.
 }
   \item{bulk_read}{
-valore intero che indica il numero di righe da recuperare alla volta. L'impostazione predefinita è
+Valore intero che indica il numero di righe da recuperare alla volta. L'impostazione predefinita è
     1000L. Quando si seleziona l'opzione di recupero preliminare, la memoria viene allocata per i
     buffer di recupero preliminare e OCI recupera ogni volta la quantità di righe specificata. Quando 
     l'opzione di recupero preliminare non è usata (impostazione predefinita), la memoria viene 
     allocata nei buffer di definizione RODBI/ROOCI. L'impostazione di un valore elevato comporta 
     l'allocazione di più memoria in base al numero di colonne nella lista di selezione e ai tipi delle colonne.
-    Per una colonna di caratteri, i buffer di definizione vengono allocati utilizzando la larghezza massima 
+    Per una colonna di tipo di carattere, i buffer di definizione vengono allocati utilizzando la larghezza massima 
     moltiplicata per la larghezza massima NLS. L'applicazione deve adeguare questo valore in base al risultato 
     della query e un valore elevato risulterà più utile alle query che restituiscono risultati di grandi dimensioni. 
     L'applicazione può regolare questo valore in base alle esigenze.
 }
+  \item{bulk_write}{
+Un valore intero che indica il numero di righe da scrivere alla volta.
+    Il valore predefinito è 1000L. Quando il valore di bulk_write viene fornito
+    in un argomento, la memoria viene allocata per i buffer e OCI scrive ogni volta
+    la quantità di righe specificata. Quando l'argomento bulk_write non viene fornito,
+    il valore predefinito 1000 viene usato per allocare la memoria per i buffer di
+    autenticazione. L'impostazione di un valore elevato comporta l'allocazione di più
+    memoria in base al numero di colonne nella lista di inserimento e ai tipi delle colonne.
+}
   \item{\dots}{
-attualmente inutilizzato.
+Attualmente inutilizzato.
 }
 }
 \value{
 \item{dbSendQuery}{
-    oggetto \code{OraResult} la cui classe estende \code{DBIResult}. Questo 
+    Oggetto \code{OraResult} la cui classe estende \code{DBIResult}. Questo 
     oggetto viene usato per il recupero dei dati dal database mediante 
     la funzione \code{fetch}.
   }
@@ -74,42 +85,41 @@ attualmente inutilizzato.
 \section{Side Effects}{
   \describe{
     \item{dbGetQuery}{
-      query statement is executed and data has fetched from database.
+      Query statement is executed and data has fetched from database.
     }
     \item{dbSendQuery}{
-      query statement is executed, but note that data needs to fetch through
+      Query statement is executed, but note that data needs to fetch through
       calls to \code{\link[DBI]{fetch}}.
     }
     \item{dbClearResult}{
-      resources acquired by result set has free.
+      Resources acquired by result set has free.
     }
     \item{dbGetException}{
-      error information retrieved and then cleaned from driver.
+      Error information retrieved and then cleaned from driver.
     }
     \item{execute}{
-      query statement is executed.
+      Query statement is executed.
     }
   }
 }
 \details{
 \\describe{
     \item{dbGetQuery}{
-      l'implementazione esegue l'istruzione di query e recupera 
-      i dati dei risultati dal database. 
+      Questa funzione esegue un'istruzione di query e recupera
+      i dati dei risultati dal database.
     }
     \item{dbSendQuery}{
-      l'implementazione esegue l'istruzione di query e restituisce 
-      il set di risultati all'applicazione. L'applicazione potrà quindi 
-      eseguire le operazioni necessarie sul set di risultati. 
+      Questa funzione esegue l'istruzione di query e restituisce un set di risultati
+      all'applicazione, che potrà quindi eseguire le operazioni necessarie sul set di risultati.
     }
     \item{dbClearResult}{
-      l'implementazione libera le risorse occupate dal set di risultati.
+      Questa funzione libera le risorse occupate dal set di risultati.
     }
     \item{dbGetException}{
-      l'implementazione recupera le informazioni relative agli errori.
+      Questa funzione recupera le informazioni relative agli errori.
     }
     \item{execute}{
-      l'implementazione esegue l'istruzione di query.
+      Questa funzione esegue l'istruzione di query specificata.
     }
   }
 }
@@ -140,9 +150,12 @@ attualmente inutilizzato.
     res3 <- dbSendQuery(con, "select * from emp where deptno = :1",
                         data2 = data.frame(deptno = 10), bulk_read=10L)
     data2 <- fetch(res3, n = -1)
-    res4 <- dbSendQuery(con, "select * from emp where ename = :1",
-                        data3 = data.frame(ename = 'SMITH')) 
+    res4 <- dbSendQuery(con, "select * from emp where deptno = :1",
+                        data3 = data.frame(deptno = 10), bulk_write=10L)
     data3 <- fetch(res4, n = -1)
+    res5 <- dbSendQuery(con, "select * from emp where ename = :1",
+                        data4 = data.frame(ename = 'SMITH')) 
+    data4 <- fetch(res5, n = -1)
   }
 }
 \keyword{methods}

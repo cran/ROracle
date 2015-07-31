@@ -1,4 +1,4 @@
-/* Copyright (c) 2011, 2014, Oracle and/or its affiliates. 
+/* Copyright (c) 2011, 2015, Oracle and/or its affiliates. 
 All rights reserved.*/
 
 /*
@@ -11,6 +11,7 @@ All rights reserved.*/
    NOTES
 
    MODIFIED   (MM/DD/YY)
+   rpingte     01/29/15 - add unicode_as_utf8
    ssjaiswa    09/12/14 - add bulk_write support field nrows_write_roociRes
    rpingte     05/21/14 - add time zone to connection
    rpingte     05/02/14 - maintain date, time stamp, time stamp with time zone
@@ -233,7 +234,8 @@ typedef struct roociRes roociRes;
 
 /* ----------------------------- roociInitializeCtx ----------------------- */
 /* Intialize driver oci context */
-sword roociInitializeCtx (roociCtx *pctx, void *epx, boolean interrupt_srv);
+sword roociInitializeCtx (roociCtx *pctx, void *epx, boolean interrupt_srv,
+                          boolean unicode_as_utf8);
 
 /* ----------------------------- roociInitializeCon ----------------------- */
 /* Initialize connection oci context */

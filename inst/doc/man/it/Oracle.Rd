@@ -10,15 +10,26 @@ Questa funzione crea e inizializza un client Oracle dalla
   a uno o più server Oracle.
 }
 \usage{
-  Oracle(interruptible = FALSE)
+  Oracle(interruptible = FALSE, unicode_as_utf8 = TRUE,
+         ora.attributes = FALSE)
   Extproc(extproc.ctx = NULL)
 }
 \arguments{
   \item{interruptible}{
-Valore logico indicante se consentire gli interrupt utente sulle query con tempi di esecuzione lunghi.
+Valore logico che indica se consentire gli interrupt utente sulle query
+    con tempi di esecuzione lunghi.
 }
   \item{extproc.ctx}{
 Contesto extproc di wrapping di puntatore esterno.
+}
+  \item{unicode_as_utf8}{
+Valore logico che indica se recuperare i dati NCHAR, NVARCHAR e NCLOB
+    codificati nel formato UTF8.
+}
+  \item{ora.attributes}{
+Valore logico che indica se includere gli attributi \code{ora.encoding},
+    \code{ora.type} e \code{ora.maxlength} nei data frame restituiti da
+    \code{dbGetQuery} e \code{fetch}.
 }
 }
 \value{
@@ -34,21 +45,31 @@ Oggetto di classe \code{OraDriver} per \code{Oracle} o
 }
 
 
+
+
 \details{
-Questo oggetto è un singleton: ciò significa che restituisce lo stesso
-  oggetto inizializzato nei richiami successivi.
+Questo oggetto è un singleton: ciò significa che per i richiami successivi
+  restituisce lo stesso oggetto inizializzato.
   Questa implementazione consente di connettersi a più server host
   e di stabilire contemporaneamente più connessioni a ogni server.
-  Quando è impostato su TRUE, interruptible consente l'interruzione delle query con
+  Quando \code{interruptible} è impostato su TRUE, consente l'interruzione delle query con
   tempi di esecuzione lunghi sul server mediante l'esecuzione della query in un
   thread. Il thread principale controlla Ctrl-C ed esegue OCIBreak/OCIReset per
-  annullare l'operazione sul server. interruptible è FALSE per impostazione predefinita.
+  annullare l'operazione sul server. Per impostazione predefinita, \code{interruptible} è FALSE.
+  Quando \code{unicode_as_utf8} è impostato su FALSE, i dati NCHAR, NVARCHAR e NCLOB
+  vengono recuperati utilizzando il set di caratteri mediante
+  l'impostazione NLS_LANG. Per impostazione predefinita, \code{unicode_as_utf8} è impostato su TRUE.
+  Quando \code{ora.attributes} è impostato su TRUE, gli attributi \code{ora.encoding},
+  \code{ora.type} e \code{ora.maxlength} vengono aggiunti al data frame dei risultati
+  restituito da dbGetQuery e recuperati. Deve essere usato con dbWriteTable per
+  creare gli stessi tipi di dati di Oracle DBMS recuperati dalla tabella di
+  origine.
 }
 \section{Oracle user authentication}{
   In order to establish a connection to an Oracle server users need to provide
   a user name, a password, and possibly a connect identifier (for more
-  informations refer to chapter 8 (Configuring Naming Methods) of Oracle
-  Database Net Services Administrator's Guide). This is the same as part
+  information refer to chapter 8 (Configuring Naming Methods) of Oracle
+  Database Net Services Administrator's Guide). This is the same as the part
   of the SQL*Plus connect string that follows the '@' sign.
 
   Connections to an Oracle TimesTen IMDB instance are established using the OCI
@@ -67,15 +88,15 @@ Questo oggetto è un singleton: ciò significa che restituisce lo stesso
   with \code{\link[DBI]{dbGetQuery}}.
 
   Notice that Oracle (and ANSI/ISO compliant DBMS) transactions are 
-  implicitly started when data definition SQL are executed (create
+  implicitly started when data definition SQL statements are executed (create
   table, etc.), which helper functions like \code{\link[DBI]{dbWriteTable}}
   may execute behind the scenes. You may want or need to commit
   or roll back your work before issuing any of these helper functions.
 }
 
 \section{References}{
-  For the Oracle Database documentation see
-  \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
+  For Oracle Database documentation, see
+  \url{ http://docs.oracle.com/en/database/}.
 }
 \author{David A. James and Denis Mukhin}
 \seealso{

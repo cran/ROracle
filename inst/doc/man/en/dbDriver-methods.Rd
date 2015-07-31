@@ -4,11 +4,10 @@
 \alias{dbUnloadDriver,OraDriver-method}
 \alias{dbUnloadDriver,ExtDriver-method}
 \title{
-  Oracle implementation of the Database Interface (DBI) classes 
-  and drivers 
+  Oracle Implementation of the Database Interface (DBI) Classes and Drivers
 }
 \description{
-  Oracle driver initialization and closing
+  Oracle driver initialization and closing.
 }
 \usage{
 \S4method{dbUnloadDriver}{OraDriver}(drv, ...)
@@ -16,21 +15,22 @@
 }
 \arguments{
   \item{drv}{
-    an object that inherits from \code{OraDriver} or \code{ExtDriver}
+    An object that inherits from \code{OraDriver} or \code{ExtDriver}
     as created by \code{dbDriver}.
   }
   \item{...}{
-    any other arguments are passed to the driver \code{drvName}.
+    Any other arguments to pass to the driver \code{drvName}.
+
   }
 }
 \value{
   \item{dbDriver}{
     An object \code{OraDriver} or \code{ExtDriver} whose class extends
     \code{DBIDriver}. This object is used to create connections, using the
-    function \code{dbConnect}, to one or several Oracle database engines.
+    function \code{dbConnect}, to one or more Oracle Database engines.
   }
   \item{dbUnloadDriver}{
-    free all resources occupied by driver object.
+    Free all resources occupied by driver object.
   }
 }
 \section{Side Effects}{
@@ -41,33 +41,43 @@
       calls to \code{\link[DBI]{dbConnect}}.
     }
     \item{dbUnloadDriver}{
-      Remove communication link between \R client and database.
+      Remove the communication link between the \R client and the database.
     }
   }
 }
 \details{
   \describe{
     \item{dbDriver}{
-      object is a singleton, that is, on subsequent invocations
-      it returns the same initialized object.
+       This object is a singleton, that is, subsequent invocations of
+       \code{dbDriver} return the same initialized object.
 
       This implementation allows you to connect to multiple host servers and
       run multiple connections on each server simultaneously.
 
-      When interruptible is set to TRUE, it allows for interrupting long-running
-      queries on the server by executing the query in a thread. Main thread
-      checks for Ctrl-C and issues OCIBreak/OCIReset to cancel the operation on
-      the server. By default interruptible is FALSE.
+      When \code{interruptible} is set to TRUE, it allows for interrupting
+      long-running queries on the server by executing the query in a thread.
+      Main thread checks for Ctrl-C and issues OCIBreak/OCIReset to cancel the
+      operation on the server. By default, \code{interruptible} is FALSE.
+
+      When \code{unicode_as_utf8} is set to FALSE, NCHAR, NVARCHAR and NCLOB
+      data is fetched using the character set specified by the NLS_LANG
+      setting. By default, \code{unicode_as_utf8} is set to TRUE.
+
+      When \code{ora.attributes} is set to TRUE, the result set from
+      \code{dbGetQuery} and \code{fetch} contains DBMS-specific attributes like
+      \code{ora.encoding}, \code{ora.type}, and \code{ora.maxlength} for the
+      corresponding column.
+
     }
     \item{dbUnloadDriver}{
-      implementation remove communication link between \R client and 
-      database. It frees all connection and all result sets associated with
-      those connection objects
+      This implementation removes communication links between the \R client and
+      the database. It frees all connections and all result sets associated
+      with those connection objects.
     }
   }
 }
 \section{References}{
-  For the Oracle Database documentaion see
+  For Oracle Database documentation, see
   \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
 }
 \seealso{

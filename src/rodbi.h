@@ -1,4 +1,4 @@
-/* Copyright (c) 2011, 2014, Oracle and/or its affiliates. 
+/* Copyright (c) 2011, 2015, Oracle and/or its affiliates. 
 All rights reserved.*/
 
 /*
@@ -21,6 +21,7 @@ All rights reserved.*/
    NOTES
 
    MODIFIED   (MM/DD/YY)
+   rpingte     03/25/15 - add NCHAR, NVARCHAR2 and NCLOB
    rpingte     01/09/14 - Copyright update
    jfeldhau    06/18/12 - ROracle support for TimesTen.
    demukhin    05/10/12 - translation changes
@@ -67,7 +68,7 @@ ub2 rodbiTypeExt(ub1 ityp);
 
 /* ----------------------------- rodbiTypeInt ---------------------------- */
 /* Maps Oracle external data type to ROracle defined internal data type */
-ub1 rodbiTypeInt(ub2 ctyp, sb2 precision, sb1 scale, ub2 size,
-                 boolean timesten);
+ub1 rodbiTypeInt(ub2 ctyp, sb2 precision, sb1 scale, ub4 size,
+                 boolean timesten, ub1 form);
 
 #endif   /* end of _rodbi_H */

@@ -14,9 +14,10 @@ Diese Methoden sind einfache Implementierungen der entsprechenden
 }
 \usage{
 \S4method{dbConnect}{OraDriver}(drv, username = "", password = "", dbname = "", prefetch = FALSE,
-          bulk_read = 1000L, stmt_cache = 0L, external_credentials = FALSE,
-          sysdba = FALSE, ...)
-\S4method{dbConnect}{ExtDriver}(drv, prefetch = FALSE, bulk_read = 1000L, stmt_cache = 0L,
+          bulk_read = 1000L, bulk_write = 1000L, stmt_cache = 0L,
+          external_credentials = FALSE, sysdba = FALSE, ...)
+\S4method{dbConnect}{ExtDriver}(drv, prefetch = FALSE, bulk_read = 1000L,
+          bulk_write = 1000L, stmt_cache = 0L,
           external_credentials = FALSE, sysdba = FALSE, ...)
 \S4method{dbDisconnect}{OraConnection}(conn, ...)
 }
@@ -35,17 +36,18 @@ Eine Zeichenfolge, die ein Kennwort angibt.
 }
   \item{dbname}{
 Eine Zeichenfolge, die eine Verbindungs-ID angibt (weitere Informationen
-    finden Sie in Kapitel 8, Configuring Naming Methods im Oracle
+    finden Sie in Kapitel 8, "Configuring Naming Methods", im Oracle
     Database Net Services Administrator's Guide). Sie ist identisch mit einem
-    Teil der SQL*Plus-Verbindungszeichenfolge, die auf das '@'-Zeichen folgt. 
+    Teil der SQL*Plus-Verbindungszeichenfolge, die auf das "@"-Zeichen folgt. 
     Wenn Sie Oracle Wallet zur Speicherung von Benutzername und Kennwort verwenden, 
     muss diese Zeichenfolge die Verbindungszeichenfolge zum Erstellen des 
     Wallet Mappings sein (weitere Informationen finden Sie im Abschnitt "Configuring Clients to Use
     the External Password Store" in Kapitel 3 des Oracle Database Security Guide).
-    Verbindungs-ID für eine Oracle TimesTen IMDB-Instanz werden über die
+    Verbindungs-IDs für eine Oracle TimesTen IMDB-Instanz werden über die
     OCI Tnsnames- oder Easy Connect-Benennungsmethoden unterstützt. Weitere Informationen
-    zu TimesTen-Verbindungen für OCI finden Sie in Kapitel 3, TimesTen Support for OCI, im
+    zu TimesTen-Verbindungen für OCI finden Sie in Kapitel 3, "TimesTen Support for OCI", im
     TimesTen In-Memory C Developer's Guide.
+    Die unten dargestellten Beispiele zeigen verschiedene Arten zur Angabe der Verbindungs-ID.
 }
   \item{prefetch}{
 Ein logischer Wert, der TRUE oder FALSE angibt. Wenn der Wert auf TRUE gesetzt ist, verwendet ROracle
@@ -67,6 +69,15 @@ Ein ganzzahliger Wert, der die Anzahl von Zeilen angibt, die gleichzeitig abgeru
     Wert entsprechend dem Abfrageergebnis anpassen und ein hoher Wert kommt
     Abfragen zu Gute, die ein großes Ergebnis zurückgeben. Eine Anwendung kann diesen
     Wert nach Bedarf optimieren.
+}
+  \item{bulk_write}{
+Ein ganzzahliger Wert, der die Anzahl von Zeilen angibt, die gleichzeitig eingefügt,
+    aktualisiert oder gelöscht werden sollen. Der Standardwert ist 1000L. Wird der bulk_write-Wert in einem
+    Argument angegeben, wird Puffern Speicher zugewiesen, und OCI schreibt die entsprechende
+    Anzahl Zeilen gleichzeitig. Wird das Argument bulk_write nicht angegeben, wird über den Standardwert
+    1000 den Bind-Puffern Speichern zugewiesen. Wenn Sie hierfür einen
+    hohen Wert festlegen, wird basierend auf der Anzahl von Spalten in der Einfügeliste
+    und auf den Spaltentypen entsprechend mehr Speicher zugewiesen.
 }
   \item{stmt_cache}{
 Ein ganzzahliger Wert, der die Anzahl von zu cachenden Anweisungen angibt. Er bedeutet, 
@@ -112,6 +123,7 @@ Aktuell nicht verwendet
 
 
 
+
            
 \details{
 \\describe{
@@ -121,9 +133,11 @@ Aktuell nicht verwendet
       für das Abrufen von zusätzlichen Daten aus dem Server zulässig.
       Das \code{bulk_read}-Argument wird verwendet, um einen ganzzahligen Wert festzulegen,
       der die Anzahl von gleichzeitig abzurufenden Zeilen angibt.
+      Das \code{bulk_write}-Argument wird verwendet, um einen ganzzahligen Wert festzulegen,
+      der die Anzahl der gleichzeitig zu schreibenden Zeilen angibt.
       Das \code{stmt_cache}-Argument wird zur Aktivierung oder Deaktivierung des Features zum
       Anweisungscaching verwendet. Sein Wert gibt die Größe des Anweisungscaches an.
-      Das \code{external_credentials}-Argument wird verwendet, um die OCI-Session, die mit externen Zugangsdaten 
+      Das \code{external_credentials}-Argument wird verwendet, um die OCI-Session, die mit externen Zugangsdaten
       authentifiziert ist, für die Verbindung zu beginnen.
       Das \code{sysdba}-Argument wird verwendet, um die OCI-Session mit SYSDBA-
       Berechtigungen für die Verbindung zu beginnen.
@@ -133,7 +147,7 @@ Aktuell nicht verwendet
       Verbindungsobjekt zurück.
     }
     \item{dbDisconnect}{
-      Diese Implementierung trennt die Verbindung zwischen R und dem Datenbankserver.
+      Diese Implementierung trennt die Verbindung zwischen R und dem Datenbankserver
       Sie gibt alle Ressourcen frei, die von dem Verbindungsobjekt verwendet werden. Sie gibt
       alle Ergebnismengen frei, die mit diesem Verbindungsobjekt verknüpft sind.
     }
@@ -155,26 +169,26 @@ Aktuell nicht verwendet
 }
 \examples{
   \dontrun{
-    ## create an Oracle Database instance and create one connection on the
+    ## Create an Oracle Database instance and create one connection on the
     ## same machine.
     drv <- dbDriver("Oracle")
 
-    ## use username/password authentication
+    ## Use username/password authentication.
     con <- dbConnect(drv, username = "scott", password = "tiger")
 
-    ## run a SQL statement by creating first a resultSet object
+    ## Run a SQL statement by creating first a resultSet object.
     rs <- dbSendQuery(con, "select * from emp where deptno = 10")
 
-    ## we now fetch records from the resultSet into a data.frame
+    ## We now fetch records from the resultSet into a data.frame.
     data <- fetch(rs)       ## extract all rows
     dim(data)
   }
   \dontrun{
-    ## create an Oracle Database instance and create one connection to a
+    ## Create an Oracle Database instance and create one connection to a
     ## remote database using the SID in the connect string. 
     drv <- dbDriver("Oracle")
 
-    ## refer to Oracle Database Net Services Administator's Guide for
+    ## Refer to Oracle Database Net Services Administator's Guide for
     ## details on connect string specification.
     host <- "myhost"
     port <- 1521
@@ -184,23 +198,23 @@ Aktuell nicht verwendet
       "(ADDRESS=(PROTOCOL=tcp)(HOST=", host, ")(PORT=", port, "))",
         "(CONNECT_DATA=(SID=", sid, ")))", sep = "")
 
-    ## use username/password authentication
+    ## Use username/password authentication.
     con <- dbConnect(drv, username = "scott", password = "tiger",
                      dbname = connect.string)
 
-    ## run a SQL statement by creating first a resultSet object
+    ## Run a SQL statement by creating first a resultSet object.
     rs <- dbSendQuery(con, "select * from emp where deptno = 10")
 
-    ## we now fetch records from the resultSet into a data.frame
+    ## We now fetch records from the resultSet into a data.frame.
     data <- fetch(rs)       ## extract all rows
     dim(data)
   }
   \dontrun{
-    ## create an Oracle Database instance and create one connection to a
+    ## Create an Oracle Database instance and create one connection to a
     ## remote database using the service name.
     drv <- dbDriver("Oracle")
 
-    ## refer to Oracle Database Net Services Administator's Guide for
+    ## Refer to Oracle Database Net Services Administator's Guide for
     ## details on connect string specification.
 
     host <- "myhost"
@@ -210,93 +224,93 @@ Aktuell nicht verwendet
       "(DESCRIPTION=",
       "(ADDRESS=(PROTOCOL=tcp)(HOST=", host, ")(PORT=", port, "))",
       "(CONNECT_DATA=(SERVICE_NAME=", svc, ")))", sep = "")
-    ## use username/password authentication
+    ## Use username/password authentication.
     con <- dbConnect(drv, username = "scott", password = "tiger",
                      dbname = connect.string)
 
-    ## run a SQL statement by creating first a resultSet object
+    ## Run a SQL statement by creating first a resultSet object.
     rs <- dbSendQuery(con, "select * from emp where deptno = 10")
 
-    ## we now fetch records from the resultSet into a data.frame
+    ## We now fetch records from the resultSet into a data.frame.
     data <- fetch(rs)       ## extract all rows
     dim(data)
   }
   \dontrun{
-    ## create an Oracle Database instance and create one connection.
+    ## Create an Oracle Database instance and create one connection.
     drv <- dbDriver("Oracle")
 
-    ## use Oracle Wallet authentication
+    ## Use Oracle Wallet authentication.
     con <- dbConnect(drv, username ="", password="", 
     dbname = "<wallet_connect_string>")
 
-    ## run a SQL statement by creating first a resultSet object
+    ## Run a SQL statement by creating first a resultSet object.
     rs <- dbSendQuery(con, "select * from emp where deptno = 10")
 
-    ## we now fetch records from the resultSet into a data.frame
+    ## We now fetch records from the resultSet into a data.frame.
     data <- fetch(rs)       ## extract all rows
     dim(data)
   }
   \dontrun{
-    ## create an Oracle Database instance and create one connection.
+    ## Create an Oracle Database instance and create one connection.
     drv <- dbDriver("Oracle")
 
-    ## connect to a TimesTen IMDB instance using the easy connect 
-    ## naming method where SampleDb is a direct driver TimesTen DSN
+    ## Connect to a TimesTen IMDB instance using the easy connect 
+    ## naming method where SampleDb is a direct driver TimesTen DSN.
     con <- dbConnect(drv, username ="scott", password="tiger", 
                      dbname = "localhost/SampleDb:timesten_direct")
 
-    ## run a SQL statement by creating first a resultSet object
+    ## Run a SQL statement by creating first a resultSet object.
     rs <- dbSendQuery(con, "select * from dual")
 
-    ## we now fetch records from the resultSet into a data.frame
+    ## We now fetch records from the resultSet into a data.frame.
     data <- fetch(rs)       ## extract all rows
     dim(data)
   }
   \dontrun{
-    ## connect to an extproc (this assumes that the driver has already
+    ## Connect to an extproc (this assumes that the driver has already
     ## been initialized in the embedded R code by passing an external
-    ## pointer representing the extproc context)
+    ## pointer representing the extproc context).
     con <- dbConnect(Extproc())
 
-    ## run a SQL statement by creating first a resultSet object
+    ## Run a SQL statement by creating first a resultSet object.
     rs <- dbSendQuery(con, "select * from dual")
 
-    ## we now fetch records from the resultSet into a data.frame
+    ## We now fetch records from the resultSet into a data.frame.
     data <- fetch(rs)       ## extract all rows
     dim(data)
   }
   \dontrun{
-    ## create an Oracle Database instance and create one connection.
+    ## Create an Oracle Database instance and create one connection.
     drv <- dbDriver("Oracle")
 
-    ## create connection with SYSDBA privileges
+    ## Create connection with SYSDBA privileges.
     con <- dbConnect(drv, username ="scott", password="tiger",
                      sysdba = TRUE)
 
-    ## run a SQL statement by creating first a resultSet object
+    ## Run a SQL statement by creating first a resultSet object.
     rs <- dbSendQuery(con, "select * from emp where deptno = 10")
 
-    ## we now fetch records from the resultSet into a data.frame
+    ## We now fetch records from the resultSet into a data.frame.
     data <- fetch(rs)       ## extract all rows
     dim(data)
   }
   \dontrun{
-    ## create an Oracle Database instance and create one connection.
+    ## Create an Oracle Database instance and create one connection.
     drv <- dbDriver("Oracle")
     
     ## Use OS authentication as an example of external authentication
     ## Make sure that databse user exist to allow an OS authentication
 
-    ## create connection authenticated with external credentials 
+    ## Create connection authenticated with external credentials.
     con <- dbConnect(drv, username ="", password="",
                      external_credentials = TRUE)
     
     ## Above dbConnect() used OS credentials to connect with database.
 
-    ## run a SQL statement by creating first a resultSet object
+    ## Run a SQL statement by creating first a resultSet object.
     rs <- dbSendQuery(con, "select * from emp where deptno = 10")
 
-    ## we now fetch records from the resultSet into a data.frame
+    ## We now fetch records from the resultSet into a data.frame.
     data <- fetch(rs)       ## extract all rows
     dim(data)
   }

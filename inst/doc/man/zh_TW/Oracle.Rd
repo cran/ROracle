@@ -5,26 +5,37 @@
 從目前 \R 階段作業建立 Oracle 從屬端
 }
 \description{
-此函數從目前 \R 階段作業建立與初始化 Oracle
-  從屬端. 它傳回一個物件, 讓您連線
-  一或數部 Oracle 伺服器.
+此函數會從目前的 \R 階段作業建立並初始化
+  Oracle 從屬端. 它會傳回一個可讓您連線至一或多部
+  Oracle 伺服器的物件.
 }
 \usage{
-  Oracle(interruptible = FALSE)
+  Oracle(interruptible = FALSE, unicode_as_utf8 = TRUE,
+         ora.attributes = FALSE)
   Extproc(extproc.ctx = NULL)
 }
 \arguments{
   \item{interruptible}{
-邏輯指示是否允許使用者中斷長時間執行的查詢.
+一個指示是否要允許使用者中斷長時間執行之查詢的
+    邏輯值.
 }
   \item{extproc.ctx}{
 包裝 extproc 相關資訊環境的外部指標.
 }
+  \item{unicode_as_utf8}{
+一個指示是否要擷取以 UTF8 編碼之 NCHAR、NVARCHAR 及 NCLOB
+    資料的邏輯值.
+}
+  \item{ora.attributes}{
+一個指示是否要在 \code{ora.encoding} 和 \code{ora.type} 所傳回的
+    資料框架中包含屬性 \code{ora.maxlength}、\code{dbGetQuery}
+    及 \code{fetch} 的邏輯值.
+}
 }
 \value{
-\code{OraDriver} 之類別為 \code{Oracle} 的物件, 或是
-  其類別擴充 \code{ExtDriver} 之 \code{Extproc} 的 \code{DBIDriver}.
-  此物件可使用函數 \code{dbConnect} 來建立對一或多個
+一個類別為 \code{OraDriver} 的物件 (如果是 \code{Oracle}), 或是一個
+  類別為 \code{ExtDriver} 的物件 (如果是類別擴充 \code{Extproc} 的 \code{DBIDriver}).
+  可藉由使用函數 \code{dbConnect}, 使用此物件來建立與一或多個
   Oracle 資料庫引擎的連線.
 }
 \section{Side Effects}{
@@ -34,21 +45,31 @@
 }
 
 
+
+
 \details{
-此物件為單一個體, 亦即後續呼叫時,
+此物件為單一個體, 亦即在後續呼叫時,
   它會傳回相同的已初始化物件. 
-  此實行可讓您連線多部主機伺服器,
+  此實行可讓您連線至多部主機伺服器,
   並在每部伺服器上同時執行多個連線.
-  當可否中斷設為 TRUE 時, 它可以執行繫線中的查詢,
-  以中斷長時間執行的查詢. 主要繫線
-  會檢查 Ctrl-C 並發出 OCIBreak/OCIReset 以取消伺服器上的作業.
-  根據預設, 可否中斷設為 FALSE.
+  當 \code{interruptible} 設為 TRUE 時, 可允許藉由執行繫線中
+  的查詢來中斷伺服器上長時間執行的查詢. 主要繫線
+  會檢查 Ctrl-C 並發出 OCIBreak/OCIReset 來取消伺服器上的
+  作業. \code{interruptible} 預設為 FALSE.
+  當 \code{unicode_as_utf8} 設為 FALSE 時, 系統會利用使用 NLS_LANG 設定值的
+  字元集來擷取 NCHAR、NVARCHAR 及 NCLOB 資料. \code{unicode_as_utf8}
+  預設為 TRUE.
+  當 \code{ora.attributes} 設為 TRUE 時, 會在從 dbGetQuery
+  和 fetch 傳回的結果資料框架中新增屬性
+  \code{ora.encoding}、\code{ora.type} 及 \code{ora.maxlength}. 應將它與 dbWriteTable 搭配使用, 以
+  建立與 Oracle DBMS 中從來源表格擷取之資料類型相同的
+  資料類型.
 }
 \section{Oracle user authentication}{
   In order to establish a connection to an Oracle server users need to provide
   a user name, a password, and possibly a connect identifier (for more
-  informations refer to chapter 8 (Configuring Naming Methods) of Oracle
-  Database Net Services Administrator's Guide). This is the same as part
+  information refer to chapter 8 (Configuring Naming Methods) of Oracle
+  Database Net Services Administrator's Guide). This is the same as the part
   of the SQL*Plus connect string that follows the '@' sign.
 
   Connections to an Oracle TimesTen IMDB instance are established using the OCI
@@ -67,15 +88,15 @@
   with \code{\link[DBI]{dbGetQuery}}.
 
   Notice that Oracle (and ANSI/ISO compliant DBMS) transactions are 
-  implicitly started when data definition SQL are executed (create
+  implicitly started when data definition SQL statements are executed (create
   table, etc.), which helper functions like \code{\link[DBI]{dbWriteTable}}
   may execute behind the scenes. You may want or need to commit
   or roll back your work before issuing any of these helper functions.
 }
 
 \section{References}{
-  For the Oracle Database documentation see
-  \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
+  For Oracle Database documentation, see
+  \url{ http://docs.oracle.com/en/database/}.
 }
 \author{David A. James and Denis Mukhin}
 \seealso{

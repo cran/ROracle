@@ -16,20 +16,19 @@
   Convenience Functions for Manipulating DBMS Tables
 }
 \description{
-  These functions mimic their R counterparts 
+  These functions mimic their R counterparts except that they generate
+  code that gets remotely executed in a database engine:
   \code{get},
   \code{assign},
   \code{exists}, 
   \code{remove},
   \code{objects}, and
-  \code{names}
-  except that they generate code that gets remotely executed in a database
-  engine.
+  \code{names}.
 }
 \usage{
 \S4method{dbReadTable}{OraConnection,character}(conn, name, schema = NULL, row.names = NULL, ...)
 \S4method{dbWriteTable}{OraConnection,character,data.frame}(conn, name, value, row.names = FALSE, overwrite = FALSE,
-             append = FALSE, ora.number = TRUE, schema = NULL, ...)
+             append = FALSE, ora.number = TRUE, schema = NULL, date = FALSE, ...)
 \S4method{dbExistsTable}{OraConnection,character}(conn, name, schema = NULL, ...)
 \S4method{dbRemoveTable}{OraConnection,character}(conn, name, purge = FALSE, schema = NULL, ...)
 \S4method{dbListTables}{OraConnection}(conn, schema = NULL, all = FALSE, full = FALSE, ...)
@@ -45,6 +44,10 @@
   \item{schema}{
     A case-sensitive character string specifying a schema name (or a
     vector of character strings for \code{dbListTables}).
+  }
+  \item{date}{
+    A boolean flag to indicate whether to use date or DateTimep.
+    By default, DateTime will be used instead of timestamp.
   }
   \item{row.names}{
     In the case of \code{dbReadTable}, this argument can be a string, an
@@ -103,6 +106,35 @@
   object names should not include double quotes as they are enclosed in
   double quotes when the corresponding SQL statement is generated.
 
+   The following attributes are used for mapping BLOB, CLOB, NCLOB, NCHAR, VARCHAR2,
+   NVARCHAR2, CHAR, TIMESTAMP WITH TIME ZONE and TIMESTAMP WITH LOCAL TIME ZONE
+   columns correctly in \code{dbWriteTable}:
+   1) Attribute Name: \code{ora.type}
+   This attribute indicates the type of the underlying column and can be
+   "CLOB", "BLOB", "CHAR", "VARCHAR2", or "RAW". The user can specify
+   TIMESTAMP, DATE, TIMESTAMP WITH TIME ZONE or any other column types
+   supported by Oracle Database. ROacle does not parse the value; it is
+   validated by the database. The user can provide one of the following
+   values for \code{ora.type}: CLOB, BLOB, CHAR, TIMESTAMP WITH TIME
+   ZONE, TIMESTAMP WITH LOCAL TIME ZONE and fractional_seconds_precision.
+   2) Attribute Name: \code{ora.encoding}
+   When UTF-8 is specified, the database uses NCLOB, NCHAR or NVARCHAR based on
+   \code{ora.type}.
+   3) Attribute Name: \code{ora.maxlength}
+   One can specify the maximum length of CHAR, VARCHAR, NCHAR, NVARCHAR2, or
+   RAW columns. For other data types, \code{ora.maxlength} does not
+   apply and is ignored. The following default values are used for
+   certain data types when \code{ora.maxlength} is not specified.
+   CHAR                                       2000
+   NCHAR                                      1000
+   VARCHAR2                                   4000
+   NVARCHAR2                                  2000
+   RAW                                        2000
+   4) Attribute Name: \code{ora.fractional_seconds_precision}
+   One can specify the fractional part of the SECOND datetime field of
+   TIMESTAMP, TIMESTAMP WITH TIME ZONE and TIMESTAMP WITH LOCAL TIME ZONE
+   columns. It can be a number in the range 0 to 9. The default value is 6.
+
   \pkg{ROracle} methods such as \code{dbReadTable}, \code{dbGetQuery},
   \code{fetch}, and \code{dbWriteTable} use the following mapping
   between \R and Oracle data types:
@@ -111,16 +143,28 @@
     \item \code{numeric} maps to Oracle \code{NUMBER} if argument
     \code{ora.number} is \code{TRUE} or Oracle  \code{BINARY_DOUBLE} if
     \code{FALSE}
-    \item \code{character} maps to Oracle \code{VARCHAR2(4000)}
+    \item \code{character} maps to Oracle \code{CLOB} if attribute 
+    \code{ora.type} is \code{"CLOB"} or Oracle \code{NCLOB} if attribute
+    \code{ora.type} is \code{"CLOB"} and \code{ora.encoding} is \code{"UTF-8"}
+    or Oracle \code{CHAR(ora.maxlength)} if attribute \code{ora.type} is 
+    \code{"CHAR"} or Oracle \code{NCHAR(ora.maxlength)} if attribute 
+    \code{ora.type} is \code{"CHAR"} and \code{ora.encoding} is \code{"UTF-8"}
+    or Oracle \code{NVARCHAR2(ora.maxlength)} if attribute \code{ora.encoding}
+    is \code{"UTF-8"} or Oracle \code{VARCHAR2(ora.maxlength)}
     \item \code{Date} and \code{POSIXct} map to Oracle \code{DATE}
     \pkg{ROracle} - the ROracle package
     \R - the R application
-    \code{POSIXct} - the POSIXct class
-    \code{TIMESTAMP}
-    \code{TIMESTAMP WITH TIME ZONE}
-    \code{TIMESTAMP WITH LOCAL TIME ZONE}
+    \item \code{POSIXct} maps to Oracle 
+    \code{TIMESTAMP WITH TIME ZONE(ora.fractional_seconds_precision)} if 
+    attribute \code{ora.type} is \code{"TIMESTAMP WITH TIME ZONE"} or Oracle 
+    \code{TIMESTAMP WITH LOCAL TIME ZONE(ora.fractional_seconds_precision)} if
+    attribute \code{ora.type} is \code{"TIMESTAMP WITH LOCAL TIME ZONE"} or
+    Oracle \code{TIMESTAMP(ora.fractional_seconds_precision)} and if 
+    \code{Date} is \code{FALSE} 
     \item \code{difftime} maps to Oracle \code{INTERVAL DAY TO SECOND}
-    \item \code{list} of \code{raw} vectors map to Oracle \code{RAW(2000)}
+    \item \code{list} of \code{raw} vectors map to Oracle \code{BLOB} if 
+    attribute \code{ora.type} is \code{"BLOB"} or Oracle 
+    \code{RAW(ora.maxlength)}
     \item other \R types such as \code{factor} are converted to
     \code{character}
   }
@@ -148,7 +192,7 @@
    Columns having a date and time stamp data type are fetched by ROracle using
    the SQLT_TIMESTAMP data type. Columns having a time stamp with time zone or
    a time stamp with local time zone data types are fetched using
-   SQLT_TIMESTAMP_LTZ data type. Columns of data type time zone with local time
+   SQLT_TIMESTAMP_LTZ data type. Columns of data type time stamp with local time
    zone undergo conversion to the session time zone that the R application runs
    in, therefore setting the time zone environment TZ in R will affect the data
    values in this column. ROracle driver maps the TZ environment variable to
@@ -327,7 +371,7 @@ and Oracle session time zone" for details on valid time zones.
   For the Oracle Database documentation see 
   \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
   For Datetime Data Types and Time Zone Support in Oracle see
-  \url{http://docs.oracle.com/cd/E14072_01/server.112/e10729/ch4datetime.htm}.
+  \url{http://docs.oracle.com/cd/E11882_01/server.112/e10729/ch4datetime.htm}.
 }
 \seealso{
   \code{\link{Oracle}},
@@ -406,6 +450,102 @@ and Oracle session time zone" for details on valid time zones.
     res[,3]
     res[,4]
     res[,5]
+
+    # insert data in Date format
+    a<-as.Date("2014-01-01")
+    dbWriteTable(con, 'TEMP', data.frame(a), date = TRUE)
+
+    # using attribute to map NCHAR, CLOB, BLOB, NCLOB columns correctly in 
+    # dbWriteTable
+    str1 <- paste(letters, collapse="")
+    lstr1 <- paste(rep(str1, 200), collapse="")
+    raw.lst <- vector("list",1)
+    lraw.lst <- vector("list",1)
+    raw.lst[[1L]] <- charToRaw(str1)
+    lraw.lst[[1L]] <- rep(charToRaw(str1), 200)
+    a <- as.POSIXct("2014-01-01 14:12:09.0194733")
+    b <- as.POSIXct("2014-01-01 14:12:09.01947")
+    test.df <- data.frame(char=str1, nchar=str1, varchar=str1, clob=lstr1,
+                      nclob=lstr1, stringsAsFactors=FALSE)
+    test.df$raw.typ <- raw.lst
+    test.df$blob <- lraw.lst
+    test.df$char_max <- str1 
+    test.df$raw_max.typ <- raw.lst
+    test.df$nvchar <- str1
+    test.df$nvchar_max <- str1
+    test.df$date_tz <- a
+    test.df$date_ltz <- b
+
+    # adding attributes
+    attr(test.df$clob, "ora.type") <- "CLOB"
+    attr(test.df$blob, "ora.type") <- "BLOB"
+    attr(test.df$nclob, "ora.type") <- "CLOB"
+    attr(test.df$nclob, "ora.encoding") <- "UTF-8"
+    attr(test.df$char_max, "ora.maxlength") <- 3000
+    attr(test.df$raw_max.typ, "ora.maxlength") <- 1000
+    attr(test.df$nvchar, "ora.encoding") <- "UTF-8"
+    attr(test.df$nvchar_max, "ora.encoding") <- "UTF-8"
+    attr(test.df$nvchar_max, "ora.maxlength") <- 1500
+    attr(test.df$char, "ora.type") <- "CHAR"
+    attr(test.df$date_tz, "ora.type") <- "timestamp with time zone"
+    attr(test.df$date_ltz, "ora.type") <- "timestamp with local time zone"
+    attr(test.df$nchar, "ora.type") <- "CHAR"
+    attr(test.df$nchar, "ora.encoding") <- "UTF-8"
+    attr(test.df$date_tz, "ora.fractional_seconds_precision") <- 9
+R> # displaying the data frame
+R> test.df
+char                         nchar
+1 abcdefghijklmnopqrstuvwxyz abcdefghijklmnopqrstuvwxyz
+varchar
+1 abcdefghijklmnopqrstuvwxyz
+clob
+1 abcdefghijklmnopqrstuvwxyz...
+nclob
+1 abcdefghijklmnopqrstuvwxyz...
+raw.typ
+1 61, 62, 63, 64, 65, 66, 67, 68, 69, 6a, 6b, 6c, 6d, 6e, 6f, 70, 71, 72, 73,
+  74, 75, 76, 77, 78, 79, 7a
+blob
+1 61, 62, 63, 64, 65, 66, 67, 68, 69, 6a, 6b, 6c, 6d, 6e, 6f, 70, 71, 72, 73,
+  74, 75, 76, 77, 78, 79, 7a,...
+char_max
+1 abcdefghijklmnopqrstuvwxyz
+raw_max.typ
+1 61, 62, 63, 64, 65, 66, 67, 68, 69, 6a, 6b, 6c, 6d, 6e, 6f, 70, 71, 72, 73,
+  74, 75, 76, 77, 78, 79, 7a
+nvchar                       nvchar_max
+1 abcdefghijklmnopqrstuvwxyz abcdefghijklmnopqrstuvwxyz
+date_tz                      date_ltz
+1 2014-01-01 14:12:09.019473 2014-01-01 14:12:09.01946
+
+    dbWriteTable(con, name="TEST_TAB", value=test.df)
+    res <- dbReadTable(con, name="TEST_TAB")
+R> res
+char
+1 abcdefghijklmnopqrstuvwxyz
+nchar
+1 abcdefghijklmnopqrstuvwxyz
+varchar
+1 abcdefghijklmnopqrstuvwxyz
+clob
+1 abcdefghijklmnopqrstuvwxyz...
+nclob
+1 abcdefghijklmnopqrstuvwxyz...
+raw.typ
+1 61, 62, 63, 64, 65, 66, 67, 68, 69, 6a, 6b, 6c, 6d, 6e, 6f, 70, 71, 72, 73,
+  74, 75, 76, 77, 78, 79, 7a
+blob
+1 61, 62, 63, 64, 65, 66, 67, 68, 69, 6a, 6b, 6c, 6d, 6e, 6f, 70, 71, 72, 73,
+  74, 75, 76, 77, 78, 79, 7a,...
+char_max                                                                                           
+1 abcdefghijklmnopqrstuvwxyz
+raw_max.typ
+1 61, 62, 63, 64, 65, 66, 67, 68, 69, 6a, 6b, 6c, 6d, 6e, 6f, 70, 71, 72, 73,
+  74, 75, 76, 77, 78, 79, 7a
+nvchar                       nvchar_max
+1 abcdefghijklmnopqrstuvwxyz abcdefghijklmnopqrstuvwxyz
+date_tz                      date_ltz
+1 2014-01-01 14:12:09.019473 2014-01-01 14:12:09.01946
   }
   \dontrun{
     df <- data.frame(A=c(0,1,NaN,4), B=c(NA, 2,3,NaN))

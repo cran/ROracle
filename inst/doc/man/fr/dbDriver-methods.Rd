@@ -4,11 +4,10 @@
 \alias{dbUnloadDriver,OraDriver-method}
 \alias{dbUnloadDriver,ExtDriver-method}
 \title{
-Implémentation Oracle des classes et pilotes d'interface de base de
-   données (DBI)
+Implémentation Oracle des classes et pilotes d'interface de base de données (DBI)
 }
 \description{
-Initialisation et fermeture de pilote Oracle
+Initialisation et fermeture de pilote Oracle.
 }
 \usage{
 \S4method{dbUnloadDriver}{OraDriver}(drv, ...)
@@ -16,11 +15,12 @@ Initialisation et fermeture de pilote Oracle
 }
 \arguments{
   \item{drv}{
-objet qui hérite de \code{OraDriver} ou \code{ExtDriver}
+Objet qui hérite de \code{OraDriver} ou \code{ExtDriver}
     tel que créé par \code{dbDriver}.
 }
+
   \item{...}{
-les autres arguments sont transmis au pilote \code{drvName}.
+Tout autre argument à transmettre au pilote \code{drvName}.
 }
 }
 \value{
@@ -41,33 +41,43 @@ les autres arguments sont transmis au pilote \code{drvName}.
       calls to \code{\link[DBI]{dbConnect}}.
     }
     \item{dbUnloadDriver}{
-      Remove communication link between \R client and database.
+      Remove the communication link between the \R client and the database.
     }
   }
 }
+
+
+
 
 
 \details{
 \\describe{
     \item{dbDriver}{
-      L'objet est un singleton, c'est-à-dire que lors des appels suivants,
-il renvoie le même objet initialisé. 
-Cette implémentation vous permet de vous connecter à plusieurs serveurs hôte et
-d'exécuter simultanément plusieurs connexions sur chaque serveur.
-Si l'élément interruptible a la valeur TRUE, il permet l'interruption de requêtes
-à longue durée d'exécution sur le serveur en exécutant la requête dans un thread. Le thread principal
-recherche Ctrl-C et émet OCIBreak/OCIReset pour annuler l'opération sur
-le serveur. Par défaut, l'élément interruptible a la valeur FALSE.
+       Cet objet est un singleton, c'est-à-dire que les appels consécutifs de
+       \code{dbDriver} renvoient le même objet initialisé.
+      Cette implémentation permet de vous connecter à plusieurs serveurs hôte et
+      d'exécuter simultanément plusieurs connexions sur chaque serveur.
+      Si \code{interruptible} a la valeur TRUE, il est possible d'interrompre des requêtes
+      à longue durée d'exécution sur le serveur en exécutant la requête dans un thread.
+      Le thread principal recherche Ctrl-C et émet OCIBreak/OCIReset pour annuler
+      l'opération sur le serveur. Par défaut, \code{interruptible} a la valeur FALSE.
+      Si \code{unicode_as_utf8} est défini sur FALSE, les données NCHAR, NVARCHAR et NCLOB
+      sont extraites à l'aide du jeu de caractères spécifié par le paramètre NLS_LANG.
+      Par défaut, \code{unicode_as_utf8} est défini sur TRUE.
+      Si \code{ora.attributes} est défini sur TRUE, l'ensemble de résultats de
+      \code{dbGetQuery} et \code{fetch} contient des attributs propres au SGBD,
+      comme \code{ora.encoding}, \code{ora.type} et \code{ora.maxlength} pour la
+      colonne correspondante.
     }
     \item{dbUnloadDriver}{
-      L'implémentation enlève le lien de communication entre le client \R et la 
-      base de données. Elle libère toutes les connexions et tous les ensembles de résultats associés à
-      ces objets de connexion
+      Cette implémentation enlève les liens de communication entre le client \R et
+      la base de données. Elle libère toutes les connexions et tous les ensembles de résultats associés à
+      ces objets de connexion.
     }
   }
 }
 \section{References}{
-  For the Oracle Database documentaion see
+  For Oracle Database documentation, see
   \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
 }
 \seealso{

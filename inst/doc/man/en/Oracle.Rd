@@ -7,25 +7,36 @@
 \description{
   This function creates and initializes an Oracle client from the
   current \R session. It returns an object that allows you to connect to
-  one or several Oracle servers.
+  one or more Oracle servers.
 }
 \usage{
-  Oracle(interruptible = FALSE)
+  Oracle(interruptible = FALSE, unicode_as_utf8 = TRUE,
+         ora.attributes = FALSE)
   Extproc(extproc.ctx = NULL)
 }
 \arguments{
   \item{interruptible}{
-    logical indicating whether to allow user interrupts on long-running queries.
+    A logical indicating whether to allow user interrupts on long-running
+    queries.
   }
   \item{extproc.ctx}{
     An external pointer wrapping extproc context.
+  }
+  \item{unicode_as_utf8}{
+    A logical indicating whether to fetch NCHAR, NVARCHAR and NCLOB data
+    encoded in UTF8.
+  }
+  \item{ora.attributes}{
+    A logical indicating whether to include the attributes \code{ora.encoding},
+    \code{ora.type}, and \code{ora.maxlength} in the data frames returned by
+    \code{dbGetQuery} and \code{fetch}.
   }
 }
 \value{
   An object of class \code{OraDriver} for \code{Oracle} or
   \code{ExtDriver} for \code{Extproc} whose class extends \code{DBIDriver}.
   This object is used to create connections, using the function
-  \code{dbConnect}, to one or several Oracle database engines.
+  \code{dbConnect}, to one or more Oracle database engines.
 }
 \section{Side Effects}{
   The \R client part of the database communication is initialized,
@@ -39,16 +50,26 @@
   This implementation allows you to connect to multiple host servers and
   run multiple connections on each server simultaneously.
 
-  When interruptible is set to TRUE, it allows for interrupting long-running
-  queries on the server by executing the query in a thread. Main thread
-  checks for Ctrl-C and issues OCIBreak/OCIReset to cancel the operation on
-  the server. By default interruptible is FALSE.
+  When \code{interruptible} is set to TRUE, it allows for interrupting
+  long-running queries on the server by executing the query in a thread. Main
+  thread checks for Ctrl-C and issues OCIBreak/OCIReset to cancel the operation
+  on the server. By default \code{interruptible} is FALSE.
+
+  When \code{unicode_as_utf8} is set to FALSE, NCHAR, NVARCHAR and NCLOB data
+  is fetched using the character set using the NLS_LANG setting. By default
+  \code{unicode_as_utf8} is set to TRUE.
+
+  When \code{ora.attributes} is set to TRUE attributes \code{ora.encoding},
+  \code{ora.type} and \code{ora.maxlength} are added in result data frame
+  returned from dbGetQuery and fetch. It should be used with dbWriteTable to
+  create the same data types as in the Oracle DBMS as fetched from the source
+  table.
 }
 \section{Oracle user authentication}{
   In order to establish a connection to an Oracle server users need to provide
   a user name, a password, and possibly a connect identifier (for more
-  informations refer to chapter 8 (Configuring Naming Methods) of Oracle
-  Database Net Services Administrator's Guide). This is the same as part
+  information refer to chapter 8 (Configuring Naming Methods) of Oracle
+  Database Net Services Administrator's Guide). This is the same as the part
   of the SQL*Plus connect string that follows the '@' sign.
 
   Connections to an Oracle TimesTen IMDB instance are established using the OCI
@@ -67,15 +88,15 @@
   with \code{\link[DBI]{dbGetQuery}}.
 
   Notice that Oracle (and ANSI/ISO compliant DBMS) transactions are 
-  implicitly started when data definition SQL are executed (create
+  implicitly started when data definition SQL statements are executed (create
   table, etc.), which helper functions like \code{\link[DBI]{dbWriteTable}}
   may execute behind the scenes. You may want or need to commit
   or roll back your work before issuing any of these helper functions.
 }
 
 \section{References}{
-  For the Oracle Database documentation see
-  \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
+  For Oracle Database documentation, see
+  \url{ http://docs.oracle.com/en/database/}.
 }
 \author{David A. James and Denis Mukhin}
 \seealso{

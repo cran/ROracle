@@ -1,4 +1,4 @@
-/* Copyright (c) 2011, 2014, Oracle and/or its affiliates. 
+/* Copyright (c) 2011, 2015, Oracle and/or its affiliates. 
 All rights reserved.*/
 
 /*
@@ -70,6 +70,11 @@ All rights reserved.*/
    NOTES
 
    MODIFIED   (MM/DD/YY)
+   rpingte     03/31/15 - add ora.attributes
+   rpingte     03/25/15 - add NCHAR, NVARCHAR2 and NCLOB
+   rpingte     01/26/15 - convert UCS2 to UTF8 for NCHAR in TimesTen
+   rpingte     12/04/14 - NLS support
+   ssjaiswa    11/21/14 - update version to 1.2-1
    ssjaiswa    09/10/14 - Add bulk_write
    rpingte     06/04/14 - time stamp with time zone define as
                           SQLT_TIMESTAMP_LTZ
@@ -237,8 +242,8 @@ while (0)
 #define RODBI_DRV_NAME       "Oracle (OCI)"
 #define RODBI_DRV_EXTPROC    "Oracle (extproc)"
 #define RODBI_DRV_MAJOR       1
-#define RODBI_DRV_MINOR       1
-#define RODBI_DRV_UPDATE      12
+#define RODBI_DRV_MINOR       2
+#define RODBI_DRV_UPDATE      1
 
 /* RODBI R classes */
 #define RODBI_R_LOG           1                                  /* LOGICAL */
@@ -283,10 +288,14 @@ while (0)
 #define RODBI_INTER_YM       19                   /* INTERVAL YEAR TO MONTH */
 #define RODBI_INTER_DS       20                   /* INTERVAL DAY TO SECOND */
 #define RODBI_TIME_LTZ       21           /* TIMESTAMP WITH LOCAL TIME ZONE */
+#define RODBI_NVARCHAR2      22                           /* NVARCHAR2 TYPE */ 
+#define RODBI_NCHAR          23                               /* NCHAR TYPE */ 
+#define RODBI_NCLOB          24                               /* NCLOB TYPE */ 
 
 
 /* RODBI internal Oracle types NaMes */
 #define RODBI_VARCHAR2_NM    "VARCHAR2"
+#define RODBI_NVARCHAR2_NM   "NVARCHAR2"
 #define RODBI_NUMBER_NM      "NUMBER"
 #define RODBI_INTEGER_NM     "NUMBER"
 #define RODBI_LONG_NM        "LONG"
@@ -295,11 +304,13 @@ while (0)
 #define RODBI_LONG_RAW_NM    "LONG RAW"
 #define RODBI_ROWID_NM       "ROWID"
 #define RODBI_CHAR_NM        "CHAR"
+#define RODBI_NCHAR_NM       "NCHAR"
 #define RODBI_BFLOAT_NM      "BINARY_FLOAT"
 #define RODBI_BDOUBLE_NM     "BINARY_DOUBLE"
 #define RODBI_UDT_NM         "USER-DEFINED TYPE"
 #define RODBI_REF_NM         "REF"
 #define RODBI_CLOB_NM        "CLOB"
+#define RODBI_NCLOB_NM       "NCLOB"
 #define RODBI_BLOB_NM        "BLOB"
 #define RODBI_BFILE_NM       "BFILE"
 #define RODBI_TIME_NM        "TIMESTAMP"
@@ -334,6 +345,8 @@ struct rodbiDrv
   roociCtx   ctx_rodbiDrv;                                   /* OCI context */
   boolean    interrupt_rodbiDrv;   /* Use ^C handler for long running query */
   boolean    extproc_rodbiDrv;                       /* extproc driver flag */
+  boolean    unicode_as_utf8;         /* fetch nchar/nvarchar/nclob in utf8 */
+  boolean    ora_attributes; /* carry ora.* attributes in result data frame */
 };
 typedef struct rodbiDrv rodbiDrv;
 
@@ -414,7 +427,10 @@ const rodbiITyp rodbiITypTab[] =
   {RODBI_TIME_TZ_NM,  RODBI_R_DAT, SQLT_TIMESTAMP_LTZ,sizeof(OCIDateTime *)}, 
   {RODBI_INTER_YM_NM, RODBI_R_CHR, SQLT_STR,          0},
   {RODBI_INTER_DS_NM, RODBI_R_DIF, SQLT_INTERVAL_DS,  sizeof(OCIInterval *)},
-  {RODBI_TIME_LTZ_NM, RODBI_R_DAT, SQLT_TIMESTAMP_LTZ,sizeof(OCIDateTime *)}
+  {RODBI_TIME_LTZ_NM, RODBI_R_DAT, SQLT_TIMESTAMP_LTZ,sizeof(OCIDateTime *)},
+  {RODBI_NVARCHAR2_NM,RODBI_R_CHR, SQLT_STR,          0}, 
+  {RODBI_NCHAR_NM,    RODBI_R_CHR, SQLT_STR,          0}, 
+  {RODBI_NCLOB_NM,    RODBI_R_CHR, SQLT_CLOB,         sizeof(OCILobLocator *)}
 };
 
 /* default maximum size of a page is 65536 for fixed data types */
@@ -1033,7 +1049,8 @@ SEXP rociDrvAlloc(void);
 
 /* ----------------------------- rociDrvInit ------------------------------ */
 /* Initialize driver  context */
-SEXP rociDrvInit(SEXP ptrDrv, SEXP interruptible, SEXP ptrEpx);
+SEXP rociDrvInit(SEXP ptrDrv, SEXP interruptible, SEXP ptrEpx,
+                 SEXP unicode_as_utf8, SEXP ora_attributes);
 
 /* ----------------------------- rociDrvInfo ------------------------------ */
 /* get driver info */
@@ -1121,7 +1138,8 @@ SEXP rociDrvAlloc(void)
 
 /* ------------------------------ rociDrvInit ----------------------------- */
 
-SEXP rociDrvInit(SEXP ptrDrv, SEXP interruptible, SEXP ptrEpx)
+SEXP rociDrvInit(SEXP ptrDrv, SEXP interruptible, SEXP ptrEpx,
+                 SEXP unicode_as_utf8, SEXP ora_attributes)
 {
   rodbiDrv  *drv = R_ExternalPtrAddr(ptrDrv);
   void      *epx = isNull(ptrEpx) ? NULL : R_ExternalPtrAddr(ptrEpx);
@@ -1146,7 +1164,8 @@ SEXP rociDrvInit(SEXP ptrDrv, SEXP interruptible, SEXP ptrEpx)
   /* create OCI environment, get client version */
   RODBI_CHECK_DRV(drv, __FUNCTION__, 1, TRUE,
                roociInitializeCtx(&(drv->ctx_rodbiDrv), epx,
-                                  *LOGICAL(interruptible)));
+                                  *LOGICAL(interruptible),
+                                  *LOGICAL(unicode_as_utf8)));
 
   /* set external pointer */
   R_SetExternalPtrAddr(ptrDrv, drv);
@@ -1154,7 +1173,9 @@ SEXP rociDrvInit(SEXP ptrDrv, SEXP interruptible, SEXP ptrEpx)
   /* set magicWord for driver */
   drv->magicWord_rodbiDrv = RODBI_CHECKWD;
   drv->interrupt_rodbiDrv = *LOGICAL(interruptible);
-  drv->extproc_rodbiDrv = (epx == NULL) ? FALSE : TRUE;
+  drv->unicode_as_utf8    = *LOGICAL(unicode_as_utf8);
+  drv->ora_attributes     = *LOGICAL(ora_attributes);
+  drv->extproc_rodbiDrv   = (epx == NULL) ? FALSE : TRUE;
 
   RODBI_TRACE("driver created");
 
@@ -1171,10 +1192,10 @@ SEXP rociDrvInfo(SEXP ptrDrv)
   SEXP      names;
 
   /* allocate output list */
-  PROTECT(info = allocVector(VECSXP, 7));
+  PROTECT(info = allocVector(VECSXP, 9));
 
   /* allocate list element names */
-  names = allocVector(STRSXP, 7);
+  names = allocVector(STRSXP, 9);
   setAttrib(info, R_NamesSymbol, names);                  /* protects names */
 
   /* driverName */
@@ -1209,9 +1230,17 @@ SEXP rociDrvInfo(SEXP ptrDrv)
   SET_VECTOR_ELT(info,  5, ScalarLogical(drv->interrupt_rodbiDrv));
   SET_STRING_ELT(names, 5, mkChar("interruptible"));
 
+  /* unicode_as_utf8 */
+  SET_VECTOR_ELT(info,  6, ScalarLogical(drv->unicode_as_utf8));
+  SET_STRING_ELT(names, 6, mkChar("unicode_as_utf8"));
+
+  /* ora_attributes */
+  SET_VECTOR_ELT(info,  7, ScalarLogical(drv->ora_attributes));
+  SET_STRING_ELT(names, 7, mkChar("ora_attributes"));
+
   /* connections */
-  SET_VECTOR_ELT(info,  6, rodbiDrvInfoConnections(drv));
-  SET_STRING_ELT(names, 6, mkChar("connections"));
+  SET_VECTOR_ELT(info,  8, rodbiDrvInfoConnections(drv));
+  SET_STRING_ELT(names, 8, mkChar("connections"));
 
   /* release info list */
   UNPROTECT(1);
@@ -1584,7 +1613,7 @@ SEXP rociResInit(SEXP hdlCon, SEXP statement, SEXP data,
   enc = Rf_getCharCE(STRING_ELT(statement, 0));
   if (enc == CE_NATIVE)
     res->cnvtxt_rodbiRes = FALSE;
-  else if (enc == CE_UTF8)
+  else if ((enc == CE_UTF8) || (enc == CE_LATIN1))
     res->cnvtxt_rodbiRes = TRUE;
   else
     RODBI_ERROR_RES(RODBI_ERR_UNSUPP_SQL_ENC, TRUE);
@@ -1955,6 +1984,41 @@ static void rodbiDrvFree(rodbiDrv *drv)
 
   RODBI_TRACE("driver freed");
 } /* end rodbiDrvFree */
+
+
+/* Convert UCS2 to UTF8 */
+static void rodbiTTConvertUCS2UTF8Data(rodbiRes *res, const ub2 *src,
+                                       size_t srclen, char **tempbuf,
+                                       size_t *tempbuflen)
+{
+  size_t templen = 0;
+
+  /* srclen is 2 bytes per character(UCS2) */
+  srclen /= 2;
+
+  if (*tempbuflen < srclen)
+  {
+    if (*tempbuf) 
+      ROOCI_MEM_FREE(*tempbuf);
+
+    /*
+    ** FIXME: Multiply by ratio of 4.
+    ** There is no OCI API to get max width.
+    */
+    *tempbuflen = srclen;
+    ROOCI_MEM_MALLOC(*tempbuf, *tempbuflen * 4, sizeof(char));
+    if (!*tempbuf)
+      RODBI_ERROR(RODBI_ERR_MEMORY_ALC);
+  }
+
+  templen = *tempbuflen * 4;
+  /* NCHAR data is returned as UCS2 in TimeTen */
+  RODBI_CHECK_RES(res, __FUNCTION__, 1, FALSE,
+              OCIUnicodeToCharSet(res->con_rodbiRes->con_rodbiCon.usr_roociCon,
+                (OraText *)*tempbuf, templen, src, (size_t)(srclen),
+                &templen));
+}
+
 
 
 /****************************************************************************/
@@ -2422,6 +2486,8 @@ static void rodbiResBindCopy(rodbiRes *res, SEXP data, int beg, int end,
             enc = Rf_getCharCE(STRING_ELT(elem, i));
             if (enc == CE_NATIVE)
               form_of_use = SQLCS_IMPLICIT;
+            else if (enc == CE_LATIN1)
+              form_of_use = SQLCS_IMPLICIT;
             else if (enc == CE_UTF8)
               form_of_use = SQLCS_NCHAR;
             else
@@ -2568,6 +2634,8 @@ static void rodbiResAccum(rodbiRes *res)
   double      tstm;
   char        tstm_str[ROOCI_DATE_TIME_STR_LEN];
   ub4         tstm_str_len;
+  char       *tempbuf= (char *)0;
+  size_t      tempbuflen = 0;
 
   /* accumulate data */
   for (cid = 0; cid < (res->res_rodbiRes).ncol_roociRes; cid++)
@@ -2581,7 +2649,12 @@ static void rodbiResAccum(rodbiRes *res)
 
 
     if (res->res_rodbiRes.form_roociRes[cid] == SQLCS_NCHAR)
-      enc = CE_UTF8;
+    {
+      if (res->con_rodbiRes->drv_rodbiCon->unicode_as_utf8)
+        enc = CE_UTF8;
+      else
+        enc = CE_NATIVE;
+    }
     else
       enc = CE_NATIVE;
 
@@ -2636,9 +2709,20 @@ static void rodbiResAccum(rodbiRes *res)
           break;
 
         case SQLT_STR:
-          SET_STRING_ELT(vec, lcur,
-                         Rf_mkCharLenCE((char *)dat,
-                         (res->res_rodbiRes).len_roociRes[cid][fcur], enc));
+          if ((res->con_rodbiRes->con_rodbiCon.timesten_rociCon) &&
+              (enc == CE_UTF8))
+          {
+            rodbiTTConvertUCS2UTF8Data(res, (const ub2 *)dat,
+                 (size_t)(res->res_rodbiRes.len_roociRes[cid][fcur]),
+                 &tempbuf, &tempbuflen);
+
+            SET_STRING_ELT(vec, lcur,
+                           Rf_mkCharLenCE((char *)tempbuf, tempbuflen, enc));
+          }
+          else
+            SET_STRING_ELT(vec, lcur,
+                           Rf_mkCharLenCE((char *)dat,
+                           (res->res_rodbiRes).len_roociRes[cid][fcur], enc));
           break;
 
         case SQLT_BIN:
@@ -2658,12 +2742,24 @@ static void rodbiResAccum(rodbiRes *res)
         case SQLT_CLOB:
           {
             /* read LOB data */
-            RODBI_CHECK_RES(res, __FUNCTION__, 2, FALSE,
+            RODBI_CHECK_RES(res, __FUNCTION__, 3, FALSE,
                             roociReadLOBData(&(res->res_rodbiRes), &lob_len,
                                              fcur, cid));
 
+            if ((res->con_rodbiRes->con_rodbiCon.timesten_rociCon) &&
+                (enc == CE_UTF8))
+            {
+              rodbiTTConvertUCS2UTF8Data(res,
+                              (const ub2 *)res->res_rodbiRes.lobbuf_roociRes,
+                              (size_t)(lob_len),
+                              &tempbuf, &tempbuflen);
+
+              SET_STRING_ELT(vec, lcur,
+                             Rf_mkCharLenCE((char *)tempbuf, tempbuflen, enc));
+            }
+            else
               /* make character element */
-            SET_STRING_ELT(vec, lcur, mkCharLenCE((const char *)
+              SET_STRING_ELT(vec, lcur, mkCharLenCE((const char *)
                          ((res->res_rodbiRes).lobbuf_roociRes), lob_len, enc));
           }
           break;
@@ -2675,7 +2771,7 @@ static void rodbiResAccum(rodbiRes *res)
             Rbyte *b;
 
             /* read LOB data */
-            RODBI_CHECK_RES(res, __FUNCTION__, 3, FALSE,
+            RODBI_CHECK_RES(res, __FUNCTION__, 4, FALSE,
                             roociReadBLOBData(&(res->res_rodbiRes), &lob_len,
                                               fcur, cid));
 
@@ -2691,7 +2787,7 @@ static void rodbiResAccum(rodbiRes *res)
         case SQLT_TIMESTAMP:
         case SQLT_TIMESTAMP_LTZ:
           tstm_str_len = sizeof(tstm_str);
-          RODBI_CHECK_RES(res, __FUNCTION__, 4, FALSE,
+          RODBI_CHECK_RES(res, __FUNCTION__, 5, FALSE,
               roociReadDateTimeData(&(res->res_rodbiRes),
                 *(OCIDateTime **)dat, &tstm_str[0], &tstm_str_len,
                 (res->res_rodbiRes.typ_roociRes[cid] == RODBI_DATE) ? 1 : 0));
@@ -2700,7 +2796,7 @@ static void rodbiResAccum(rodbiRes *res)
           break;
 
         case SQLT_INTERVAL_DS:
-          RODBI_CHECK_RES(res, __FUNCTION__, 5, FALSE,
+          RODBI_CHECK_RES(res, __FUNCTION__, 6, FALSE,
                roociReadDiffTimeData(&(res->res_rodbiRes),
                                      *(OCIInterval **)dat, &tstm));
           REAL(vec)[lcur] = tstm;
@@ -2715,6 +2811,9 @@ static void rodbiResAccum(rodbiRes *res)
       dat += (res->res_rodbiRes).siz_roociRes[cid];
     }
   }
+
+  if (tempbuf)
+    ROOCI_MEM_FREE(tempbuf);
 
   /* set state */
   res->rows_rodbiRes  += res->fchEnd_rodbiRes - res->fchBeg_rodbiRes;
@@ -2869,6 +2968,8 @@ static void rodbiResPopulate(rodbiRes *res)
   int         cid  = 0;
   ub1        *conv_buf = (ub1 *)0;
   int         conv_buf_len = 0;
+  char       *tempbuf= (char *)0;
+  size_t      tempbuflen = 0;
 
   /* populate data in R from cache */
   for (cid = 0; cid < res->res_rodbiRes.ncol_roociRes; cid++)
@@ -2882,7 +2983,12 @@ static void rodbiResPopulate(rodbiRes *res)
     RODBI_REPOSITION_COL_HDL(hdl);
 
     if (res->res_rodbiRes.form_roociRes[cid] == SQLCS_NCHAR)
-      enc = CE_UTF8;
+    {
+      if (res->con_rodbiRes->drv_rodbiCon->unicode_as_utf8)
+        enc = CE_UTF8;
+      else
+        enc = CE_NATIVE;
+    }
     else
       enc = CE_NATIVE;
 
@@ -2933,12 +3039,35 @@ static void rodbiResPopulate(rodbiRes *res)
             else if (len == RODBI_VCOL_NO_REF)
             {
               len = RODBI_GET_VAR_DATA_ITEM(hdl,(void *)conv_buf,conv_buf_len);
-              SET_STRING_ELT(vec, lcur,
-                             Rf_mkCharLenCE((char *)conv_buf, len, enc));
+
+              if ((res->con_rodbiRes->con_rodbiCon.timesten_rociCon) &&
+                  (enc == CE_UTF8))
+              {
+                rodbiTTConvertUCS2UTF8Data(res, (const ub2 *)conv_buf,
+                                           (size_t)(len), &tempbuf,
+                                           &tempbuflen);
+
+                SET_STRING_ELT(vec, lcur,
+                             Rf_mkCharLenCE((char *)tempbuf, tempbuflen, enc));
+              }
+              else
+                SET_STRING_ELT(vec, lcur,
+                               Rf_mkCharLenCE((char *)conv_buf, len, enc));
             }
             else
             {
-              SET_STRING_ELT(vec,lcur,Rf_mkCharLenCE((char *)data, len, enc));
+              if ((res->con_rodbiRes->con_rodbiCon.timesten_rociCon) &&
+                  (enc == CE_UTF8))
+              {
+                rodbiTTConvertUCS2UTF8Data(res, (const ub2 *)data,
+                                           (size_t)(len), &tempbuf,
+                                           &tempbuflen);
+
+                SET_STRING_ELT(vec, lcur,
+                             Rf_mkCharLenCE((char *)tempbuf, tempbuflen, enc));
+              }
+              else
+                SET_STRING_ELT(vec,lcur,Rf_mkCharLenCE((char *)data, len, enc));
             }
           }
           break;
@@ -2999,16 +3128,20 @@ static void rodbiResPopulate(rodbiRes *res)
 
   if (conv_buf)
     ROOCI_MEM_FREE(conv_buf);
+
+  if (tempbuf)
+    ROOCI_MEM_FREE(tempbuf);
+
 } /* end rodbiResPopulate */
 
 /* -------------------------- rodbiResDataFrame --------------------------- */
 
 static void rodbiResDataFrame(rodbiRes *res)
 {
-  SEXP row_names;
-  SEXP cla; 
-  int  ncol = (res->res_rodbiRes).ncol_roociRes;
-  int  cid; 
+  SEXP  row_names;
+  SEXP  cla; 
+  int   ncol = (res->res_rodbiRes).ncol_roociRes;
+  int   cid;
 
   if (res->pghdl_rodbiRes)
   {
@@ -3036,6 +3169,75 @@ static void rodbiResDataFrame(rodbiRes *res)
                 ScalarString(mkChar("secs")));
       setAttrib(VECTOR_ELT(res->list_rodbiRes, cid), R_ClassSymbol,
                 ScalarString(mkChar(RODBI_R_DIF_NM)));
+    }
+
+    if (res->con_rodbiRes->drv_rodbiCon->ora_attributes)
+    {
+      if (res->res_rodbiRes.typ_roociRes[cid] == RODBI_NCHAR ||
+          res->res_rodbiRes.typ_roociRes[cid] == RODBI_NVARCHAR2)
+      {
+        ub4  siz;
+        RODBI_CHECK_RES(res, __FUNCTION__, 1, FALSE,
+                        roociDescCol(&(res->res_rodbiRes), (ub4)(cid+1), NULL,
+                                     NULL, NULL, &siz, NULL, NULL, NULL, NULL));
+
+        setAttrib(VECTOR_ELT(res->list_rodbiRes, cid), install("ora.encoding"),
+                  ScalarString(mkChar("UTF-8")));
+        siz /= 2;
+        setAttrib(VECTOR_ELT(res->list_rodbiRes, cid), install("ora.maxlength"),
+                  ScalarInteger(siz));
+
+        if (res->res_rodbiRes.typ_roociRes[cid] == RODBI_NCHAR)
+          setAttrib(VECTOR_ELT(res->list_rodbiRes, cid), install("ora.type"),
+                  ScalarString(mkChar("char")));
+      }
+      else
+      {
+        if (res->res_rodbiRes.typ_roociRes[cid] == RODBI_CHAR)
+        {
+          ub4  siz;
+          RODBI_CHECK_RES(res, __FUNCTION__, 1, FALSE,
+                          roociDescCol(&(res->res_rodbiRes), 
+                                       (ub4)(cid+1), NULL, NULL, NULL, 
+                                       &siz, NULL, NULL, NULL, NULL));
+          setAttrib(VECTOR_ELT(res->list_rodbiRes, cid), install("ora.type"),
+                  ScalarString(mkChar("char")));
+          setAttrib(VECTOR_ELT(res->list_rodbiRes, cid),
+                    install("ora.maxlength"), ScalarInteger(siz));
+        }
+        else if (res->res_rodbiRes.typ_roociRes[cid] == RODBI_VARCHAR2)
+        {
+          ub4  siz;
+          RODBI_CHECK_RES(res, __FUNCTION__, 1, FALSE,
+                          roociDescCol(&(res->res_rodbiRes), 
+                                       (ub4)(cid+1), NULL, NULL, NULL, 
+                                       &siz, NULL, NULL, NULL, NULL));
+          setAttrib(VECTOR_ELT(res->list_rodbiRes, cid),
+                    install("ora.maxlength"), ScalarInteger(siz));
+        }
+        else if (res->res_rodbiRes.typ_roociRes[cid] == RODBI_NCLOB)
+        {
+          setAttrib(VECTOR_ELT(res->list_rodbiRes, cid), install("ora.type"),
+                    ScalarString(mkChar("clob")));
+          setAttrib(VECTOR_ELT(res->list_rodbiRes, cid), install("ora.encoding"),
+                    ScalarString(mkChar("UTF-8")));
+        }
+        else if (res->res_rodbiRes.typ_roociRes[cid] == RODBI_CLOB)
+        {
+          setAttrib(VECTOR_ELT(res->list_rodbiRes, cid), install("ora.type"),
+                    ScalarString(mkChar("clob")));
+        }
+        else if (res->res_rodbiRes.typ_roociRes[cid] == RODBI_BLOB)
+        {
+          setAttrib(VECTOR_ELT(res->list_rodbiRes, cid), install("ora.type"),
+                    ScalarString(mkChar("blob")));
+        }
+        else if (res->res_rodbiRes.typ_roociRes[cid] == RODBI_BFILE)
+        {
+          setAttrib(VECTOR_ELT(res->list_rodbiRes, cid), install("ora.type"),
+                    ScalarString(mkChar("bfile")));
+        }
+      }
     }
   }
 
@@ -3172,8 +3374,12 @@ static SEXP rodbiResInfoFields(rodbiRes *res)
         res->res_rodbiRes.typ_roociRes[cid] == RODBI_VARCHAR2 ||
         res->res_rodbiRes.typ_roociRes[cid] == RODBI_RAW)
       INTEGER(vecLen)[cid]   = (int)siz;
+    else if (res->res_rodbiRes.typ_roociRes[cid] == RODBI_NCHAR ||
+             res->res_rodbiRes.typ_roociRes[cid] == RODBI_NVARCHAR2)
+      INTEGER(vecLen)[cid]   = (int)siz/2;
     else
       INTEGER(vecLen)[cid]   = NA_INTEGER;
+
     INTEGER(vecPrec)[cid]  = (int)pre;
     INTEGER(vecScale)[cid] = (int)sca;
     LOGICAL(vecInd)[cid]   = nul ? TRUE : FALSE;
@@ -3325,15 +3531,18 @@ ub2 rodbiTypeExt(ub1 ityp)
 
 /* ---------------------------- rodbiTypeInt ------------------------------ */
 
-ub1 rodbiTypeInt(ub2 ctyp, sb2 precision, sb1 scale, ub2 size,
-                 boolean timesten)
+ub1 rodbiTypeInt(ub2 ctyp, sb2 precision, sb1 scale, ub4 size,
+                 boolean timesten, ub1 csform)
 {
   ub1 ityp;
 
   switch (ctyp)
   {
   case SQLT_CHR:                                     /* VARCHAR2, NVARCHAR2 */
-    ityp = RODBI_VARCHAR2;
+    if (csform == SQLCS_NCHAR)
+      ityp = RODBI_NVARCHAR2;
+    else
+      ityp = RODBI_VARCHAR2;
     break;
   case SQLT_NUM:                                                  /* Number */
     if (precision > 0 && precision < 10 && scale == 0)
@@ -3363,7 +3572,10 @@ ub1 rodbiTypeInt(ub2 ctyp, sb2 precision, sb1 scale, ub2 size,
       ityp = RODBI_LONG_RAW;
     break;
   case SQLT_AFC:                            
-    ityp = RODBI_CHAR;
+    if (csform == SQLCS_NCHAR)
+      ityp = RODBI_NCHAR;
+    else
+      ityp = RODBI_CHAR;
     break;
   case SQLT_FLT:
     ityp = RODBI_NUMBER;                                          /* DOUBLE */
@@ -3384,7 +3596,10 @@ ub1 rodbiTypeInt(ub2 ctyp, sb2 precision, sb1 scale, ub2 size,
     ityp = RODBI_REF;
     break;
   case SQLT_CLOB:                                          /* Character LOB */
-    ityp = RODBI_CLOB;
+    if (csform == SQLCS_NCHAR)
+      ityp = RODBI_NCLOB;
+    else
+      ityp = RODBI_CLOB;
     break;
   case SQLT_BLOB:                                             /* Binary LOB */
     ityp = RODBI_BLOB;

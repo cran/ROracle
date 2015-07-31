@@ -4,11 +4,10 @@
 \alias{dbUnloadDriver,OraDriver-method}
 \alias{dbUnloadDriver,ExtDriver-method}
 \title{
-A implementação da Oracle dos drivers e classes DBI (Database
-  Interface)
+Implementação da Oracle das Classes e dos Drivers DBI (Database Interface)
 }
 \description{
-Inicialização e fechamento de driver Oracle
+Inicialização e fechamento de driver Oracle.
 }
 \usage{
 \S4method{dbUnloadDriver}{OraDriver}(drv, ...)
@@ -16,21 +15,22 @@ Inicialização e fechamento de driver Oracle
 }
 \arguments{
   \item{drv}{
-um objeto que herda de \code{OraDriver} ou \code{ExtDriver}
+Um objeto que herda de \code{OraDriver} ou \code{ExtDriver}
     conforme criado por \code{dbDriver}.
 }
+
   \item{...}{
-todos os outros argumentos são especificados para o driver \code{drvName}.
+Qualquer outro argumento a ser especificado para o driver \code{drvName}.
 }
 }
 \value{
 \item{dbDriver}{
     Um objeto \code{OraDriver} ou \code{ExtDriver} cuja classe estende
-    \code{DBIDriver}. Esse objeto é usado para criar conexões, usando a função
-    \code{dbConnect} para um ou vários mecanismos do banco de dados Oracle.
+    \code{DBIDriver}. Esse objeto é usado para criar conexões, utilizando a
+    função \code{dbConnect}, com um ou mais motores do Oracle Database.
   }
   \item{dbUnloadDriver}{
-    libera todos os recursos ocupados pelo objeto do driver.
+    Libera todos os recursos ocupados pelo objeto de driver.
   }
 }
 \section{Side Effects}{
@@ -41,33 +41,43 @@ todos os outros argumentos são especificados para o driver \code{drvName}.
       calls to \code{\link[DBI]{dbConnect}}.
     }
     \item{dbUnloadDriver}{
-      Remove communication link between \R client and database.
+      Remove the communication link between the \R client and the database.
     }
   }
 }
+
+
+
 
 
 \details{
 \\describe{
     \item{dbDriver}{
-      o objeto é um singleton, ou seja, em chamadas subsequentes
-      ele retorna o mesmo objeto inicializado.
-      Esta implementação permite que você estabeleça conexão com vários servidores e
+       Este objeto é um singleton, ou seja, as chamadas subsequentes de
+       \code{dbDriver} retornam o mesmo objeto inicializado.
+      Essa implementação permite que você tenha conexão com diversos servidores host e
       execute várias conexões em cada servidor simultaneamente.
-      Quando definida como TRUE, a opção interrompível permite interromper
-      consultas de longa execução no servidor ao processar a consulta em um thread. O thread principal
-      verifica se a sequência Ctrl-C foi utilizada e emite OCIBreak/OCIReset para cancelar a operação no
-      servidor. Por padrão , a opção interrompível é FALSE.
+      Quando \code{interruptible} é definido como TRUE, ele permite interromper
+      consultas de execução longa no servidor executando a consulta em um thread.
+      O thread principal verifica Ctrl-C e emite OCIBreak/OCIReset para cancelar a
+      operação no servidor. Por padrão, \code{interruptible} é FALSE.
+      Quando \code{unicode_as_utf8} é definido como FALSE, os dados NCHAR, NVARCHAR e NCLOB
+      são extraídos usando o conjunto de caracteres especificado pela
+      definição NLS_LANG. Por padrão, \code{unicode_as_utf8} é definido como TRUE.
+      Quando \code{ora.attributes} é definido como TRUE, o conjunto de resultados de
+      \code{dbGetQuery} e \code{fetch} contém atributos específicos do DBMS, como
+      \code{ora.encoding}, \code{ora.type} e \code{ora.maxlength}, para a
+      coluna correspondente.
     }
     \item{dbUnloadDriver}{
-      A implementação remove o link de comunicação entre o cliente \R e 
-      o banco de dados. Ela libera todas as conexões e todos os conjuntos de resultados associados a
-      esses objetos de conexão
+      Essa implementação remove links de comunicação entre o cliente \R e o
+      banco de dados. Ela libera todas as conexões e todos os conjuntos de resultados associados
+      a esses objetos de conexão.
     }
   }
 }
 \section{References}{
-  For the Oracle Database documentaion see
+  For Oracle Database documentation, see
   \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
 }
 \seealso{

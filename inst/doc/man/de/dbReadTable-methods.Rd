@@ -29,7 +29,7 @@ Diese Funktionen ahmen die entsprechenden R-Funktionen nach
 \usage{
 \S4method{dbReadTable}{OraConnection,character}(conn, name, schema = NULL, row.names = NULL, ...)
 \S4method{dbWriteTable}{OraConnection,character,data.frame}(conn, name, value, row.names = FALSE, overwrite = FALSE,
-             append = FALSE, ora.number = TRUE, schema = NULL, ...)
+             append = FALSE, ora.number = TRUE, schema = NULL, date = FALSE, ...)
 \S4method{dbExistsTable}{OraConnection,character}(conn, name, schema = NULL, ...)
 \S4method{dbRemoveTable}{OraConnection,character}(conn, name, purge = FALSE, schema = NULL, ...)
 \S4method{dbListTables}{OraConnection}(conn, schema = NULL, all = FALSE, full = FALSE, ...)
@@ -45,6 +45,10 @@ Eine Zeichenfolge, die einen Tabellennamen angibt. Groß-/Kleinschreibung muss b
   \item{schema}{
 Eine Zeichenfolge, die einen Schemanamen angibt 
     (oder ein Vektor mit Zeichenfolgen für \code{dbListTables}). Groß-/Kleinschreibung muss beachtet werden.
+}
+  \item{date}{
+Ein boolesches Kennzeichen, das angibt, ob "date" oder "DateTimep" verwendet werden soll.
+    Standardmäßig wird "DateTime" anstelle von "timestamp" verwendet.
 }
 
   \item{row.names}{
@@ -104,73 +108,217 @@ Aktuell nicht verwendet.
 
 
 
-   
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 \details{
-Bei Tabellen-, Schema- und Spaltennamen muss die Groß-/Kleinschreibung beachtet werden, Beispiel:
-  die Tabellennamen \code{ABC} und \code{abc} sind nicht identisch. Alle Datenbankschemaobjektnamen
-  dürfen keine doppelten Anführungszeichen enthalten, weil sie in doppelte Anführungszeichen
-  gesetzt werden, wenn die entsprechende SQL-Anweisung generiert wird.
+Bei Tabellen-, Schema- und Spaltennamen muss Groß- und Kleinschreibung beachtet werden.
+  Beispiel: Die Tabellennamen \code{ABC} und \code{abc} sind nicht identisch. Namen von Datenbank-
+  schemaobjekten dürfen keine doppelten Anführungszeichen enthalten, da sie bei der Generierung
+  der entsprechenden SQL-Anweisung in doppelte Anführungszeichen eingeschlossen werden. 
+   Folgende Attribute werden zur korrekten Zuordnung der Spalten BLOB, CLOB, NCLOB, NCHAR, VARCHAR2,
+   NVARCHAR2, CHAR, TIMESTAMP WITH TIME ZONE und TIMESTAMP WITH LOCAL TIME ZONE
+   in \code{dbWriteTable} verwendet:
+   1) Attributname: \code{ora.type}
+   Dieses Attribut gibt den Typ der zugrunde liegenden Spalte an und kann den Wert
+   "CLOB", "BLOB", "CHAR", "VARCHAR2" oder "RAW" haben. Benutzern kann außerdem
+   die Verwendung von "time stamp", "Date", "time stamp with time zone" oder beliebigen anderen
+   von Oracle DB unterstützten Spaltentypen ermöglicht werden. Das Attribut wird nicht von ROracle geparst.
+   Validierung erfolgt über DB. Folgende \code{ora.type}-Werte können vom Benutzer angegeben werden:
+   clob, blob, char, time stamp with time zone, time stamp with local time zone
+   und fractional_seconds_precision.
+   2) Attributname: \code{ora.encoding}
+   Bei Angabe von UTF-8 wird NCLOB, NCHAR oder NVARCHAR basierend auf
+   "ora.type" verwendet.
+   3) Attributname: \code{ora.maxlength}
+   Die Maximallänge von CHAR-, VARCHAR-, NCHAR-, NVARCHAR2- oder RAW-Spalten
+   kann angegeben werden. Für andere Datentypen gilt das Attribut nicht und wird ignoriert.
+   Folgende Standardwerte werden für bestimmte Datentypen verwendet, wenn
+   \code{ora.maxlength} nicht für angegeben wird \code{NULL}
+   CHAR                                       2000
+   NCHAR                                      1000
+   VARCHAR2                                   4000
+   NVARCHAR2                                  2000
+   RAW                                        2000
+   4) Attributname: \code{ora.fractional_seconds_precision}
+   Der Bruchteil des SECOND "datetime"-Feldes der Spalten
+   TIMESTAMP, TIMESTAMP WITH TIME ZONE und TIMESTAMP WITH LOCAL TIME ZONE
+   kann angegeben werden. Dies kann eine Zahl im Bereich zwischen 0 und 9 sein. Der Standardwert ist 6.
   \\pkg{ROracle}-Methoden wie \code{dbReadTable}, \code{dbGetQuery},
-  \code{fetch} und \code{dbWriteTable} verwenden dieselbe Zuordnung
+  \code{fetch} und \code{dbWriteTable} verwenden folgende Zuordnung
   zwischen \R- und Oracle-Datentypen:
   \itemize{
     \item \code{logical} und \code{integer} werden Oracle \code{INTEGER} zugeordnet
     \item \code{numeric} wird Oracle \code{NUMBER} zugeordnet, wenn Argument
-    \code{ora.number} \code{TRUE} ist oder Oracle \code{BINARY_DOUBLE}, wenn
-    \code{FALSE} ist
-    \item \code{character} wird Oracle \code{VARCHAR2(4000)} zugeordnet
+    \code{ora.number} \code{TRUE} ist, oder Oracle \code{BINARY_DOUBLE}, wenn
+    \code{FALSE}
+    \item \code{character} wird Oracle \code{CLOB} zugeordnet, wenn Attribut
+    \code{ora.type} \code{"CLOB"} ist, oder Oracle \code{NCLOB}, wenn Attribut
+    \code{ora.type} \code{"CLOB"} ist und \code{ora.encoding} \code{"UTF-8"} ist
+    oder Oracle \code{CHAR(ora.maxlength)}, wenn Attribut \code{ora.type} 
+    \code{"CHAR"} ist, oder Oracle \code{NCHAR(ora.maxlength)}, wenn Attribut 
+    \code{ora.type} \code{"CHAR"} ist und \code{ora.encoding} \code{"UTF-8"} ist,
+    oder Oracle \code{NVARCHAR2(ora.maxlength)}, wenn Attribut \code{ora.encoding}
+    \code{"UTF-8"} ist, oder Oracle \code{VARCHAR2(ora.maxlength)}
     \item \code{Date} und \code{POSIXct} werden Oracle \code{DATE} zugeordnet
-    \\pkg{ROracle} - das ROracle-Package
-    \R - die R-Anwendung
-    \code{POSIXct} - die POSIXct-Klasse
-    \code{TIMESTAMP}
-    \code{TIMESTAMP WITH TIME ZONE}
-    \code{TIMESTAMP WITH LOCAL TIME ZONE}
-    \item \code{difftime} wird Oracle \code{INTERVAL DAY TO SECOND} zugeordnet
-    \item \code{list} von \code{raw} Vektoren werden Oracle \code{RAW(2000)} zugeordnet
-    \item andere \R-Typen wie \code{factor} werden in
+    \\pkg{ROracle} - Das ROracle-Package
+    \R - Die R-Anwendung
+    \item \code{POSIXct} wird Oracle 
+    \code{TIMESTAMP WITH TIME ZONE(ora.fractional_seconds_precision)} zugeordnet, wenn 
+    Attribut \code{ora.type} \code{"TIMESTAMP WITH TIME ZONE"} ist, oder Oracle 
+    \code{TIMESTAMP WITH LOCAL TIME ZONE(ora.fractional_seconds_precision)}, wenn
+    Attribut \code{ora.type} \code{"TIMESTAMP WITH LOCAL TIME ZONE"} ist, oder
+    Oracle \code{TIMESTAMP(ora.fractional_seconds_precision)}, wenn 
+    \code{Date} \code{FALSE} ist
+    \item \code{difftime} wird \code{INTERVAL DAY TO SECOND} zugeordnet
+    \item \code{list} von \code{raw} Vektoren werden Oracle \code{BLOB} zugeordnet, wenn 
+    Attribut \code{ora.type} \code{"BLOB"} ist, oder Oracle 
+    \code{RAW(ora.maxlength)}
+    \item Andere \R-Typen wie \code{factor} werden in 
     \code{character} konvertiert
   }
-   ROracle gibt Werte aus Datenspalten mit folgenden Datentypen zurück: Datum,
-   Zeitstempel, Zeitstempel mit Zeitzone und Zeitstempel mit lokaler Zeitzone,
-   Datentypen im POSIXct-Format von R. POSIXct bezieht sich auf eine Zeit, 
-   die intern als eine Anzahl von Sekunden seit dem Anfang von1970 
-   in UTC gespeichert wird. Die Anzahl von Sekunden wird von R und ROracle-Treiber
-   im Gleitkommadoppelformat ausgetauscht. In POSIXct verwendet die Darstellung von R 
-   die TZ-Umgebungsvariable oder ordnet die BS-Zeitzonenumgebungsvariable sich selbst
-   zu, deshalb wird das Datum in diesem Zeitzonenformat angezeigt.
-   Daten können in Spalten der 4 oben aufgeführten Datentypen mit einer
-   Zeichenfolge im korrekten Format oder der POSIXct-Darstellung eingefügt werden.
-   Zeichenfolgendaten werden direkt an die Datenbank übergeben und ROracle verwendet die
-   Datenbank zu deren Konvertierung in die Datumzeitdarstellung. POSIXct-Daten werden in den
-   internen DateTime-Deskriptor von Oracle konvertiert, indem der Anfang von1970 UTC zu der
-   Anzahl von Sekunden hinzugefügt wird, die aus R abgerufen werden. POSIXct-Variablen in Insert-
-   Anweisungen werden als SQLT_TIMESTAMP_TZ gebunden.
-   Wenn diese Datentypen aus Oracle gewählt werden, werden sie in das POSIXct-Format
-   konvertiert, indem der Anfang von 1970 UTC subtrahiert wird. Wenn der ROracle-Client und die
-   Datenbank Dateien mit unterschiedlichen Zeitzonenversionen haben und eine Anwendung die
-   Zeitzonendatentypen verwendet, wird empfohlen, dass sie identisch sind, weil die Zeitzone
-   der Region möglicherweise geändert wurde. ROracle meldet einen Fehler in dieser Situation, weil
-   dies zu einer Beschädigung und einem Verlust der Daten führen kann, wenn diese Datentypen
-   bearbeitet werden.
-   Spalten mit dem Datentyp Datum und Zeitstempel werden von ROracle mit dem 
-   SQLT_TIMESTAMP-Datentyp abgerufen. Spalten mit dem Datentyp Zeitstempel mit Zeitzone
-   und Zeitstempel mit lokaler Zeitzone werden mit dem Datentyp 
-   SQLT_TIMESTAMP_TZ abgerufen. Spalten mit dem Datentyp Zeitzone mit lokaler
-   Zeitzone werden in die Sessionzeitzone konvertiert, in der die R-Anwendung ausgeführt wird.
-   Die Festlegung der Zeitzonenumgebungsvariablen TZ in R wirkt sich also auf die Datenwerte
-   in dieser Spalte aus. ROracle-Treiber ordnet die TZ-Umgebungsvariable der
-   Sessionzeitzone nicht zu und gibt keine
-   "alter DDL"-Anweisung aus, um die Sessionzeitzone festzulegen. Um Daten aus Spalten
-   mit dem Datentyp Zeitstempel mit Zeitzone und Zeitstempel lokaler Zeitzone
-   abzurufen, müssen Client und Server dieselbe Zeitzonendatendatei verwenden,
-   sonst kommt es zu einem Fehler.
-   Das folgende Beispiel zeigt, wie sich die Änderung der Zeitzone in der R-Umgebung auswirkt:
+   ROracle gibt Werte aus Datenbankspalten zurück, die folgenden Datentyp haben: "date",
+   "time stamp", "time stamp with time zone" und "time stamp with local time zone"
+   im POSIXct-Format von R. POSIXct bezieht sich auf eine Zeit,
+   die intern als Anzahl Sekunden seit Anfang 1970 in UTC
+   gespeichert ist. Die Anzahl der Sekunden wird zwischen den R- und ROracle-Treibern im 
+   doppelten Gleitkommaformat ausgetauscht. In der POSIXct-Darstellung verwendet R die TZ-
+   Umgebungsvariable oder ordnet die Umgebungsvariable der Betriebssystem-Zeitzone
+   der eigenen Zeitzone zu. Daher wird das Datum in diesem Zeitzonenformat angezeigt.
+   In Spalten der vier oben aufgeführten Datentypen können Daten über eine Zeichenfolge
+   mit dem korrekten Format oder eine POSIXct-Darstellung eingegeben werden. Zeichenfolgendaten
+   werden direkt an die Datenbank übergeben, und die Datenbank muss diese dann für ROracle
+   in eine Datums-/Uhrzeitdarstellung konvertieren. Der ROracle-Treiber konvertiert die POSIXct-
+   Darstellung in eine Zeichenfolgedarstellung mithilfe des Formats
+   "\%Y-\%m-\%d \%H:\%M:\%OS6" in einem Datenframe, der für DML-Vorgänge verwendet wird.
+   Daten in diesem Format entsprechen dem NLS_TIMESTAMP_TZ_FORMAT-Format
+   "YYYY-MM-DD HH24:MI:SSXFF" und werden in SQLT_TIMESTAMP_LTZ konvertiert,
+   um an die Oracle-Datenbank gebunden zu werden. Die Zwischenklasse "datetime" wird erstellt,
+   die Zeichendaten intern für den ROracle-Treiber darstellt.
+   Spalten mit dem Datentyp "date" oder "timestamp" werden von ROracle über
+   den Datentyp SQLT_TIMESTAMP abgerufen. Spalten mit dem Datentyp "timestamp with time zone" oder
+   "timestamp with local time zone" werden über den Datentyp
+   SQLT_TIMESTAMP_LTZ abgerufen. Spalten des Datentyps "time zone with local time
+   zone" unterlaufen eine Konvertierung in die Zeitzone der Session, in der die R-Anwendung
+   ausgeführt wird. Daher wirkt sich das Festlegen der Zeitzonenumgebung TZ in R auf die
+   Datenwerte in dieser Spalte aus. Der ROracle-Treiber ordnet die TZ-Umgebungsvariable der
+   Sessionzeitzone zu und gibt den Befehl "alter DDL" aus, um die Sessionzeitzone
+   beim Herstellen der Verbindung zur Datenbank festzulegen.
+   Um Daten aus Spalten des Typs "timestamp with time zone" oder "timestamp
+   with local time zone" abzurufen, müssen Client und Server dieselbe Zeitzonen-Datendatei haben,
+   da ansonsten ein Fehler gemeldet wird.
+   Bei Auswahl dieser Datentypen aus der Datenbank werden diese in eine
+   Zeichenfolgedarstellung über das NLS_TIMESTAMP_TZ_FORMAT-Format
+   "YYYY-MM-DD HH24:MI:SSXFF" konvertiert, das "\%Y-\%m-\%d \%H:\%M:\%OS6"
+   in R entspricht. Die Zwischenklasse "datetime" wird erstellt,
+   um diese Zeichendaten im ROracle-Treiber darzustellen. Der ROracle-Treiber
+   konvertiert diese dann über die Funktion as.POSIXct() in das Format POSIXct.
+   Für eine R-Anwendung werden die Daten im Datenframe im Format POSIXct dargestellt.
+   \\preformatted{
+R-Sessionzeitzone:
+ R besitzt das Konzept einer Zeitzone, in der die R-Engine ausgeführt wird. Die Zeitzone
+ kann auf eine Zeichenfolge wie "PST8PDT", "America/Los_Angeles" usw. festgelegt sein.
+ Diese Zeichenfolgen sind selbsterklärend und geben die Zeitzone an, in der die
+ Session ausgeführt wird.
+ Die R-Sessionzeitzone kann auf eine von zwei Arten festgelegt werden:
+ 1. Durch Eingabe des folgenden Befehls in der Linux- oder Unix-Befehlszeile
+    vor dem Starten von R:
+    setenv TZ = America/Los_Angeles unter Linux/UNIX
+    HINWEIS: Verwenden Sie diese Option nicht unter Windows, da dadurch keine mit 
+          Oracle kompatiblen Zeitzonennamen für die Umgebungsvariable TZ festgelegt werden können.
+ 2. Durch Eingabe des folgenden Befehls in der R-Eingabeaufforderung:
+    Sys.setenv(TZ = "PST8PDT")
+ Option 2 wird empfohlen, da das R-Skript ohne Portierungsprobleme
+ sowohl unter Linux/Unix als auch unter Windows funktioniert. Mit Option 2 können Sie außerdem
+ auch unter Windows mit Oracle kompatible Zeitzonennamen angeben.
+ Die R-Sessionzeitzone bestimmt die Zeitzone für alle Datums- und Uhrzeitentypen,
+ die nicht für die POSIXct-Zone qualifiziert sind. Dies ist auch die Zeitzone, in die alle 
+ qualifizierten Datums- und Uhrzeitentypen bei der Anzeige durch R konvertiert werden.
+ Dies wird anhand des folgenden Beispiels erläutert.
+ Sys.setenv(TZ = "PST8PDT")
+ dt <- c(as.POSIXct("2010/3/13", tz = "PST8PDT"),
+         as.POSIXct("2010/3/13 3:47:30.123456", tz = "PST8PDT"),
+         as.POSIXct("2010/3/22", tz = "PST8PDT"),
+         as.POSIXct("2010/3/22 7:02:30", tz = "PST8PDT"),
+         as.POSIXct("2010/3/13"),
+         as.POSIXct("2010/3/13 3:47:30.123456"),
+         as.POSIXct("2010/3/22"),
+         as.POSIXct("2010/3/22 7:02:30"))
+ dt
+ [1] "2010-03-13 00:00:00.000000 PST" "2010-03-13 03:47:30.123456 PST"
+ [3] "2010-03-22 00:00:00.000000 PDT" "2010-03-22 07:02:30.000000 PDT"
+ [5] "2010-03-13 00:00:00.000000 PST" "2010-03-13 03:47:30.123456 PST"
+ [7] "2010-03-22 00:00:00.000000 PDT" "2010-03-22 07:02:30.000000 PDT"
+Beachten Sie, dass auch die nicht qualifizierten Zeitstempel als innerhalb der R-
+Sessionzeitzone befindlich gelten, wenn sie von R angezeigt werden. R kann natürlich
+auch anhand des Beginns der US-Sommerzeit bestimmen, ob eine Uhrzeit innerhalb von
+PST oder PDT liegt und dementsprechend PST bzw. PDT
+anzeigen.
+Im folgenden Beispiel wird dies verdeutlicht.
+> Sys.setenv(TZ = "EST5EDT")
+> dt <- c(as.POSIXct("2010/3/13", tz = "PST8PDT"),
++         as.POSIXct("2010/3/13 3:47:30.123456", tz = "PST8PDT"),
++         as.POSIXct("2010/3/22", tz = "PST8PDT"),
++         as.POSIXct("2010/3/22 7:02:30", tz = "PST8PDT"),
++         as.POSIXct("2010/3/13"),
++         as.POSIXct("2010/3/13 3:47:30.123456"),
++         as.POSIXct("2010/3/22"),
++         as.POSIXct("2010/3/22 7:02:30"))
+> dt
+[1] "2010-03-13 03:00:00.000000 EST" "2010-03-13 06:47:30.123456 EST"
+[3] "2010-03-22 03:00:00.000000 EDT" "2010-03-22 10:02:30.000000 EDT"
+[5] "2010-03-13 00:00:00.000000 EST" "2010-03-13 03:47:30.123456 EST"
+[7] "2010-03-22 00:00:00.000000 EDT" "2010-03-22 07:02:30.000000 EDT"
+Beachten Sie, dass alle nicht für die Zeitzone qualifizierten Zeitstempel als innerhalb der
+Sessionzeitzone befindlich gelten. Jedoch werden auch die für die Zeitzone qualifizierten Zeitstempel
+in die Sessionzeitzone konvertiert und angezeigt. Beachten Sie, dass alle
+Werte von R in der Zeitzone der R-Session angezeigt werden (wobei
+der Zeitzonenname je nachdem, ob Sommerzeit gilt, jeweils als EST bzw. EDT
+angezeigt wird). Lesen Sie "Date-Time Classes" unter
+http://stat.ethz.ch/R-manual/R-devel/library/base/html/DateTimeClasses.html
+und "Time Zone" unter:
+http://stat.ethz.ch/R-manual/R-devel/library/base/html/timezones.html,
+um Einzelheiten zur Handhabung von Daten, Uhrzeiten und Zeitzonen in R zu erhalten.
+Es folgt ein Beispiel mit einem längeren Zeitzonennamen
+(oft auch als "Olson-Name" bezeichnet) anstelle einer Abkürzung.
+> Sys.setenv(TZ = "America/Los_Angeles")
+> dt <- c(as.POSIXct("2010/3/13", tz = "PST8PDT"),
++         as.POSIXct("2010/3/13 3:47:30.123456", tz = "PST8PDT"),
++         as.POSIXct("2010/3/22", tz = "PST8PDT"),
++         as.POSIXct("2010/3/22 7:02:30", tz = "PST8PDT"),
++         as.POSIXct("2010/3/13"),
++         as.POSIXct("2010/3/13 3:47:30.123456"),
++         as.POSIXct("2010/3/22"),
++         as.POSIXct("2010/3/22 7:02:30"))
+> dt
+[1] "2010-03-13 00:00:00.000000 PST" "2010-03-13 03:47:30.123456 PST"
+[3] "2010-03-22 00:00:00.000000 PDT" "2010-03-22 07:02:30.000000 PDT"
+[5] "2010-03-13 00:00:00.000000 PST" "2010-03-13 03:47:30.123456 PST"
+[7] "2010-03-22 00:00:00.000000 PDT" "2010-03-22 07:02:30.000000 PDT"
+Beachten Sie, dass R in solch einem Fall beim Anzeigen der Werte nicht den
+langen Namen verwendet, sondern stattdessen die Werte weiterhin mit
+den Abkürzungen "PST" und "PDT" anzeigt. Dies ist bedeutsam, da diese Abkürzungen
+nicht notwendigerweise mit Oracle kompatibel sind. Beispiel: Eine Oracle-
+Datenbank erkennt "PDT" nicht als gültige Zeitzone an. Informationen zu gültigen
+Zeitzonen finden Sie unter "R Time zone and Oracle session time zone".
+}
+   Im nachstehenden Beispiel werden die Auswirkungen einer Änderung der Zeitzone
+   in der R-Umgebung dargestellt:
    \\preformatted{   R> Sys.timezone()
    [1] "PST8PDT"
-   # Auswahl von Daten und deren Anzeige
+   # Daten auswählen und anzeigen
    res <- dbGetQuery(con, selStr)
    R>     res[,1]
    [1] 1 2 3 4 5 6
@@ -209,9 +357,9 @@ Bei Tabellen-, Schema- und Spaltennamen muss die Groß-/Kleinschreibung beachtet
    [1] "2012-06-05 03:00:00 EDT" "2012-01-05 10:15:03 EST"
        "2012-01-05 03:00:00 EST" "2011-01-05 03:00:00 EST"
    [5] "2013-01-05 03:00:00 EST" "2020-01-05 03:00:00 EST"}
-  Außerdem speichert \code{dbWriteTable} eine aktuelle Transaktion immer automatisch genau so wie
-  die Daten, die eingefügt werden, d.h. sie fungiert als DDL-Anweisung, selbst wenn 
-  Zeilen an eine bereits vorhandene Tabelle angehängt werden.
+  \code{dbWriteTable} schreibt eine aktuelle Transaktion samt den dadurch eingefügten Daten
+  außerdem immer automatisch fest, agiert also als DDL-Anweisung, auch wenn
+  Zeilen an eine bereits vorhandene Tabelle angefügt werden.
 }
 \value{
 Ein \code{data.frame} im Fall von \code{dbReadTable}; 
@@ -263,26 +411,26 @@ Ein \code{data.frame} im Fall von \code{dbReadTable};
     if (dbExistsTable(con, "RORACLE_TEST", "SCOTT"))
       dbRemoveTable(con, "RORACLE_TEST")
 
-    # example of POSIXct usage
+    # Example of POSIXct usage.
     # A table is created using:
     createTab <- "create table RORACLE_TEST(row_num number, id1 date,
                  id2 timestamp, id3 timestamp with time zone, 
                  id4 timestamp with local time zone )"
 
     dbGetQuery(con, createTab)
-    # Insert statement
+    # Insert statement.
     insStr <- "insert into RORACLE_TEST values(:1, :2, :3, :4, :5)";
 
-    # Select statement
+    # Select statement.
     selStr <- "select * from RORACLE_TEST";
 
-    # Insert time stamp without time values in POSIXct form
+    # Insert time stamp without time values in POSIXct form.
     x <- 1; 
     y <- "2012-06-05";
     y <- as.POSIXct(y);
     dbGetQuery(con, insStr, data.frame(x, y, y, y, y));
 
-    # Insert date & times stamp with time values in POSIXct form
+    # Insert date & times stamp with time values in POSIXct form.
     x <- 2;
     y <- "2012-01-05 07:15:02";
     y <- as.POSIXct(y);
@@ -290,7 +438,7 @@ Ein \code{data.frame} im Fall von \code{dbReadTable};
     z <- as.POSIXct(z);
     dbGetQuery(con, insStr, data.frame(x, y, z,  z, z));
 
-    # Insert list of date objects in POSIXct form
+    # Insert list of date objects in POSIXct form.
     x <- c(3, 4, 5, 6);
     y <- c('2012-01-05', '2011-01-05', '2013-01-05', '2020-01-05');
     y <- as.POSIXct(y);
@@ -298,13 +446,109 @@ Ein \code{data.frame} im Fall von \code{dbReadTable};
 
     dbCommit (con)
 
-    # Selecting data and displaying it
+    # Selecting data and displaying it.
     res <- dbGetQuery(con, selStr)
     res[,1]
     res[,2]
     res[,3]
     res[,4]
     res[,5]
+
+    # insert data in Date format
+    a<-as.Date("2014-01-01")
+    dbWriteTable(con, 'TEMP', data.frame(a), date = TRUE)
+
+    # using attribute to map NCHAR, CLOB, BLOB, NCLOB columns correctly in 
+    # dbWriteTable
+    str1 <- paste(letters, collapse="")
+    lstr1 <- paste(rep(str1, 200), collapse="")
+    raw.lst <- vector("list",1)
+    lraw.lst <- vector("list",1)
+    raw.lst[[1L]] <- charToRaw(str1)
+    lraw.lst[[1L]] <- rep(charToRaw(str1), 200)
+    a <- as.POSIXct("2014-01-01 14:12:09.0194733")
+    b <- as.POSIXct("2014-01-01 14:12:09.01947")
+    test.df <- data.frame(char=str1, nchar=str1, varchar=str1, clob=lstr1,
+                      nclob=lstr1, stringsAsFactors=FALSE)
+    test.df$raw.typ <- raw.lst
+    test.df$blob <- lraw.lst
+    test.df$char_max <- str1 
+    test.df$raw_max.typ <- raw.lst
+    test.df$nvchar <- str1
+    test.df$nvchar_max <- str1
+    test.df$date_tz <- a
+    test.df$date_ltz <- b
+
+    # adding attributes
+    attr(test.df$clob, "ora.type") <- "CLOB"
+    attr(test.df$blob, "ora.type") <- "BLOB"
+    attr(test.df$nclob, "ora.type") <- "CLOB"
+    attr(test.df$nclob, "ora.encoding") <- "UTF-8"
+    attr(test.df$char_max, "ora.maxlength") <- 3000
+    attr(test.df$raw_max.typ, "ora.maxlength") <- 1000
+    attr(test.df$nvchar, "ora.encoding") <- "UTF-8"
+    attr(test.df$nvchar_max, "ora.encoding") <- "UTF-8"
+    attr(test.df$nvchar_max, "ora.maxlength") <- 1500
+    attr(test.df$char, "ora.type") <- "CHAR"
+    attr(test.df$date_tz, "ora.type") <- "timestamp with time zone"
+    attr(test.df$date_ltz, "ora.type") <- "timestamp with local time zone"
+    attr(test.df$nchar, "ora.type") <- "CHAR"
+    attr(test.df$nchar, "ora.encoding") <- "UTF-8"
+    attr(test.df$date_tz, "ora.fractional_seconds_precision") <- 9
+R> # displaying the data frame
+R> test.df
+char                         nchar
+1 abcdefghijklmnopqrstuvwxyz abcdefghijklmnopqrstuvwxyz
+varchar
+1 abcdefghijklmnopqrstuvwxyz
+clob
+1 abcdefghijklmnopqrstuvwxyz...
+nclob
+1 abcdefghijklmnopqrstuvwxyz...
+raw.typ
+1 61, 62, 63, 64, 65, 66, 67, 68, 69, 6a, 6b, 6c, 6d, 6e, 6f, 70, 71, 72, 73,
+  74, 75, 76, 77, 78, 79, 7a
+blob
+1 61, 62, 63, 64, 65, 66, 67, 68, 69, 6a, 6b, 6c, 6d, 6e, 6f, 70, 71, 72, 73,
+  74, 75, 76, 77, 78, 79, 7a,...
+char_max
+1 abcdefghijklmnopqrstuvwxyz
+raw_max.typ
+1 61, 62, 63, 64, 65, 66, 67, 68, 69, 6a, 6b, 6c, 6d, 6e, 6f, 70, 71, 72, 73,
+  74, 75, 76, 77, 78, 79, 7a
+nvchar                       nvchar_max
+1 abcdefghijklmnopqrstuvwxyz abcdefghijklmnopqrstuvwxyz
+date_tz                      date_ltz
+1 2014-01-01 14:12:09.019473 2014-01-01 14:12:09.01946
+
+    dbWriteTable(con, name="TEST_TAB", value=test.df)
+    res <- dbReadTable(con, name="TEST_TAB")
+R> res
+char
+1 abcdefghijklmnopqrstuvwxyz
+nchar
+1 abcdefghijklmnopqrstuvwxyz
+varchar
+1 abcdefghijklmnopqrstuvwxyz
+clob
+1 abcdefghijklmnopqrstuvwxyz...
+nclob
+1 abcdefghijklmnopqrstuvwxyz...
+raw.typ
+1 61, 62, 63, 64, 65, 66, 67, 68, 69, 6a, 6b, 6c, 6d, 6e, 6f, 70, 71, 72, 73,
+  74, 75, 76, 77, 78, 79, 7a
+blob
+1 61, 62, 63, 64, 65, 66, 67, 68, 69, 6a, 6b, 6c, 6d, 6e, 6f, 70, 71, 72, 73,
+  74, 75, 76, 77, 78, 79, 7a,...
+char_max                                                                                           
+1 abcdefghijklmnopqrstuvwxyz
+raw_max.typ
+1 61, 62, 63, 64, 65, 66, 67, 68, 69, 6a, 6b, 6c, 6d, 6e, 6f, 70, 71, 72, 73,
+  74, 75, 76, 77, 78, 79, 7a
+nvchar                       nvchar_max
+1 abcdefghijklmnopqrstuvwxyz abcdefghijklmnopqrstuvwxyz
+date_tz                      date_ltz
+1 2014-01-01 14:12:09.019473 2014-01-01 14:12:09.01946
   }
   \dontrun{
     df <- data.frame(A=c(0,1,NaN,4), B=c(NA, 2,3,NaN))
