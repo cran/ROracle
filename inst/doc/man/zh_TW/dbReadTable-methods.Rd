@@ -16,15 +16,14 @@
 操控 DBMS 表格的便利函數
 }
 \description{
-這些函數模仿其 R 中對應的 
+這些函數會模仿其 R 相對應項, 差別在於這些函數
+  會產生在資料庫引擎中遠端執行的程式碼:
   \code{get}、
   \code{assign}、
   \code{exists}、
   \code{remove}、
-  \code{objects} 與
-  \code{names},
-  差別在於這些函數會產生在資料庫引擎中遠端執行的
-  程式碼.
+  \code{objects} 以及
+  \code{names}.
 }
 \usage{
 \S4method{dbReadTable}{OraConnection,character}(conn, name, schema = NULL, row.names = NULL, ...)
@@ -123,128 +122,104 @@
 
 
 \details{
-表格、綱要及資料欄名稱皆區分大小寫, 例如表格
-  名稱 \code{ABC} 和 \code{abc} 並不相同. 所有資料庫綱要
-  物件名稱都不應該包含雙引號, 因為產生對應的 SQL
-  敘述句時會將這些物件名稱包含在雙引號中.
-   下列屬性是用來在 \code{dbWriteTable} 中正確對應 BLOB、CLOB、NCLOB、NCHAR、VARCHAR2、
-   NVARCHAR2、CHAR、TIMESTAMP WITH TIME ZONE 及 TIMESTAMP WITH LOCAL TIME ZONE
+表格、綱要以及資料欄名稱都有大小寫之分, 例如表格
+  名稱 \code{ABC} 和 \code{abc} 就不相同. 所有的資料庫綱要
+  物件名稱都不應包括雙引號, 因為產生相對應的
+  SQL 敘述句之後, 這些物件名稱都會外加雙引號.
+   下列屬性用於在 \code{dbWriteTable} 中正確對應 BLOB、CLOB、NCLOB、NCHAR、VARCHAR2、
+   NVARCHAR2、CHAR、TIMESTAMP WITH TIME ZONE 以及 TIMESTAMP WITH LOCAL TIME ZONE
    資料欄:
    1) 屬性名稱: \code{ora.type}
-   此屬性將指示基底資料欄的類型, 並可包含
-   "CLOB"、"BLOB"、"CHAR"、"VARCHAR2" 或 "RAW". 可允許使用者指定
-   時戳、日期、含時區的時戳或 Oracle 資料庫支援的
-   任何其他資料欄類型. ROracle 將不會剖析它, 而是會由資料庫來
-   驗證它. 下列 \code{ora.type} 值可由使用者提供:
-   clob、blob、char、含時區的時戳、含當地時區的時戳
-   以及 fractional_seconds_precision.
+   此屬性代表現有資料欄的類型, 可以是
+   "CLOB"、"BLOB"、"CHAR"、"VARCHAR2" 或 "RAW". 使用者可以指定
+   TIMESTAMP、DATE、TIMESTAMP WITH TIME ZONE 或 Oracle 資料庫支援的
+   任何其他資料欄類型. ROacle 不會剖析值; 而是由
+   資料庫來進行驗證. 使用者可針對 \code{ora.type} 提供下列
+   其中一個值: CLOB、BLOB、CHAR、TIMESTAMP WITH TIME
+   ZONE、TIMESTAMP WITH LOCAL TIME ZONE 以及 fractional_seconds_precision.
    2) 屬性名稱: \code{ora.encoding}
-   已指定 UTF-8 時, 它會根據 "ora.type" 使用 NCLOB、NCHAR 或
+   若指定 UTF-8, 資料庫會根據 \code{ora.type} 使用 NCLOB、NCHAR 或
    NVARCHAR.
    3) 屬性名稱: \code{ora.maxlength}
-   使用者可以指定 CHAR、VARCHAR、NCHAR、NVARCHAR2 或 RAW
-   資料欄的長度上限. 這並不適用於其他資料類型, 而將會予以忽略.
-   當  \code{ora.maxlength} 未指定 \code{NULL} 時, 會針對特定資料類型
-   使用下列預設值
+   使用者可以指定 CHAR、VARCHAR、NCHAR、NVARCHAR2 或
+   RAW 資料欄的最大長度. 對於其他資料類型, \code{ora.maxlength} 不適用,
+   會予以忽略. 未指定 \code{ora.maxlength} 時, 某些
+   資料類型會使用下列預設值.
    CHAR                                       2000
    NCHAR                                      1000
    VARCHAR2                                   4000
    NVARCHAR2                                  2000
    RAW                                        2000
    4) 屬性名稱: \code{ora.fractional_seconds_precision}
-   使用者可以指定 TIMESTAMP、TIMESTAMP WITH TIME ZONE 及
-   TIMESTAMP WITH LOCAL TIME ZONE 資料欄之 SECOND 日期時間欄位的
-   小數部分. 它可以是範圍 0 到 9 中的數字. 預設值為 6.
+   使用者可以指定 TIMESTAMP、TIMESTAMP WITH TIME ZONE
+   以及 TIMESTAMP WITH LOCAL TIME ZONE 資料欄之 SECOND 日期時間欄位的
+   小數部分. 它可以 0 到 9 範圍內的數字. 預設值為 6.
   \\pkg{ROracle} 方法 (例如 \code{dbReadTable}、\code{dbGetQuery}、
-  \code{fetch} 及 \code{dbWriteTable}) 會使用下列 \R 與 Oracle
-  資料類型之間的對應:
+  \code{fetch} 以及 \code{dbWriteTable}) 在 \R 與 Oracle 資料類型之間
+  使用下列對應:
   \itemize{
-    \item \code{logical} 與 \code{integer} 會對應至 Oracle \code{INTEGER}
-    \item 如果引數 \code{numeric} 為 \code{NUMBER}, 則 \code{ora.number} 會對應至
-    Oracle \code{TRUE}, 或如果為 \code{BINARY_DOUBLE}, 則會對應至 Oracle
+    \item \code{logical} 和 \code{integer} 對應至 Oracle \code{INTEGER}
+    \item 如果引數 \code{numeric} 為 \code{NUMBER}, 則 \code{ora.number} 對應至 \code{TRUE},
+    或如果為 \code{BINARY_DOUBLE} 則對應至 Oracle 
     \code{FALSE}
-    \item 如果屬性 \code{character} 為 \code{CLOB}, 則 \code{ora.type} 會對應至 
-    Oracle \code{"CLOB"}, 或如果屬性 \code{NCLOB} 為 \code{ora.type} 且 \code{"CLOB"}
-    為 \code{ora.encoding}, 則會對應至 Oracle \code{"UTF-8"},
-    或如果屬性 \code{CHAR(ora.maxlength)} 為 \code{ora.type}, 則會對應至 Oracle 
-    \code{"CHAR"}, 或如果屬性 \code{NCHAR(ora.maxlength)} 為 \code{ora.type} 且 \code{"CHAR"} 
-    為 \code{ora.encoding}, 則會對應至 Oracle \code{"UTF-8"},
-    獲如果屬性 \code{NVARCHAR2(ora.maxlength)} 為 \code{ora.encoding}, 則會對應至 Oracle
-    \code{"UTF-8"}, 或對應至 Oracle \code{VARCHAR2(ora.maxlength)}
+    \item如果屬性 \code{character} 為 \code{CLOB}, 則 \code{ora.type} 對應至 Oracle \code{"CLOB"}, 
+    或如果屬性 \code{NCLOB} 為 \code{ora.type} 且 \code{"CLOB"} 為 \code{ora.encoding}, 則對應至  Oracle \code{"UTF-8"}, 
+    或如果屬性 \code{CHAR(ora.maxlength)} 為 \code{ora.type}, 則對應至 Oracle \code{"CHAR"}, 
+    或如果屬性 \code{NCHAR(ora.maxlength)} 為 \code{ora.type} 且 \code{"CHAR"} 為 \code{ora.encoding}, 則對應至 Oracle \code{"UTF-8"}, 
+    或如果屬性 \code{NVARCHAR2(ora.maxlength)} 為 \code{ora.encoding} 或 Oracle \code{"UTF-8"}, 則對應至 Oracle \code{VARCHAR2(ora.maxlength)}
     \item \code{Date} 與 \code{POSIXct} 會對應至 Oracle \code{DATE}
-    \\pkg{ROracle} - ROracle 套裝程式
+    \\pkg{ROracle} -  ROracle 封裝程式
     \R - R 應用程式
-    \item 如果屬性 \code{POSIXct} 為 \code{TIMESTAMP WITH TIME ZONE(ora.fractional_seconds_precision)}, 
-    則 \code{ora.type} 
-    會對應至Oracle \code{"TIMESTAMP WITH TIME ZONE"}, 或如果 
-    屬性 \code{TIMESTAMP WITH LOCAL TIME ZONE(ora.fractional_seconds_precision)}
-    為 \code{ora.type}, 則會對應至 Oracle \code{"TIMESTAMP WITH LOCAL TIME ZONE"}, 或
-    如果 \code{TIMESTAMP(ora.fractional_seconds_precision)} 為 \code{Date}, 則會
-    對應至 Oracle \code{FALSE} 
+    \item 如果屬性 \code{POSIXct} 為 \code{TIMESTAMP WITH TIME ZONE(ora.fractional_seconds_precision)}  
+    則 \code{ora.type} 會對應至 Oracle \code{"TIMESTAMP WITH TIME ZONE"} 
+    或如果屬性 \code{TIMESTAMP WITH LOCAL TIME ZONE(ora.fractional_seconds_precision)} 為 \code{ora.type}
+    則對應至Oracle \code{"TIMESTAMP WITH LOCAL TIME ZONE"} 
+    或如果 \code{TIMESTAMP(ora.fractional_seconds_precision)} 為 \code{Date}
+    則對應至 Oracle \code{FALSE} 
     \item \code{difftime} 會對應至 Oracle \code{INTERVAL DAY TO SECOND}
-    \item 如果屬性 \code{list} 為 \code{raw}, 則 \code{BLOB} 向量的 \code{ora.type} 
-    會對應至 Oracle \code{"BLOB"}, 或對應至 Oracle 
-    \code{RAW(ora.maxlength)}
+    \item 如果屬性 \code{list} 為 \code{raw} 或 Oracle \code{BLOB}
+    則 \code{ora.type} 向量的 \code{"BLOB"} 會對應至 Oracle \code{RAW(ora.maxlength)}
     \item 其他 \R 類型 (例如 \code{factor}) 會轉換成
     \code{character}
   }
-   ROracle 會以 R 的 POSIXct 格式, 從下列資料類型的
-   資料庫資料欄傳回值: 日期、時戳、含時區的時戳、
-   含當地時區的時戳資料類型. POSIXct 是一個
-   以自 1970 年開始算起的秒數形式儲存在內部的
-   UTC 時間. 秒數是從 R 和 ROracle 驅動程式以浮點
-   雙精準數格式換算. 在 POSIXct 表示法中, R 會使用 TZ
-   環境變數, 或將作業系統時區環境變數對應至它自己的
-   環境變數, 因此, 日期將會以此時區格式顯示.
-   使用者可以使用格式正確的字串或 POSIXct 表示法, 將資料
-   插入上列四種資料類型的資料欄. 字串資料會
-   被直接傳送給資料庫, 而 ROracle 會倚賴資料庫將其轉換成
-   日期時間表示法. ROracle 驅動程式會在用於 DML 作業的
-   資料框架中使用 "\%Y-\%m-\%d \%H:\%M:\%OS6" 格式,
-   將 POSIXct 表示法轉換成字串表示法.
-   此格式的資料會對應至 NLS_TIMESTAMP_TZ_FORMAT
-   "YYYY-MM-DD HH24:MI:SSXFF", 並會轉換成要連結至 Oracle 資料庫的
-   SQLT_TIMESTAMP_LTZ. 系統會建立在內部代表 ROracle 驅動程式
-   之字元資料的中繼類別 "datetime".
-   ROracle 會使用 SQLT_TIMESTAMP 資料類型來擷取日期
-   和時戳資料類型的資料欄. 擷取含時區的時戳或含當地時區
-   的時戳資料類型的資料欄時, 則是使用 
-   SQLT_TIMESTAMP_LTZ 資料類型. 含當地時區的時區資料類型
-   的資料欄會經歷轉換成 R 應用程式執行環境之階段作業時區的
-   過程, 因此在 R 中設定時區環境變數 TZ 將會影響此資料欄中
-   的資料值. 當連線至資料庫時, ROracle 驅動程式會將 TZ
-   環境變數對應至階段作業時區, 並發出更改 DDL
-   以設定階段作業時區.
-   若要從含時區的時戳或含當地時區的時戳資料類型
-   的資料欄擷取資料, 從屬端和伺服器必須具有相同的時區
-   資料檔, 否則將會回報錯誤.
-   從資料庫選取這些資料類型時, 會使用與 R 中的
-   "\%Y-\%m-\%d \%H:\%M:\%OS6" 對應的 NLS_TIMESTAMP_TZ_FORMAT
-   "YYYY-MM-DD HH24:MI:SSXFF" 將它們轉換成字串
-   表示式. 系統會建立中繼類別 "datetime" 以在 ROracle
-   驅動程式中代表此字元資料. ROracle 驅動程式會接著
-   使用 as.POSIXct() 函數將其轉換成 POSIXct. R 應用程式
-   會在資料框架中看見 POSIXct 形式的資料.
+   ROracle 會以 R 的 POSIXct 格式, 從下列資料類型的資料庫資料欄傳回值: 日期、
+   時戳、含時區的時戳、及含當地時區的時戳資料類型.  POSIXct 是一個以自 1970 年
+   開始算起的秒數形式儲存在內部的 UTC  時間. 秒數是從 R 和 ROracle 驅動程式
+   以浮點雙精準數格式換算. 在 POSIXct 表示法中, R 會使用 TZ 環境變數, 
+   或將作業系統時區環境變數對應至它自己的環境變數, 因此, 日期將會以此時區格式顯示.
+   使用者可以使用格式正確的字串或 POSIXct 表示法, 將資料插入上列四種資料類型的資料欄.
+   字串資料會被直接傳送給資料庫, 而 ROracle 會倚賴資料庫將其轉換成日期時間表示法.
+   ROracle 驅動程式會在用於 DML 作業的資料框架中使用 "\%Y-\%m-\%d \%H:\%M:\%OS6" 格式,
+   將 POSIXct 表示法轉換成字串表示法. 此格式的資料會對應至 NLS_TIMESTAMP_TZ_FORMAT
+   "YYYY-MM-DD HH24:MI:SSXFF", 並會轉換成要連結至 Oracle 資料庫的 SQLT_TIMESTAMP_LTZ.
+   系統會建立在內部代表 ROracle 驅動程式之字元資料的中繼類別 "datetime".
+   ROracle 會使用 SQLT_TIMESTAMP 資料類型來擷取日期和時戳資料類型的資料欄.
+   擷取含時區的時戳或含當地時區的時戳資料類型的資料欄時, 則是使用 SQLT_TIMESTAMP_LTZ 資料類型.
+   含當地時區的時區資料類型的資料欄會經歷轉換成 R 應用程式執行環境之階段作業時區的過程, 
+   因此在 R 中設定時區環境變數 TZ 將會影響此資料欄中的資料值. 當連線至資料庫時,
+   ROracle 驅動程式會將 TZ 環境變數對應至階段作業時區, 並發出更改 DDL 以設定階段作業時區.
+   若要從含時區的時戳或含當地時區的時戳資料類型的資料欄擷取資料, 從屬端和伺服器必須具有
+   相同的時區資料檔, 否則將會回報錯誤.
+   從資料庫選取這些資料類型時, 會使用與 R 中的 "Y-\%m-\%d \%H:\%M:\%OS6" 對應
+   的 NLS_TIMESTAMP_TZ_FORMAT "YYYY-MM-DD HH24:MI:SSXFF" 將它們轉換成字串表示式. 
+   系統會建立中繼類別 "datetime" 以在 ROracle 驅動程式中代表此字元資料. 
+   ROracle 驅動程式會接著使用 as.POSIXct() 函數將其轉換成 POSIXct.
+   R 應用程式會在資料框架中看見 POSIXct 形式的資料.
    \\preformatted{
 R 階段作業時區:
- R 具有 R 引擎運作環境時區的概念. 時區
- 可以設定為 'PST8PDT'、'America/Los_Angeles' 等等之類的字串.
- 這些字串皆一目了然並且指定了階段作業運作環境
- 的時區.
+ R 具有 R 引擎運作環境時區的概念. 時區可以設定為 'PST8PDT'、'America/Los_Angeles' 等等之類的字串.
+ 這些字串皆一目了然並且指定了階段作業運作環境的時區.
  可以使用下列兩種方式之一來設定 R 階段作業時區:
- 1. 在 Linux/UNIX 上啟動 R 之前, 於 Linux 或 Unix 命令行中輸入下列
-    程式碼:
-    setenv TZ = America/Los_Angeles
-    注意: 請勿在 Windows 上使用此選項, 因為它不允許使用者
-          設定環境變數 TZ 的 Oracle 相容時區名稱.
+ 1. 在 Linux/UNIX 上啟動 R 之前, 於 Linux 或 Unix 命令行中輸入下列程式碼:
+    setenv TZ = America/Los_Angeles on Linux/UNIX
+    注意: 請勿在 Windows 上使用此選項, 因為它不允許使用者設定
+             環境變數 TZ 的 Oracle 相容時區名稱.
  2. 在出現 R 提示時輸入下列程式碼:
     Sys.setenv(TZ = "PST8PDT")
- 建議使用選項 2, 因為 R 命令檔在 Linux/Unix 與 Windows 上
- 運作時都一樣沒有移植問題. 選項 2 甚至同樣可讓您
- 在 Windows 上指定 Oracle 相容時區名稱.
- R 階段作業時區會決定所有 POSIXct 未限定
- 時區之日期時間類型的時區. 這也是所有限定之
- 日期時間類型被 R 顯示時所轉換成的時區.
+ 建議使用選項 2, 因為 R 命令檔在 Linux/Unix 與 Windows 上運作時都一樣沒有移植問題. 
+ 選項 2 甚至同樣可讓您 在 Windows 上指定 Oracle 相容時區名稱. R 階段作業時區會決定
+ 所有 POSIXct 未限定時區之日期時間類型的時區. 這也是所有限定之日期時間類型
+ 被 R 顯示時所轉換成的時區.
  下列範例提供此案例的示範.
  Sys.setenv(TZ = "PST8PDT")
  dt <- c(as.POSIXct("2010/3/13", tz = "PST8PDT"),
@@ -260,11 +235,9 @@ R 階段作業時區:
  [3] "2010-03-22 00:00:00.000000 PDT" "2010-03-22 07:02:30.000000 PDT"
  [5] "2010-03-13 00:00:00.000000 PST" "2010-03-13 03:47:30.123456 PST"
  [7] "2010-03-22 00:00:00.000000 PDT" "2010-03-22 07:02:30.000000 PDT"
-請注意, 未限定的時戳在被 R 顯示時, 也會被假設為
-採用 R 的階段作業時區. 當然, R 也夠聰明, 能夠
-根據美國日光節約的開始時間判斷該時間
-是 PST 或 PDT, 然後相應地顯示 PST
-或 PDT.
+請注意, 未限定的時戳在被 R 顯示時, 也會被假設為採用 R 的階段作業時區. 
+當然, R 也夠聰明, 能夠根據美國日光節約的開始時間判斷該時間是 PST 或 PDT,
+然後相應地顯示 PST或 PDT.
 下列範例提供更明確的示範.
 > Sys.setenv(TZ = "EST5EDT")
 > dt <- c(as.POSIXct("2010/3/13", tz = "PST8PDT"),
@@ -280,16 +253,14 @@ R 階段作業時區:
 [3] "2010-03-22 03:00:00.000000 EDT" "2010-03-22 10:02:30.000000 EDT"
 [5] "2010-03-13 00:00:00.000000 EST" "2010-03-13 03:47:30.123456 EST"
 [7] "2010-03-22 00:00:00.000000 EDT" "2010-03-22 07:02:30.000000 EDT"
-請注意, 所有未限定時區的時戳都會被假設為採用
-階段作業時區. 不過, 甚至是限定時區的時戳也會被
-轉換成階段作業時區並顯示. 請注意, R 會
-以 R 階段作業的時區來顯示所有值 (時區名稱
-也會一併修改成 EST 或 EDT 來表示
-適用的日光節約時間). 請參考日期時間類別 (網址為:
-http://stat.ethz.ch/R-manual/R-devel/library/base/html/DateTimeClasses.html)
-和時區 (網址為:
-http://stat.ethz.ch/R-manual/R-devel/library/base/html/timezones.html)
-以瞭解 R 如何處理日期與時間及時區
+請注意, 所有未限定時區的時戳都會被假設為採用階段作業時區.
+不過, 甚至是限定時區的時戳也會被轉換成階段作業時區並顯示. 
+請注意, R 會以 R 階段作業的時區來顯示所有值 (時區名稱也會一併
+修改成 EST 或 EDT 來表示適用的日光節約時間). 請參考日期時間類別 (網址為:
+http://stat.ethz.ch/R-manual/R-devel/library/base/html/DateTimeClasses.html) 和時區
+(網址為:
+http://stat.ethz.ch/R-manual/R-devel/library/base/html/timezones.html
+以瞭解 R 如何處理日期與時間及時區)
 以下是使用較長時區名稱 (通常稱為「Olson 名稱」)
 而不使用縮寫的範例.
 > Sys.setenv(TZ = "America/Los_Angeles")
@@ -306,15 +277,13 @@ http://stat.ethz.ch/R-manual/R-devel/library/base/html/timezones.html)
 [3] "2010-03-22 00:00:00.000000 PDT" "2010-03-22 07:02:30.000000 PDT"
 [5] "2010-03-13 00:00:00.000000 PST" "2010-03-13 03:47:30.123456 PST"
 [7] "2010-03-22 00:00:00.000000 PDT" "2010-03-22 07:02:30.000000 PDT"
-請注意, 在這樣的案例中, R 在顯示值時不會
-使用長名稱, 而是仍使用縮寫 "PST" 和
-"PDT" 來顯示值. 這相當重要, 因為 Oracle
-不一定喜歡這些縮寫. 例如, Oracle
-資料庫無法將 "PDT" 辨識為有效的時區. 請參閱「R 時區
-與 Oracle 階段作業時區」以瞭解有關有效時區的詳細資訊.
+請注意, 在這樣的案例中, R 在顯示值時不會使用長名稱, 
+而是仍使用縮寫 "PST" 和 "PDT" 來顯示值. 這相當重要, 
+因為 Oracle 不一定喜歡這些縮寫. 例如, Oracle\\n資料庫
+無法將 "PDT" 辨識為有效的時區. 請參閱
+「R 時區與 Oracle 階段作業時區」以瞭解有關有效時區的詳細資訊.
 }
-   下列範例顯示變更 R 環境中時區的
-   結果:
+   下列範例顯示變更 R 環境中時區的結果:
    \\preformatted{   R> Sys.timezone()
    [1] "PST8PDT"
    # Selecting data and displaying it
@@ -357,8 +326,8 @@ http://stat.ethz.ch/R-manual/R-devel/library/base/html/timezones.html)
        "2012-01-05 03:00:00 EST" "2011-01-05 03:00:00 EST"
    [5] "2013-01-05 03:00:00 EST" "2020-01-05 03:00:00 EST"}
   此外, 即使是將資料列附加至已經存在的表格,
-  \code{dbWriteTable} 也一律會自動確認目前的交易及其插入的
-  資料 (亦即會扮演 DDL 敘述句的角色).
+  \code{dbWriteTable} 也一律會自動確認目前的交易及其插入
+  的資料 (亦即會扮演 DDL 敘述句的角色).
 }
 \value{
 在 \code{data.frame} 情況下為 \code{dbReadTable};
@@ -373,7 +342,7 @@ http://stat.ethz.ch/R-manual/R-devel/library/base/html/timezones.html)
   For the Oracle Database documentation see 
   \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
   For Datetime Data Types and Time Zone Support in Oracle see
-  \url{http://docs.oracle.com/cd/E14072_01/server.112/e10729/ch4datetime.htm}.
+  \url{http://docs.oracle.com/cd/E11882_01/server.112/e10729/ch4datetime.htm}.
 }
 \seealso{
   \code{\link{Oracle}},

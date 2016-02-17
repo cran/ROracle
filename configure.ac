@@ -1,4 +1,4 @@
-AC_INIT([ROracle], 1.2-1)
+AC_INIT([ROracle], 1.2-2)
 
 dnl find standard Instant Client installation
 : ${R_HOME=`R RHOME`}

@@ -29,6 +29,8 @@ Class \code{"DBIObject"}, by class \code{"DBIDriver"}, distance 2.
  \code{\link{OraResult-class}}
 }
 \examples{\dontrun{
+# first load the library
+library("ROracle")
 ora <- dbDriver("Oracle")
 con <- dbConnect(ora, "scott", "tiger")
 }

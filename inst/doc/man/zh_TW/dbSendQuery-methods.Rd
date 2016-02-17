@@ -2,26 +2,30 @@
 \docType{methods}
 \alias{dbSendQuery}
 \alias{dbGetQuery}
+\alias{oracleProc}
 \alias{dbClearResult}
 \alias{dbGetException}
 \alias{execute}
 \alias{dbSendQuery,OraConnection,character-method}
 \alias{dbGetQuery,OraConnection,character-method}
 \alias{dbClearResult,OraResult-method}
+\alias{oracleProc,OraConnection,character-method}
 \alias{dbGetException,OraConnection-method}
 \alias{execute,OraResult-method}
 \title{
-在指定的資料庫連線上執行敘述句
+在指定的資料庫連線執行敘述句
 }
 \description{
-這些方法是對應的一般函數的
-   直接實行, 但 \code{execute} 方法除外, 該方法是
-   ROracle 特定的 DBI 擴充.
+這些方法是相對應一般函數的直接
+   實行, 但 \code{execute} 方法除外, 它是
+   ROracle 特定 DBI 擴充.
 }
 \usage{
 \S4method{dbSendQuery}{OraConnection,character}(conn, statement, data = NULL,
           prefetch = FALSE, bulk_read = 1000L, bulk_write = 1000L, ...)
 \S4method{dbGetQuery}{OraConnection,character}(conn, statement, data = NULL,
+          prefetch = FALSE, bulk_read = 1000L, bulk_write = 1000L, ...)
+\S4method{oracleProc}{OraConnection,character}(conn, statement, data = NULL, 
           prefetch = FALSE, bulk_read = 1000L, bulk_write = 1000L, ...)
 \S4method{dbClearResult}{OraResult}(res, ...)
 \S4method{dbGetException}{OraConnection}(conn, ...)
@@ -40,36 +44,38 @@ SQL 敘述句之長度為 1 的字元向量.
 一個 \code{OraResult} 物件.
 }
   \item{data}{
-一個指定連結資料的 data.frame
+一個指定連結資料的 \code{data.frame}
 }
   \item{prefetch}{
-一個指示 TRUE 或 FALSE 的邏輯值. 設為 TRUE 時, ROracle 會使用
-    OCI 預先擷取緩衝區來從伺服器擷取其他資料, 這樣便可透過
-    配置單一資料列緩衝區來從 OCI 擷取資料, 節省 RODBI/ROOCI 中
-    所需的記憶體. 使用預先擷取會對每個資料列產生一個擷取呼叫.
-    依照預設, 預先擷取為 FALSE, 系統會使用陣列擷取來從伺服器擷取
-    資料.
+一個邏輯值, 用於指定 ROracle 是使用預先擷取緩衝區還是
+    陣列擷取, 從伺服器擷取資料. 若為 \code{TRUE}, ROracle 會
+    使用 OCI 預先擷取緩衝區從伺服器擷取其他資料, 而透過 
+    配置單一資料列緩衝區來擷取 OCI 中的資料, 可節省 RODBI/ROOCI 中 
+    所需的記憶體. 若使用預先擷取, 會對每個資料列產生一個擷取
+    呼叫. 若為 \code{FALSE} (預設值), ROracle 會使用陣列擷取來 
+    擷取資料.
 }
   \item{bulk_read}{
-一個指定一次要擷取之資料列數的整數值. 預設值
-    為 1000L. 如果選取預先擷取選項, 就會為預先擷取緩衝區
-    配置記憶體, 而 OCI 將一次擷取數量相當的資料列. 若未使用
-    預先擷取 (預設值), 記憶體就會配置在 RODBI/ROOCI
-    定義緩衝區中. 將這個值設成較大的值時, 會讓系統根據
-    選取清單中的資料欄數與資料欄類型, 配置更多的記憶體. 
-    對於字元類型的資料欄, 會使用最大寬度乘以 NLS 最大寬度
-    的方式來配置定義緩衝區. 應用程式應根據查詢結果調整
-    這個值, 而較大的值將對傳回大型結果的查詢較有利.
-    應用程式可根據其需求來調整此值.
+一個整數值, 用於指示一次要擷取的資料列數目. 
+    預設值為 1000L. 如果選取預先擷取選項, 會配置 
+    記憶體給預先擷取緩衝區, OCI 將一次擷取指定數目的 
+    資料列. 若未使用預先擷取 (預設值), 會在 RODBI/ROOCI 
+    定義緩衝區中配置記憶體. 這個值若設得越大, 
+    系統就會根據選取清單中的資料欄數目和資料欄類型, 
+    配置更多的記憶體. 若為字元類型的資料欄, 
+    會使用最大寬度乘以 NLS 最大寬度, 配置定義 
+    緩衝區. 應用程式應該根據查詢結果調整這個值.
+    值若比較大, 將有利於傳回大量結果的查詢. 
+    應用程式可視需要調校這個值.
 }
   \item{bulk_write}{
-一個指示一次要寫入之資料列數的整數值.
-    預設值為 1000L. 以引數提供 bulk_write 值時,
-    系統會為緩衝區配置記憶體, 而 OCI 將會一次寫入
-    數量相當的資料列. 未提供 bulk_write 引數時, 會使用
-    預設值 1000 來為連結緩衝區配置記憶體. 將這個值設成
-    較大的值時, 會讓系統根據插入清單中的資料欄數與
-    資料欄類型, 配置更多的記憶體.
+一個整數值, 用於指示一次要寫入的資料列數目. 
+    預設值為 1000L. 如果指定 bulk_write 值, 會配置 
+    記憶體給緩衝區, 而 OCI 將一次寫入那麼多的資料列. 
+    若未使用 bulk_write 引數, 將會使用預設值來配置 
+    記憶體給連結緩衝區. \code{bulk_write} 值若設得越大, 
+    系統就會根據插入清單中的資料欄數目和資料欄類型, 
+    配置更多的記憶體.
 }
   \item{\dots}{
 目前未使用.
@@ -77,25 +83,29 @@ SQL 敘述句之長度為 1 的字元向量.
 }
 \value{
 \item{dbSendQuery}{
-    一個類別擴充 \code{OraResult} 的 \code{DBIResult} 物件. 
-    可藉由使用函數 \code{fetch}, 使用此物件來從資料庫擷取 
+    一個其類別擴充 \code{OraResult} 的 \code{DBIResult} 物件. 
+    可利用 \code{fetch} 函數, 使用此物件來擷取資料庫的 
     資料.
   }
 }
 \section{Side Effects}{
   \describe{
     \item{dbGetQuery}{
-      Query statement is executed and data has fetched from database.
+      Query statement is executed and data is fetched from database.
     }
     \item{dbSendQuery}{
-      Query statement is executed, but note that data needs to fetch through
+      Query statement is executed, but data needs to be fetched through
       calls to \code{\link[DBI]{fetch}}.
     }
+    \item{oracleProc}{
+      PL/SQL stored procedure or function query statement is executed and 
+      result is returned.
+    }
     \item{dbClearResult}{
-      Resources acquired by result set has free.
+      Resources acquired by the result set are freed.
     }
     \item{dbGetException}{
-      Error information retrieved and then cleaned from driver.
+      Error information is retrieved and then cleaned from the driver.
     }
     \item{execute}{
       Query statement is executed.
@@ -106,14 +116,19 @@ SQL 敘述句之長度為 1 的字元向量.
 \\describe{
     \item{dbGetQuery}{
       此函數會執行查詢敘述句並從資料庫擷取
-      結果資料.
+      結果資料. 不可使用它呼叫 PL/SQL 查詢.
     }
     \item{dbSendQuery}{
       此函數會執行查詢敘述句並將結果集傳回給 
-      應用程式. 這時應用程式便可對該結果集執行作業.
+      應用程式. 應用程式可以接著對結果集執行作業.
+      不可使用它呼叫 PL/SQL 查詢.
+    }
+     \item{oracleProc}{
+      此函數會執行 PL/SQL 預存程序或函數查詢
+      敘述句並傳回結果.
     }
     \item{dbClearResult}{
-      此函數會釋出結果集所佔用的資源.
+      此函數會釋出結果集所使用的資源.
     }
     \item{dbGetException}{
       此函數會擷取錯誤資訊.
@@ -124,7 +139,7 @@ SQL 敘述句之長度為 1 的字元向量.
   }
 }
 \section{References}{
-  For the Oracle Database documentaion see 
+  For the Oracle Database documentation see 
   \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
 }
 \seealso{
@@ -144,18 +159,25 @@ SQL 敘述句之長度為 1 的字元向量.
                        data = data.frame(deptno = 10))
     data <- fetch(res, n = -1)
     res2 <- dbSendQuery(con, "select * from emp where deptno = :1",
-                        data1 = data.frame(deptno = 10), prefetch=TRUE,
+                        data1 <- data.frame(deptno = 10), prefetch=TRUE,
                         bulk_read=2L)
     data1 <- fetch(res2, n = -1)
+    data1
+
     res3 <- dbSendQuery(con, "select * from emp where deptno = :1",
-                        data2 = data.frame(deptno = 10), bulk_read=10L)
+                        data2 <- data.frame(deptno = 10), bulk_read=10L)
     data2 <- fetch(res3, n = -1)
+    data2
+
     res4 <- dbSendQuery(con, "select * from emp where deptno = :1",
-                        data3 = data.frame(deptno = 10), bulk_write=10L)
+                        data3 <- data.frame(deptno = 10), bulk_write=10L)
     data3 <- fetch(res4, n = -1)
+    data3
+
     res5 <- dbSendQuery(con, "select * from emp where ename = :1",
-                        data4 = data.frame(ename = 'SMITH')) 
+                        data4 <- data.frame(ename = 'SMITH')) 
     data4 <- fetch(res5, n = -1)
+    data4
   }
 }
 \keyword{methods}

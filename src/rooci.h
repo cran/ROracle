@@ -1,4 +1,4 @@
-/* Copyright (c) 2011, 2015, Oracle and/or its affiliates. 
+/* Copyright (c) 2011, 2016, Oracle and/or its affiliates. 
 All rights reserved.*/
 
 /*
@@ -11,6 +11,9 @@ All rights reserved.*/
    NOTES
 
    MODIFIED   (MM/DD/YY)
+   rpingte     08/05/15 - added epoch_roociRes and diff_roociRes fields
+   rpingte     08/05/15 - 21128853: changing roociReadDateTimeData and 
+                          roociWriteDateTimeData prototype
    rpingte     01/29/15 - add unicode_as_utf8
    ssjaiswa    09/12/14 - add bulk_write support field nrows_write_roociRes
    rpingte     05/21/14 - add time zone to connection
@@ -188,6 +191,8 @@ struct roociCon
   char              *cstr_roociCon;                       /* Connect STRing */
   int                conID_roociCon;                       /* connection ID */
   boolean            timesten_rociCon;          /* TIMESTEN connection flag */
+  double             secs_UTC_roociCon;     /* LocalTZ, UTC diff in seconds
+                    * used for timesten as TSTZ and TSLTZ are not supported */
   sb4                nlsmaxwidth_roociCon;    /* NLS max width of character */
   roociResAccess     acc_roociCon;       /* sequential traversal of results */
   /* TODO: add mutex when R is thread-safe */
@@ -223,6 +228,8 @@ struct roociRes
   boolean          prefetch_roociRes;    /* TRUE - use OCI prefetch buffers */
   int              nrows_roociRes;     /* number of rows to fetch at a time */
   int              nrows_write_roociRes; /* # of elements to bind at a time */
+  OCIDateTime     *epoch_roociRes;             /* epoch from 1970/01/01 UTC */
+  OCIInterval     *diff_roociRes; /* time interval difference from 1970 UTC */
   /* TODO: add mutex when R is thread-safe */
 };
 typedef struct roociRes roociRes;
@@ -326,13 +333,12 @@ sword roociReadBLOBData(roociRes *pres, int *lob_len, int rowpos, int cid);
 
 /* -------------------------- rociReadDateTimeData ------------------------- */
 /* Read DateTime data */
-sword roociReadDateTimeData(roociRes *pres, OCIDateTime *tstm, char *date_time,
-                            ub4 *date_time_len, boolean isDate);
+sword roociReadDateTimeData(roociRes *pres, OCIDateTime *tstm, double *date,
+                            boolean isDate);
 
 /* ------------------------- roociWriteDateTimeData ------------------------ */
 /* Write DateTime data */
-sword roociWriteDateTimeData(roociRes *pres, OCIDateTime *tstm,
-                             const char *date_time, size_t date_time_len);
+sword roociWriteDateTimeData(roociRes *pres, OCIDateTime *tstm, double date);
 
 /* -------------------------- rociReadDiffTimeData ------------------------- */
 /* Read DiffTime data */

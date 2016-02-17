@@ -16,15 +16,14 @@
 Funciones Prácticas para Manipular Tablas de DBMS
 }
 \description{
-Estas funciones imitan a los equivalentes de R 
+Estas funciones imitan a los equivalentes de R salvo en el hecho de que generan 
+  código que se ejecuta de manera remota en un motor de base de datos:
   \code{get},
   \code{assign},
   \code{exists}, 
   \code{remove},
   \code{objects} y
-  \code{names},
-  salvo en el hecho de que generan código que se ejecuta de manera remota en un motor
-  de base de datos.
+  \code{names}.
 }
 \usage{
 \S4method{dbReadTable}{OraConnection,character}(conn, name, schema = NULL, row.names = NULL, ...)
@@ -124,29 +123,29 @@ no utilizado actualmente.
 
 
 \details{
-Los nombres de tabla, esquema y columna son sensibles a mayúsculas/minúsculas, por ejemplo, los nombres
-  de tabla \code{ABC} y \code{abc} no son los mismos. Todos los nombres de objeto
-  de esquema de base de datos no se deben escribir entre comillas, ya que están entre comillas cuando se genera
-   la sentencia SQL correspondiente.
+Los nombres de tabla, esquema y columna son sensibles a mayúsculas/minúsculas, por ejemplo,
+  los nombres \code{ABC} y \code{abc} no son iguales. Los nombres de objeto
+  de esquema de base de datos no deben incluir comillas dobles, ya que se escriben
+   entre comillas cuando se genera la sentencia SQL correspondiente.
    Se utilizan los siguientes atributos para asignar las columnas BLOB, CLOB, NCLOB, NCHAR, VARCHAR2,
    NVARCHAR2, CHAR, TIMESTAMP WITH TIME ZONE y TIMESTAMP WITH LOCAL TIME ZONE
    de forma correcta en \code{dbWriteTable}:
    1) Nombre de Atributo: \code{ora.type}
-   Este atributo indicará el tipo de columna subyacente y puede tener
-   "CLOB", "BLOB", "CHAR", "VARCHAR2" o "RAW". Podríamos permitir al usuario que
-   especifique el registro de hora, la fecha, el registro de hora con la zona horaria o cualquier otro tipo de columna
-   soportado por Oracle DB. ROracle no lo analizará y dejará que DB
-   lo valide. El usuario puede proporcionar los siguientes valores de \code{ora.type}:
-   clob, blob, char, registro de hora con zona horaria, registro de hora con zona horaria local
-   y fractional_seconds_precision.
+   Este atributo indicará el tipo de columna subyacente y puede ser
+   "CLOB", "BLOB", "CHAR", "VARCHAR2" o "RAW". El usuario puede especificar
+   TIMESTAMP, DATE, TIMESTAMP WITH TIME ZONE o cualquier otro tipo de columna
+   soportado por Oracle Database. ROracle no lo analizará y dejará que
+   lo valide la base de datos. El usuario puede proporcionar los siguientes
+   valores de \code{ora.type}: CLOB, BLOB, CHAR, TIMESTAMP WITH TIME
+   ZONE, TIMESTAMP WITH LOCAL TIME ZONE y fractional_seconds_precision.
    2) Nombre de Atributo: \code{ora.encoding}
-   Cuando se especifique UTF-8, utilizará NCLOB, NCHAR o NVARCHAR basado en
-   "ora.type".
+   Cuando se especifique UTF-8, la base de datos utilizará NCLOB, NCHAR o NVARCHAR basándose en
+   \code{ora.type}.
    3) Nombre de Atributo: \code{ora.maxlength}
    Se puede especificar una longitud máxima de columnas CHAR, VARCHAR, NCHAR, NVARCHAR2 o
-   RAW. Para otros tipos de dato, no se aplica y se ignorará.
-   Se utilizan los siguientes valores por defecto para determinados tipos de dato cuando
-   no se especifica \code{ora.maxlength} \code{NULL}
+   RAW. Para otros tipos de dato, \code{ora.maxlength} no se aplica
+   y se ignorará. Se utilizan los siguientes valores por defecto para
+   determinados tipos de dato cuando no se especifica \code{ora.maxlength}.
    CHAR                                       2000
    NCHAR                                      1000
    VARCHAR2                                   4000
@@ -154,8 +153,8 @@ Los nombres de tabla, esquema y columna son sensibles a mayúsculas/minúsculas,
    RAW                                        2000
    4) Nombre de Atributo: \code{ora.fractional_seconds_precision}
    Se puede especificar la parte fraccional del campo de fecha y hora SECOND de
-   las columnas TIMESTAMP, TIMESTAMP WITH TIME ZONE y TIMESTAMP WITH LOCAL y
-   TIME ZONE. Puede ser un número en el rango de 0 a 9. El valor por defecto es 6.
+   las columnas TIMESTAMP, TIMESTAMP WITH TIME ZONE y TIMESTAMP WITH
+    LOCAL TIME ZONE. Puede ser un número en el rango de 0 a 9. El valor por defecto es 6.
   Los métodos \\pkg{ROracle} como \code{dbReadTable}, \code{dbGetQuery},
   \code{fetch} y \code{dbWriteTable} utilizan la siguiente asignación
   entre los tipos de dato \R y Oracle:
@@ -173,52 +172,52 @@ Los nombres de tabla, esquema y columna son sensibles a mayúsculas/minúsculas,
     u Oracle \code{NVARCHAR2(ora.maxlength)} si el atributo \code{ora.encoding}
     es \code{"UTF-8"} u Oracle \code{VARCHAR2(ora.maxlength)}
     \item \code{Date} y \code{POSIXct} se asignan a Oracle \code{DATE}
-    \\pkg{ROracle}: paquete ROracle
+    \\pkg{ROracle}: Paquete ROracle
     \R: aplicación R
     \item \code{POSIXct} se asigna a Oracle 
     \code{TIMESTAMP WITH TIME ZONE(ora.fractional_seconds_precision)} si 
     el atributo \code{ora.type} es \code{"TIMESTAMP WITH TIME ZONE"} u Oracle 
     \code{TIMESTAMP WITH LOCAL TIME ZONE(ora.fractional_seconds_precision)} si
     el atributo \code{ora.type} es \code{"TIMESTAMP WITH LOCAL TIME ZONE"} u
-    Oracle \code{TIMESTAMP(ora.fractional_seconds_precision)} y si
+    Oracle \code{TIMESTAMP(ora.fractional_seconds_precision)} y si 
     \code{Date} es \code{FALSE} 
     \item \code{difftime} se asigna a Oracle \code{INTERVAL DAY TO SECOND}
     \item \code{list} de \code{raw} vectores se asignan a Oracle \code{BLOB} si 
     el atributo \code{ora.type} es \code{"BLOB"} u Oracle 
     \code{RAW(ora.maxlength)}
-    \item que no sean tipos de \R conforme \code{factor} se convierten en
+    \item otros tipos de \R como \code{factor} se convierten a
     \code{character}
   }
-   ROracle devuelve valores desde las columnas de la base de datos que forman parte del tipo de dato: fecha,
+   ROracle devuelve valores de las columnas de base de datos que son del tipo de dato: fecha,
    registro de hora, registro de hora con zona horaria y registro de hora con zona horaria local
    en el formato POSIXct de R. POSIXct hace referencia a una hora
    que se almacena internamente como el número de segundos desde el principio de
    1970 en UTC. El número de segundos se intercambia entre el controlador de R y ROracle en
    formato doble de punto flotante. En la representación POSIXct, R utiliza la variable de entorno TZ
    o se asigna a sí mismo la variable de entorno de zona horaria del sistema operativo,
-   por lo tanto, la fecha aparecerá en este formato de zona horaria.
-   Un usuario puede insertar datos en columnas de los 4 tipos de dato mostrados anteriormente que utilizan
-   una cadena con el formato correcto o la representación POSIXct. Los datos de cadena se
-   transfieren a la base de datos directamente y ROracle se basa en una base de datos para convertirla
-   a una representación de fecha y hora. El controlador de ROracle convierte la representación de POSIXct
-   en una representación de cadena con el formato
+   por lo que la fecha aparecerá en este formato de zona horaria.
+   Un usuario puede insertar datos en columnas de los 4 tipos de dato mostrados anteriormente
+   con una cadena con el formato correcto o la representación POSIXct. Los datos de cadena se
+   transfieren a la base de datos directamente y ROracle se basa en una base de datos para convertirlos
+   en una representación de fecha y hora. El controlador de ROracle convierte la representación de POSIXct
+  en una representación de cadena con el formato
    "\%Y-\%m-\%d \%H:\%M:\%OS6" en un marco de datos que se utiliza para operaciones DML.
    Los datos de este formato se corresponden con NLS_TIMESTAMP_TZ_FORMAT
    "AAAA-MM-DD HH24:MI:SSXFF" y se convierten en SQLT_TIMESTAMP_LTZ para
-   enlazarse a la base de datos de Oracle. Se crea una clase "datetime" intermedia
+   enlazarse a la base de datos Oracle. Se crea una clase "datetime" intermedia.
    que representa los datos de caracteres para el controlador de ROracle de forma interna.
-   Las columnas de los tipos de dato de registro de hora con zona horaria y
-   el tipo de dato SQLT_TIMESTAMP. Las columnas con un registro de hora con la zona horaria o
-   un registro de hora con los tipos de dato de la zona horaria local se recuperan mediante el
-   tipo de datos SQLT_TIMESTAMP_LTZ. Las columnas de la zona horaria del tipo de datos con la zona
-   horaria local se convierten en la zona horaria de la sesión en que se ejecuta la aplicación R,
-   por lo que definir la variable de entorno TZ de la zona horaria en R afectará a los valores de 
-   datos de esta columna. El controlador ROracle asigna la variable de entorno TZ a
-   la zona horaria de la sesión y emite una sentencia alter DDL para definir la zona horaria de la sesión
-   cuando se realice la conexión a la base de datos.
-   Para recuperar datos de columnas con un registro de hora con la zona horaria o un registro de hora
-   con la zona horaria local, el cliente y el servidor deben tener el mismo archivo de datos
-   de zona horaria, ya que, de lo contrario, se notificará que hay un error.
+   ROracle recupera las columnas con el tipo de dato de registro de fecha y hora mediante el tipo de dato
+   SQLT_TIMESTAMP. Las columnas de los tipos de dato de registro de hora con zona horaria o
+   de registro de hora con zona horaria local se recuperarán mediante el tipo de dato
+   SQLT_TIMESTAMP_LTZ. Las columnas de zona horaria de tipo de dato con zona horaria local
+   experimentan una conversión a la zona horaria de la sesión en la que se ejecuta la aplicación R
+   por lo que la configuración del entorno de zona horaria TZ en R afectará a los valores de datos
+   de esta columna. El controlador de ROracle asigna la variable de entorno TZ
+   a la zona horaria de la sesión y emite una DDL de modificación para definir la zona horaria de la sesión
+   cuando se establece la conexión con la base de datos.
+   Para recuperar datos de columnas con registro de hora de zona horaria o registro de hora de
+   zona horaria local, el cliente y el servidor deben tener el mismo archivo de datos de zona horaria,
+   ya que, de lo contrario, se notificará que hay un error.
    Cuando se seleccionan estos tipos de dato de la base de datos, se convierten en
    una representación de cadena con el valor NLS_TIMESTAMP_TZ_FORMAT
    "AAAA-MM-DD HH24:MI:SSXFF" que se corresponde con "\%Y-\%m-\%d \%H:\%M:\%OS6"
@@ -231,19 +230,19 @@ Zona horaria de la sesión de R:
  R tiene el concepto de una zona horaria en la que se utiliza el motor de R. La zona
  horaria se puede definir en una cadena, como 'PST8PDT', 'America/Los_Angeles', etc.
  Estas cadenas se explican por sí mismas y especifican la zona horaria en la que
- se está utilizando la zona.
+ se está ejecutando la sesión.
  La zona horaria de la sesión de R se puede definir de una de estas dos formas:
- 1. Al introducir lo siguiente en la línea de comandos de Linux o Unix antes de iniciar
+ 1. Introduciendo lo siguiente en la línea de comandos de Linux o Unix antes de iniciar
     R:
     setenv TZ = America/Los_Angeles en Linux/UNIX
     NOTA: No utilice esta opción en Windows, ya que no permite
           definir nombres de zonas horarias compatibles con Oracle para la variable de entorno TZ.
- 2. Al introducir lo siguiente en la petición de datos de R:
+ 2. Introduciendo lo siguiente en la petición de datos de R:
     Sys.setenv(TZ = "PST8PDT")
  Recomendamos utilizar la opción 2, ya que el script de R funciona sin ningún
  problema de migración en Linux/Unix, así como en Windows. La opción 2 también permite
  especificar nombres de zonas horarias compatibles con Oracle, incluso en Windows.
- La zona horaria de la sesión de R determina la zona horaria para todos los tipos de fecha-hora no cualificados 
+ La zona horaria de la sesión de R determina la zona horaria para todos los tipos de fecha-hora no cualificados
  de zona horaria POSIXct. También es la zona horaria en la que se convierten todos los
  tipos de fecha-hora cualificados cuando se muestran en R.
  El siguiente ejemplo muestra esto.
@@ -261,7 +260,7 @@ Zona horaria de la sesión de R:
  [3] "2010-03-22 00:00:00.000000 PDT" "2010-03-22 07:02:30.000000 PDT"
  [5] "2010-03-13 00:00:00.000000 PST" "2010-03-13 03:47:30.123456 PST"
  [7] "2010-03-22 00:00:00.000000 PDT" "2010-03-22 07:02:30.000000 PDT"
-Tenga en cuenta que los registros de hora no cualificados también se asume que están en la
+Tenga en cuenta que también se asume que los registros de hora no cualificados están en la
 zona horaria de la sesión de R cuando los muestra R. Por supuesto, R también es lo
 suficientemente inteligente como para determinar si la hora está en PST o en PDT
 según cuándo comience el cambio de horario de verano de EE.UU. y muestra PST o PDT
@@ -281,18 +280,18 @@ En el siguiente ejemplo se muestra esto más claramente.
 [3] "2010-03-22 03:00:00.000000 EDT" "2010-03-22 10:02:30.000000 EDT"
 [5] "2010-03-13 00:00:00.000000 EST" "2010-03-13 03:47:30.123456 EST"
 [7] "2010-03-22 00:00:00.000000 EDT" "2010-03-22 07:02:30.000000 EDT"
-Tenga en cuenta que se asume que todos los registros de hora no cualificados de zona horaria
-están en la zona horaria de la sesión. Sin embargo, incluso los registros de hora
+Tenga en cuenta que también se asume que los registros de hora no cualificados están en la
+zona horaria de la sesión. Sin embargo, incluso los registros de hora
 cualificados de la zona horaria se convierten en la zona horaria de la sesión y se muestran. Tenga en cuenta que
 todos los valores los muestra R en la zona horaria de la sesión de R (con el nombre de zona horaria
-también modificado en EST o EDT para representar
+también modificado a EST o EDT para representar
 el cambio de horario de verano según corresponda). Consulte la sección sobre clases Date-Time en
 http://stat.ethz.ch/R-manual/R-devel/library/base/html/DateTimeClasses.html
 y sobre las zonas horarias en:
 http://stat.ethz.ch/R-manual/R-devel/library/base/html/timezones.html
 para obtener información sobre cómo R gestiona las fechas y horas y las zonas horarias)
-Vamos a ver un ejemplo donde utilizamos un nombre de zona horaria más largo
-(al que se suele conocer como 'Nombre Olson'), al contrario que una abreviatura.
+En el siguiente ejemplo se utiliza un nombre de zona horaria más largo
+(al que se suele conocer como 'Nombre Olson'), en lugar de una abreviatura.
 > Sys.setenv(TZ = "America/Los_Angeles")
 > dt <- c(as.POSIXct("2010/3/13", tz = "PST8PDT"),
 +         as.POSIXct("2010/3/13 3:47:30.123456", tz = "PST8PDT"),
@@ -309,16 +308,16 @@ Vamos a ver un ejemplo donde utilizamos un nombre de zona horaria más largo
 [7] "2010-03-22 00:00:00.000000 PDT" "2010-03-22 07:02:30.000000 PDT"
 Tenga en cuenta que, en ese caso, R no utiliza el nombre largo cuando se
 muestran los valores, sino que sigue mostrando los valores con
-las abreviaturas "PST" y "PDT". Esto es significativo porque a Oracle
-no necesariamente le gustan estas abreviaturas. Por ejemplo, una base
-de datos no reconoce "PDT" como una zona horaria válida. Consulte la sección sobre
-la zona horaria de R y la zona horaria de la sesión de Oracle" para obtener información sobre las zonas horarias válidas.
+las abreviaturas "PST" y "PDT". Esto es significativo porque Oracle
+no siempre acepta estas abreviaturas. Por ejemplo, una base
+de datos Oracle no reconoce "PDT" como zona horaria válida. Consulte la sección sobre
+la zona horaria de R y la zona horaria de la sesión de Oracle para obtener información sobre las zonas horarias válidas.
 }
-   El siguiente ejemplo muestra el efecto de cambiar la zona horaria en el entorno 
+   El siguiente ejemplo muestra el efecto de cambiar la zona horaria en el entorno
    de R:
    \\preformatted{   R> Sys.timezone()
    [1] "PST8PDT"
-   # Seleccionar datos y mostrarlos
+   # Selecting data and displaying it
    res <- dbGetQuery(con, selStr)
    R>     res[,1]
    [1] 1 2 3 4 5 6
@@ -357,9 +356,9 @@ la zona horaria de R y la zona horaria de la sesión de Oracle" para obtener inf
    [1] "2012-06-05 03:00:00 EDT" "2012-01-05 10:15:03 EST"
        "2012-01-05 03:00:00 EST" "2011-01-05 03:00:00 EST"
    [5] "2013-01-05 03:00:00 EST" "2020-01-05 03:00:00 EST"}
-  De la misma forma, \code{dbWriteTable} siempre confirma automáticamente una transacción actual, de la misma forma
-  que inserta los datos, es decir, actúa como una sentencia DDL, incluso aunque
-   agregue filas a una tabla ya existente.
+  De la misma forma, \code{dbWriteTable} siempre confirma automáticamente
+   una transacción actual, así como los datos que esta inserta,
+   es decir, actúa como una sentencia DDL, incluso aunque agregue filas a una tabla ya existente.
 }
 \value{
 \code{data.frame} en caso de \code{dbReadTable};
@@ -374,7 +373,7 @@ la zona horaria de R y la zona horaria de la sesión de Oracle" para obtener inf
   For the Oracle Database documentation see 
   \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
   For Datetime Data Types and Time Zone Support in Oracle see
-  \url{http://docs.oracle.com/cd/E14072_01/server.112/e10729/ch4datetime.htm}.
+  \url{http://docs.oracle.com/cd/E11882_01/server.112/e10729/ch4datetime.htm}.
 }
 \seealso{
   \code{\link{Oracle}},

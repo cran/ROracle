@@ -16,7 +16,7 @@
 \alias{dbColumnInfo,OraResult-method}
 \alias{dbHasCompleted,OraResult-method}
 \title{
-데이터베이스 인터페이스 메타 데이터
+데이터베이스 인터페이스 메타데이터
 }
 \description{
 이 메소드는 해당하는 일반 함수를 간단히 구현한
@@ -88,7 +88,7 @@ R 인터페이스에서 데이터베이스에 대한 일부 기능을
   객체 이름은 해당 SQL 문이 생성될 때 큰 따옴표로 묶이므로
   큰 따옴표를 포함하지 않아야 합니다.
   \\pkg{ROracle} 메소드 \code{dbGetInfo}은(는) 드라이버 객체에 대한 다음
-  세부 정보를 제공합니다.
+  세부정보를 제공합니다.
   \itemize{
     \item {\\$driverName} 드라이버 이름이 "Oracle (OCI)"입니다.
     \item {\\$driverVersion} 사용된 ROracle 드라이버의 버전입니다.
@@ -104,7 +104,7 @@ R 인터페이스에서 데이터베이스에 대한 일부 기능을
                           접속 객체의 \code{dbGetInfo}을(를) 참조하십시오.
   }
   \\pkg{ROracle} 메소드 \code{dbGetInfo}은(는) 접속 객체에 대한 다음
-  세부 정보를 제공합니다.
+  세부정보를 제공합니다.
   \itemize{
     \item {\\$username} 이 접속의 사용자 이름입니다.
     \item {\\$dbname} 사용된 접속 별칭 또는 접속 문자열입니다.
@@ -119,7 +119,7 @@ R 인터페이스에서 데이터베이스에 대한 일부 기능을
     \item {\\$results} 현재 열린 각 결과 집합에 대한 정보입니다. 자세한 내용은 결과 집합의
                       \code{dbGetInfo}을(를) 참조하십시오.
   }
-  \\pkg{ROracle} 메소드 \code{dbGetInfo}은(는) 결과 집합 객체에 대한 다음 세부 정보를
+  \\pkg{ROracle} 메소드 \code{dbGetInfo}은(는) 결과 집합 객체에 대한 다음 세부정보를
   제공합니다.
   \itemize{
     \item {\\$statement} 결과 집합 객체를 생성하는 데 사용되는 SQL 문입니다.
@@ -134,7 +134,7 @@ R 인터페이스에서 데이터베이스에 대한 일부 기능을
                      \code{dbColumnInfo}을(를) 참조하십시오.
   }
   \\pkg{ROracle} 메소드 \code{dbColumnInfo}은(는) 결과 집합의 각 열에 대한
-  다음 세부 정보를 제공합니다.
+  다음 세부정보를 제공합니다.
   \itemize{
     \item {\\$name} 열의 이름입니다.
     \item {\\$Sclass} Oracle RDBMS에서 반환된 데이터를 포함하는 객체의

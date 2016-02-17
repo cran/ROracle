@@ -2,16 +2,18 @@
 \docType{methods}
 \alias{dbSendQuery}
 \alias{dbGetQuery}
+\alias{oracleProc}
 \alias{dbClearResult}
 \alias{dbGetException}
 \alias{execute}
 \alias{dbSendQuery,OraConnection,character-method}
 \alias{dbGetQuery,OraConnection,character-method}
 \alias{dbClearResult,OraResult-method}
+\alias{oracleProc,OraConnection,character-method}
 \alias{dbGetException,OraConnection-method}
 \alias{execute,OraResult-method}
 \title{
-Exécuter une instruction sur une connexion de base de données donnée
+Exécuter une instruction sur une connexion de base de données spécifique
 }
 \description{
 Ces méthodes sont des implémentations directes des
@@ -22,6 +24,8 @@ Ces méthodes sont des implémentations directes des
 \S4method{dbSendQuery}{OraConnection,character}(conn, statement, data = NULL,
           prefetch = FALSE, bulk_read = 1000L, bulk_write = 1000L, ...)
 \S4method{dbGetQuery}{OraConnection,character}(conn, statement, data = NULL,
+          prefetch = FALSE, bulk_read = 1000L, bulk_write = 1000L, ...)
+\S4method{oracleProc}{OraConnection,character}(conn, statement, data = NULL, 
           prefetch = FALSE, bulk_read = 1000L, bulk_write = 1000L, ...)
 \S4method{dbClearResult}{OraResult}(res, ...)
 \S4method{dbGetException}{OraConnection}(conn, ...)
@@ -40,34 +44,36 @@ Vecteur de caractère de longueur 1 avec l'instruction SQL.
 Objet \code{OraResult}.
 }
   \item{data}{
-Elément data.frame indiquant les données de liaison
+Elément \code{data.frame} indiquant les données de liaison
 }
   \item{prefetch}{
-Valeur logique indiquant TRUE ou FALSE. Lorsque cette valeur est définie sur TRUE, ROracle utilise
-    les tampons de préextraction OCI pour extraire des données supplémentaires du serveur, économisant ainsi
-    la mémoire requise dans RODBI/ROOCI en attribuant un seul tampon de ligne pour extraire 
-    les données à partir d'OCI. L'utilisation de la préextraction génère un appel d'extraction pour chaque ligne. Par
-    défaut, la préextraction est définie sur FALSE et l'extraction par tableau est utilisée pour extraire les données à partir
-    du serveur.
+Valeur logique indiquant si ROracle utilise les tampons de préextraction ou une
+    extraction par tableau pour extraire des données du serveur. Si \code{TRUE}, ROracle 
+    utilise les tampons de préextraction OCI pour extraire des données supplémentaires du serveur, 
+    économisant ainsi la mémoire requise dans RODBI/ROOCI en allouant un seul tampon de ligne pour 
+    extraire les données à partir d'OCI. L'utilisation de la préextraction génère un appel d'extraction pour 
+    chaque ligne. Si \code{FALSE} (valeur par défaut), ROracle utilise l'extraction par tableau pour 
+    extraire les données.
 }
   \item{bulk_read}{
-Valeur entière indiquant le nombre de lignes à extraire simultanément. La
-    valeur par défaut est 1000L. Lorsque l'option de préextraction est sélectionnée, la mémoire est
-    allouée aux tampons de préextraction et OCI extrait ce nombre de lignes simultanément.
-    Lorsque la préextraction n'est pas utilisée (par défaut), la mémoire est allouée aux tampons définis
-    RODBI/ROOCI. La définition de cette valeur sur un nombre plus important se traduira par l'allocation de plus de mémoire
-    en fonction du nombre de colonnes dans la liste de sélection et des types
-    de colonnes. Pour une colonne de type caractère, les tampons définis sont attribués
-    à l'aide de la formule suivante : largeur maximale x largeur maximale NLS. Une application doit
-    ajuster cette valeur en fonction du résultat de requête, et une valeur plus importante sera bénéfique pour
-    les requêtes qui renvoient un résultat important. L'application peut régler cette valeur selon ses besoins.
+Valeur entière indiquant le nombre de lignes à extraire à la fois. La 
+    valeur par défaut est 1000L. Lorsque l'option de préextraction est sélectionnée, la mémoire 
+    est allouée aux tampons de préextraction et OCI extrait le nombre de lignes indiquée de manière 
+    simultanée. Lorsque la préextraction n'est pas utilisée, ce qui est le paramètre par défaut, la mémoire est 
+    allouée aux tampons définis RODBI/ROOCI. La définition de cette valeur sur un nombre plus important 
+    entraîne l'allocation de plus de mémoire en fonction du nombre de colonnes dans la liste et les types
+    de colonnes sélectionnés. Pour une colonne de type caractère, les tampons définis sont alloués
+    à l'aide de la formule suivante : largeur maximale fois largeur maximale NLS. Une application doit
+    ajuster cette valeur en fonction du résultat de requête. Une valeur plus importante est
+    bénéfique pour les requêtes qui renvoient un résultat important. L'application peut régler
+    cette valeur selon ses besoins.
 }
   \item{bulk_write}{
 Valeur entière indiquant le nombre de lignes à écrire simultanément.
-    La valeur par défaut est 1000L. Lorsque la valeur bulk_write est donnée
-    dans l'argument, la mémoire est allouée pour les tampons et OCI écrit ce nombre
-    de lignes de manière simultanée. Lorsque l'argument bulk_write n'est pas spécifié, la valeur par défaut
-    1000 est utilisée pour allouer la mémoire aux tampons de liaison. Si cet argument est défini
+    La valeur par défaut est 1000L. Lorsque la valeur bulk_write est spécifiée,
+    la mémoire est allouée pour les tampons et OCI écrit ce nombre de lignes
+    de manière simultanée. Lorsque l'argument bulk_write n'est pas spécifié, la valeur par défaut
+    est utilisée pour allouer la mémoire aux tampons de liaison. Si \code{bulk_write} est défini
     sur une valeur élevée, davantage de mémoire est allouée en fonction du nombre de
     colonnes dans la liste d'insertion et des types de colonne.
 }
@@ -77,25 +83,29 @@ Inutilisé actuellement.
 }
 \value{
 \item{dbSendQuery}{
-    Objet \code{OraResult} dont la classe étend \code{DBIResult}. 
-    Cet objet est utilisé pour extraire des données de la base de données à l'aide de la fonction 
+    Objet \code{OraResult} dont la classe étend \code{DBIResult}. Cet objet est utilisé 
+    pour extraire des données d'une base de données, à l'aide de la fonction 
     \code{fetch}.
   }
 }
 \section{Side Effects}{
   \describe{
     \item{dbGetQuery}{
-      Query statement is executed and data has fetched from database.
+      Query statement is executed and data is fetched from database.
     }
     \item{dbSendQuery}{
-      Query statement is executed, but note that data needs to fetch through
+      Query statement is executed, but data needs to be fetched through
       calls to \code{\link[DBI]{fetch}}.
     }
+    \item{oracleProc}{
+      PL/SQL stored procedure or function query statement is executed and 
+      result is returned.
+    }
     \item{dbClearResult}{
-      Resources acquired by result set has free.
+      Resources acquired by the result set are freed.
     }
     \item{dbGetException}{
-      Error information retrieved and then cleaned from driver.
+      Error information is retrieved and then cleaned from the driver.
     }
     \item{execute}{
       Query statement is executed.
@@ -106,11 +116,16 @@ Inutilisé actuellement.
 \\describe{
     \item{dbGetQuery}{
       Cette fonction exécute une instruction de requête et extrait les données de résultat
-      de la base de données.
+      de la base de données. Elle ne doit pas être utilisée pour l'appel de requêtes PL/SQL.
     }
     \item{dbSendQuery}{
       Cette fonction exécute une instruction de requête et renvoie un ensemble de résultats
-      à l'application, qui peut désormais effectuer des opérations sur cet ensemble de résultats.
+      à l'application. L'application peut ensuite effectuer des opérations sur l'ensemble de résultats.
+      Elle ne doit pas être utilisée pour l'appel de requêtes PL/SQL.
+    }
+     \item{oracleProc}{
+      Cette fonction exécute une procédure stockée PL/SQL ou une instruction de requête 
+      de fonction et renvoie le résultat.
     }
     \item{dbClearResult}{
       Cette fonction libère les ressources utilisées par l'ensemble de résultats.
@@ -124,7 +139,7 @@ Inutilisé actuellement.
   }
 }
 \section{References}{
-  For the Oracle Database documentaion see 
+  For the Oracle Database documentation see 
   \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
 }
 \seealso{
@@ -144,18 +159,25 @@ Inutilisé actuellement.
                        data = data.frame(deptno = 10))
     data <- fetch(res, n = -1)
     res2 <- dbSendQuery(con, "select * from emp where deptno = :1",
-                        data1 = data.frame(deptno = 10), prefetch=TRUE,
+                        data1 <- data.frame(deptno = 10), prefetch=TRUE,
                         bulk_read=2L)
     data1 <- fetch(res2, n = -1)
+    data1
+
     res3 <- dbSendQuery(con, "select * from emp where deptno = :1",
-                        data2 = data.frame(deptno = 10), bulk_read=10L)
+                        data2 <- data.frame(deptno = 10), bulk_read=10L)
     data2 <- fetch(res3, n = -1)
+    data2
+
     res4 <- dbSendQuery(con, "select * from emp where deptno = :1",
-                        data3 = data.frame(deptno = 10), bulk_write=10L)
+                        data3 <- data.frame(deptno = 10), bulk_write=10L)
     data3 <- fetch(res4, n = -1)
+    data3
+
     res5 <- dbSendQuery(con, "select * from emp where ename = :1",
-                        data4 = data.frame(ename = 'SMITH')) 
+                        data4 <- data.frame(ename = 'SMITH')) 
     data4 <- fetch(res5, n = -1)
+    data4
   }
 }
 \keyword{methods}

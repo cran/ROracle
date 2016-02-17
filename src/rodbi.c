@@ -1,4 +1,4 @@
-/* Copyright (c) 2011, 2015, Oracle and/or its affiliates. 
+/* Copyright (c) 2011, 2016, Oracle and/or its affiliates. 
 All rights reserved.*/
 
 /*
@@ -70,6 +70,8 @@ All rights reserved.*/
    NOTES
 
    MODIFIED   (MM/DD/YY)
+   rpingte     08/05/15 - 21128853: performance improvements for datetime types
+   ssjaiswa    08/03/15 - update version to 1.2-2
    rpingte     03/31/15 - add ora.attributes
    rpingte     03/25/15 - add NCHAR, NVARCHAR2 and NCLOB
    rpingte     01/26/15 - convert UCS2 to UTF8 for NCHAR in TimesTen
@@ -243,7 +245,7 @@ while (0)
 #define RODBI_DRV_EXTPROC    "Oracle (extproc)"
 #define RODBI_DRV_MAJOR       1
 #define RODBI_DRV_MINOR       2
-#define RODBI_DRV_UPDATE      1
+#define RODBI_DRV_UPDATE      2
 
 /* RODBI R classes */
 #define RODBI_R_LOG           1                                  /* LOGICAL */
@@ -261,7 +263,7 @@ while (0)
 #define RODBI_R_NUM_NM       "numeric"
 #define RODBI_R_CHR_NM       "character"
 #define RODBI_R_LST_NM       "list"
-#define RODBI_R_DAT_NM       "datetime"
+#define RODBI_R_DAT_NM       "POSIXct"
 #define RODBI_R_DIF_NM       "difftime"
 #define RODBI_R_RAW_NM       "raw"
   
@@ -411,7 +413,7 @@ const rodbiITyp rodbiITypTab[] =
   {RODBI_NUMBER_NM,   RODBI_R_NUM, SQLT_FLT,          sizeof(double)},
   {RODBI_INTEGER_NM,  RODBI_R_INT, SQLT_INT,          sizeof(int)},
   {RODBI_LONG_NM,     0,           0,                 0},
-  {RODBI_DATE_NM,     RODBI_R_DAT, SQLT_TIMESTAMP,    sizeof(OCIDateTime *)}, 
+  {RODBI_DATE_NM,     RODBI_R_DAT, SQLT_TIMESTAMP_LTZ,sizeof(OCIDateTime *)}, 
   {RODBI_RAW_NM,      RODBI_R_RAW, SQLT_BIN,          0}, 
   {RODBI_LONG_RAW_NM, 0,           0,                 0},
   {RODBI_ROWID_NM,    RODBI_R_CHR, SQLT_STR,          0}, 
@@ -423,7 +425,7 @@ const rodbiITyp rodbiITypTab[] =
   {RODBI_CLOB_NM,     RODBI_R_CHR, SQLT_CLOB,         sizeof(OCILobLocator *)},
   {RODBI_BLOB_NM,     RODBI_R_RAW, SQLT_BLOB,         sizeof(OCILobLocator *)},
   {RODBI_BFILE_NM,    RODBI_R_RAW, SQLT_BFILE,        sizeof(OCILobLocator *)},
-  {RODBI_TIME_NM,     RODBI_R_DAT, SQLT_TIMESTAMP,    sizeof(OCIDateTime *)}, 
+  {RODBI_TIME_NM,     RODBI_R_DAT, SQLT_TIMESTAMP_LTZ,sizeof(OCIDateTime *)}, 
   {RODBI_TIME_TZ_NM,  RODBI_R_DAT, SQLT_TIMESTAMP_LTZ,sizeof(OCIDateTime *)}, 
   {RODBI_INTER_YM_NM, RODBI_R_CHR, SQLT_STR,          0},
   {RODBI_INTER_DS_NM, RODBI_R_DIF, SQLT_INTERVAL_DS,  sizeof(OCIInterval *)},
@@ -567,7 +569,7 @@ static const rodbiRTyp rodbiRTypTab[] =
   {RODBI_R_NUM_NM, REALSXP},
   {RODBI_R_CHR_NM, STRSXP},
   {RODBI_R_LST_NM, VECSXP},
-  {RODBI_R_DAT_NM, STRSXP},
+  {RODBI_R_DAT_NM, REALSXP},
   {RODBI_R_DIF_NM, REALSXP},
   {RODBI_R_RAW_NM, VECSXP}
 };
@@ -2252,7 +2254,15 @@ static void rodbiResBind(rodbiRes *res, SEXP data, int bulk_write,
     /* set bind parameters */
     if (isReal(vec))
     {
-      if (Rf_inherits(vec, RODBI_R_DIF_NM) &&
+      if (Rf_inherits(vec, RODBI_R_DAT_NM))
+      {
+        if (res->con_rodbiRes->con_rodbiCon.timesten_rociCon)
+          (res->res_rodbiRes).btyp_roociRes[bid] = SQLT_TIMESTAMP;
+        else
+          (res->res_rodbiRes).btyp_roociRes[bid] = SQLT_TIMESTAMP_LTZ;
+        (res->res_rodbiRes).bsiz_roociRes[bid] = (ub2)sizeof(OCIDateTime *);
+      }
+      else if (Rf_inherits(vec, RODBI_R_DIF_NM) &&
           /* TimesTen binds difftime as SQLT_BDOUBLE */
           !res->con_rodbiRes->con_rodbiCon.timesten_rociCon)
       {
@@ -2273,50 +2283,40 @@ static void rodbiResBind(rodbiRes *res, SEXP data, int bulk_write,
     else if (isString(vec))
     {
       SEXP class = Rf_getAttrib(vec, R_ClassSymbol);
+      int    len = LENGTH(VECTOR_ELT(data, 0));
+      int    i;
+      sb8    bndsz = 0;
 
-      if (isNull(class) ||
-          (strcmp(CHAR(STRING_ELT(class, 0)), RODBI_R_DAT_NM)))
+      /* find the max len of the bind data */
+      for (i=0; i<len; i++)
       {
-        int    len = LENGTH(VECTOR_ELT(data, 0));
-        int    i;
-        sb8    bndsz = 0;
+        size_t ellen = strlen(CHAR(STRING_ELT(vec, i)));
+        bndsz = (bndsz < ellen) ? ellen : bndsz;
+      }
 
-        /* find the max len of the bind data */
-        for (i=0; i<len; i++)
-        {
-          size_t ellen = strlen(CHAR(STRING_ELT(vec, i)));
-          bndsz = (bndsz < ellen) ? ellen : bndsz;
-        }
+      if (bndsz > SB4MAXVAL)
+      {
+        sprintf(err_buf, RODBI_ERR_BIND_VAL_TOOBIG, bndsz);
+        RODBI_ERROR_RES(err_buf, free_res);
+      }
 
-        if (bndsz > SB4MAXVAL)
-        {
-          sprintf(err_buf, RODBI_ERR_BIND_VAL_TOOBIG, bndsz);
-          RODBI_ERROR_RES(err_buf, free_res);
-        }
-
-        /* Limitation of OCIBindByPos API, where alen is ub2 for array binds */
-        /* For strings larger than UB2MAXVAL - NULL terminator, use SQLT_LVC */
-        if (bndsz > (UB2MAXVAL -
-                      res->con_rodbiRes->con_rodbiCon.nlsmaxwidth_roociCon))
-        {
-          res->res_rodbiRes.btyp_roociRes[bid] = SQLT_LVC;
-          bndsz += sizeof(sb4);
-        }
-        else
-        {
-          bndsz += res->con_rodbiRes->con_rodbiCon.nlsmaxwidth_roociCon;
-          res->res_rodbiRes.btyp_roociRes[bid] = SQLT_STR;
-        }
-
-        /* align buffer to even boundary */
-        bndsz += (sizeof(char *) - (bndsz % sizeof(char *)));
-        res->res_rodbiRes.bsiz_roociRes[bid] = (sb4)bndsz;
+      /* Limitation of OCIBindByPos API, where alen is ub2 for array binds */
+      /* For strings larger than UB2MAXVAL - NULL terminator, use SQLT_LVC */
+      if (bndsz > (UB2MAXVAL -
+                    res->con_rodbiRes->con_rodbiCon.nlsmaxwidth_roociCon))
+      {
+        res->res_rodbiRes.btyp_roociRes[bid] = SQLT_LVC;
+        bndsz += sizeof(sb4);
       }
       else
       {
-        res->res_rodbiRes.btyp_roociRes[bid] = SQLT_TIMESTAMP_LTZ;
-        res->res_rodbiRes.bsiz_roociRes[bid] = (sb4)sizeof(OCIDateTime *);
+        bndsz += res->con_rodbiRes->con_rodbiCon.nlsmaxwidth_roociCon;
+        res->res_rodbiRes.btyp_roociRes[bid] = SQLT_STR;
       }
+
+      /* align buffer to even boundary */
+      bndsz += (sizeof(char *) - (bndsz % sizeof(char *)));
+      res->res_rodbiRes.bsiz_roociRes[bid] = (sb4)bndsz;
     }
     else if (IS_LIST(vec) && IS_RAW(VECTOR_ELT(vec, 0)))
     {
@@ -2377,12 +2377,19 @@ static void rodbiResBind(rodbiRes *res, SEXP data, int bulk_write,
                       roociAllocDescBindBuf(&(res->res_rodbiRes), tsdt, bid,
                       (ub4)OCI_DTYPE_TIMESTAMP_LTZ));
     } 
+    else if ((res->res_rodbiRes).btyp_roociRes[bid] == SQLT_TIMESTAMP)
+    {
+      void **tsdt = (void **)((res->res_rodbiRes).bdat_roociRes[bid]);
+      RODBI_CHECK_RES(res, __FUNCTION__, 2, free_res,
+                      roociAllocDescBindBuf(&(res->res_rodbiRes), tsdt, bid,
+                      (ub4)OCI_DTYPE_TIMESTAMP));
+    } 
     else if (((res->res_rodbiRes).btyp_roociRes[bid] == SQLT_INTERVAL_DS) &&
              /* TimesTen binds difftime as SQLT_BDOUBLE */
              !res->con_rodbiRes->con_rodbiCon.timesten_rociCon)
     {
       void **invl = (void **)((res->res_rodbiRes).bdat_roociRes[bid]);
-      RODBI_CHECK_RES(res, __FUNCTION__, 1, free_res,
+      RODBI_CHECK_RES(res, __FUNCTION__, 3, free_res,
                       roociAllocDescBindBuf(&(res->res_rodbiRes), invl, bid,
                       OCI_DTYPE_INTERVAL_DS));
     } 
@@ -2404,14 +2411,7 @@ static void rodbiResBindCopy(rodbiRes *res, SEXP data, int beg, int end,
     sb2     *ind  = (res->res_rodbiRes).bind_roociRes[bid];
     ub2     *alen  = (res->res_rodbiRes).alen_roociRes[bid];
     ub1      form_of_use = 0;
-    boolean  date_time;
     SEXP     class = Rf_getAttrib(elem, R_ClassSymbol);
-
-    if (isNull(class) ||
-        (strcmp(CHAR(STRING_ELT(class, 0)), RODBI_R_DAT_NM)))
-      date_time = FALSE;
-    else
-      date_time = TRUE;
 
     /* copy vector */
     for (i = beg; i < end; i++)
@@ -2426,7 +2426,15 @@ static void rodbiResBindCopy(rodbiRes *res, SEXP data, int beg, int end,
           *ind = OCI_IND_NULL;
         else
         {
-          if ((res->res_rodbiRes).btyp_roociRes[bid] == SQLT_INTERVAL_DS)
+          if (((res->res_rodbiRes).btyp_roociRes[bid] == SQLT_TIMESTAMP_LTZ) ||
+              ((res->res_rodbiRes).btyp_roociRes[bid] == SQLT_TIMESTAMP))
+          {
+            RODBI_CHECK_RES(res, __FUNCTION__, 1, free_res,
+                            roociWriteDateTimeData(&(res->res_rodbiRes),
+                                                   *(OCIDateTime **)dat,
+                                                   REAL(elem)[i]));
+          }
+          else if ((res->res_rodbiRes).btyp_roociRes[bid] == SQLT_INTERVAL_DS)
             RODBI_CHECK_RES(res, __FUNCTION__, 1, free_res,
                             roociWriteDiffTimeData(&(res->res_rodbiRes),
                                                    *(OCIInterval **)dat,
@@ -2459,13 +2467,7 @@ static void rodbiResBindCopy(rodbiRes *res, SEXP data, int beg, int end,
           size_t      len = (sb4)strlen(str);
           cetype_t    enc;
 
-          if (date_time)
-          {
-            RODBI_CHECK_RES(res, __FUNCTION__, 1, free_res,
-                            roociWriteDateTimeData(&(res->res_rodbiRes),
-                                             *(OCIDateTime **)dat, str, len));
-          }
-          else if (res->res_rodbiRes.btyp_roociRes[bid] == SQLT_LVC)
+          if (res->res_rodbiRes.btyp_roociRes[bid] == SQLT_LVC)
           {
             rodbild    *pdat = (rodbild *)dat;
             pdat->len_rodbild = len;
@@ -2632,8 +2634,6 @@ static void rodbiResAccum(rodbiRes *res)
   int         lcur;
   int         cid  = 0;
   double      tstm;
-  char        tstm_str[ROOCI_DATE_TIME_STR_LEN];
-  ub4         tstm_str_len;
   char       *tempbuf= (char *)0;
   size_t      tempbuflen = 0;
 
@@ -2671,11 +2671,11 @@ static void rodbiResAccum(rodbiRes *res)
 
         case RODBI_R_NUM:
         case RODBI_R_DIF:
+        case RODBI_R_DAT:
           REAL(vec)[lcur] = NA_REAL;
           break;
 
         case RODBI_R_CHR:
-        case RODBI_R_DAT:
           SET_STRING_ELT(vec, lcur, NA_STRING);
           break;
 
@@ -2786,13 +2786,11 @@ static void rodbiResAccum(rodbiRes *res)
 
         case SQLT_TIMESTAMP:
         case SQLT_TIMESTAMP_LTZ:
-          tstm_str_len = sizeof(tstm_str);
           RODBI_CHECK_RES(res, __FUNCTION__, 5, FALSE,
-              roociReadDateTimeData(&(res->res_rodbiRes),
-                *(OCIDateTime **)dat, &tstm_str[0], &tstm_str_len,
-                (res->res_rodbiRes.typ_roociRes[cid] == RODBI_DATE) ? 1 : 0));
-          SET_STRING_ELT(vec, lcur, Rf_mkCharLenCE((char *)tstm_str,
-                                                   tstm_str_len, enc));
+             roociReadDateTimeData(&(res->res_rodbiRes),
+                                   *(OCIDateTime **)dat, &tstm,
+                 (res->res_rodbiRes.typ_roociRes[cid] == RODBI_DATE) ? 1 : 0));
+          REAL(vec)[lcur] = tstm;
           break;
 
         case SQLT_INTERVAL_DS:
@@ -2831,8 +2829,6 @@ static void rodbiResAccumInCache(rodbiRes *res)
   int         lcur;
   int         cid  = 0;
   double      tstm;
-  char        tstm_str[ROOCI_DATE_TIME_STR_LEN];
-  ub4         tstm_str_len;
 
   /* accumulate data */
   for (cid = 0; cid < (res->res_rodbiRes).ncol_roociRes; cid++)
@@ -2863,13 +2859,13 @@ static void rodbiResAccumInCache(rodbiRes *res)
           break;
 
         case RODBI_R_NUM:
+        case RODBI_R_DAT:
         case RODBI_R_DIF:
           RODBI_ADD_FIXED_DATA_ITEM(hdl, double, NA_REAL);
           break;
 
         case RODBI_R_CHR:
         case RODBI_R_RAW:
-        case RODBI_R_DAT:
           RODBI_ADD_VAR_DATA_ITEM(hdl, RODBI_VCOL_FLG_NULL, (void *)0, 0);
           break;
 
@@ -2905,13 +2901,11 @@ static void rodbiResAccumInCache(rodbiRes *res)
 
         case SQLT_TIMESTAMP:
         case SQLT_TIMESTAMP_LTZ:
-          tstm_str_len = sizeof(tstm_str);
-          RODBI_CHECK_RES(res, __FUNCTION__, 4, FALSE,
+          RODBI_CHECK_RES(res, __FUNCTION__, 5, FALSE,
              roociReadDateTimeData(&(res->res_rodbiRes),
-                 *(OCIDateTime **)dat, &tstm_str[0], &tstm_str_len,
+                                   *(OCIDateTime **)dat, &tstm,
                  (res->res_rodbiRes.typ_roociRes[cid] == RODBI_DATE) ? 1 : 0));
-          RODBI_ADD_VAR_DATA_ITEM(hdl, RODBI_VCOL_FLG_NOTNULL,
-                                  (void *)tstm_str, tstm_str_len);
+          RODBI_ADD_FIXED_DATA_ITEM(hdl, double, tstm);
           break;
 
         case SQLT_INTERVAL_DS:
@@ -3022,12 +3016,12 @@ static void rodbiResPopulate(rodbiRes *res)
 
         case SQLT_BDOUBLE:
         case SQLT_FLT:
+        case SQLT_TIMESTAMP:
+        case SQLT_TIMESTAMP_LTZ:
         case SQLT_INTERVAL_DS:
             RODBI_GET_FIXED_DATA_ITEM(hdl, double, &REAL(vec)[lcur]);
           break;
 
-        case SQLT_TIMESTAMP:
-        case SQLT_TIMESTAMP_LTZ:
         case SQLT_STR:
           {
             ub1     *data;
@@ -3157,8 +3151,9 @@ static void rodbiResDataFrame(rodbiRes *res)
   {
     if (RODBI_TYPE_R((res->res_rodbiRes).typ_roociRes[cid]) == RODBI_R_DAT)
     {
-      PROTECT(cla = allocVector(STRSXP, 1)); 
+      PROTECT(cla = allocVector(STRSXP, 2)); 
       SET_STRING_ELT(cla, 0, mkChar(RODBI_R_DAT_NM));
+      SET_STRING_ELT(cla, 1, mkChar("POSIXt"));
       setAttrib(VECTOR_ELT(res->list_rodbiRes, cid), R_ClassSymbol, cla);
       UNPROTECT(1);
     }

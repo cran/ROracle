@@ -1,4 +1,4 @@
-/* Copyright (c) 2011, 2015, Oracle and/or its affiliates. 
+/* Copyright (c) 2011, 2016, Oracle and/or its affiliates. 
 All rights reserved.*/
 
 /*
@@ -11,6 +11,7 @@ All rights reserved.*/
    NOTES
 
    MODIFIED   (MM/DD/YY)
+   rpingte     08/05/15 - 21128853: performance improvements for datetime types
    rpingte     03/25/15 - add NCHAR, NVARCHAR2 and NCLOB
    rpingte     01/29/15 - add unicode_as_utf8
    rpingte     12/04/14 - NLS support
@@ -586,6 +587,100 @@ sword roociGetConInfo(roociCon *pcon, text **user, ub4 *userLen,
   return rc;
 
 } /* end of roociGetConInfo */
+
+/* --------------------- roociAllocateDateTimeDescriptors ------------------ */
+static sword roociAllocateDateTimeDescriptors(roociRes *pres)
+{
+  sword     rc    = OCI_SUCCESS;
+  roociCon *pcon  = pres->con_roociRes;
+  roociCtx *pctx  = pcon->ctx_roociCon;
+  void     *temp  = NULL;      /* pointer to remove strict-aliasing warning */
+
+  /* allocate POSIXct beginning datetime descriptor and interval descriptor */
+  rc = OCIDescriptorAlloc(pctx->env_roociCtx, (void **)&temp,
+                          pcon->timesten_rociCon ? OCI_DTYPE_TIMESTAMP :
+                                                   OCI_DTYPE_TIMESTAMP_LTZ,
+                          0, NULL);
+  if (rc == OCI_ERROR)
+    return rc;
+
+  pres->epoch_roociRes = temp;
+    
+  /* construct the beginning of 1970 (in the UTC timezone) */
+  rc = OCIDateTimeConstruct(pcon->usr_roociCon, pcon->err_roociCon,
+                            pres->epoch_roociRes, 1970, 1, 1, 0, 0, 0, 0,
+                            (OraText*)"+00:00", 6);
+  if (rc == OCI_ERROR) 
+  {
+    OCIDescriptorFree(pres->epoch_roociRes,
+                      pcon->timesten_rociCon ? OCI_DTYPE_TIMESTAMP :
+                                               OCI_DTYPE_TIMESTAMP_LTZ);
+    pres->epoch_roociRes = NULL;
+    return rc;
+  }
+
+  temp = NULL;
+  rc = OCIDescriptorAlloc(pctx->env_roociCtx, (void **)&temp,
+                          OCI_DTYPE_INTERVAL_DS, 0, NULL);
+  if (rc == OCI_ERROR) 
+  {
+    OCIDescriptorFree(pres->epoch_roociRes,
+                      pcon->timesten_rociCon ? OCI_DTYPE_TIMESTAMP :
+                                               OCI_DTYPE_TIMESTAMP_LTZ);
+    pres->epoch_roociRes = NULL;
+    return rc;
+  }
+
+  pres->diff_roociRes = temp;
+
+  if (pcon->timesten_rociCon)
+  {
+    sb1          tzhr = 0;
+    sb1          tzmm = 0;
+    OCIDateTime *systime;
+
+    temp  = NULL;
+    rc = OCIDescriptorAlloc(pctx->env_roociCtx, (void **)&temp,
+                           OCI_DTYPE_TIMESTAMP_TZ, 0, NULL);
+    if (rc == OCI_SUCCESS)
+    {
+      systime = temp;
+
+      /* get the current datetime containing the OCI environment's timezone */
+      rc = OCIDateTimeSysTimeStamp(pctx->env_roociCtx, pcon->err_roociCon,
+                                   systime);
+      if (rc == OCI_ERROR)
+        OCIDescriptorFree (systime, OCI_DTYPE_TIMESTAMP_TZ);
+      else
+      {
+        /* get the offsets for the OCI environment's timezone */
+        rc = OCIDateTimeGetTimeZoneOffset(pctx->env_roociCtx, 
+                                          pcon->err_roociCon,
+                                          systime, &tzhr, &tzmm);
+        OCIDescriptorFree(systime, OCI_DTYPE_TIMESTAMP_TZ);
+        if (rc == OCI_SUCCESS)
+          /* this may be a positive or a negative value depending on 
+           * local time */
+          pcon->secs_UTC_roociCon = 
+                                ((double)tzhr * 3600.0) + ((double)tzmm * 60.0);
+      }
+    }
+  }
+
+  if (rc == OCI_ERROR) 
+  {
+    OCIDescriptorFree(pres->epoch_roociRes,
+                      pcon->timesten_rociCon ? OCI_DTYPE_TIMESTAMP :
+                                               OCI_DTYPE_TIMESTAMP_LTZ);
+    pres->epoch_roociRes = NULL;
+    OCIDescriptorFree(pres->diff_roociRes, OCI_DTYPE_INTERVAL_DS);
+    pres->diff_roociRes = NULL;
+    return rc;
+  }
+
+  return rc;
+} /* end of roociAllocateDateTimeDescriptors */
+
 
 /* -------------------------- roociInitializeRes -------------------------- */
 
@@ -1432,28 +1527,92 @@ sword roociReadBLOBData(roociRes *pres, int *lob_len, int rowpos, int cid)
 
 /* ------------------------- roociReadDateTimeData ------------------------ */
 
-sword roociReadDateTimeData(roociRes *pres, OCIDateTime *tstm,
-                            char *date_time, ub4 *date_time_len,
+sword roociReadDateTimeData(roociRes *pres, OCIDateTime *tstm, double *date,
                             boolean isDate)
 {
-  return (OCIDateTimeToText(pres->con_roociRes->usr_roociCon,
-                            pres->con_roociRes->err_roociCon,
-                            (const OCIDateTime *)tstm,
-                            (OraText*)"YYYY-MM-DD HH24:MI:SS.FF",
-                            24, (ub1)(isDate ? 0 : 9), (OraText*)0, 0,
-                            date_time_len, (OraText *)date_time));
+  sword          rc = OCI_ERROR;
+  roociCon      *pcon = pres->con_roociRes;
+  roociCtx      *pctx = pcon->ctx_roociCon;
+  sb4            dy = 0;
+  sb4            hr = 0;
+  sb4            mm = 0;
+  sb4            ss = 0;
+  sb4            fsec = 0;
+
+  if (!pres->epoch_roociRes)
+  {
+    rc = roociAllocateDateTimeDescriptors(pres);
+    if (rc == OCI_ERROR)
+      return rc;
+  }
+
+  /* compute the difference from the epoch */
+  rc = OCIDateTimeSubtract(pres->con_roociRes->usr_roociCon,
+                           pcon->err_roociCon, tstm, pres->epoch_roociRes,
+                           pres->diff_roociRes);
+  if (rc == OCI_ERROR)
+    return rc;
+
+  /* extract interval components */
+  rc = OCIIntervalGetDaySecond(pres->con_roociRes->usr_roociCon, 
+                               pcon->err_roociCon, &dy,
+                               &hr, &mm, &ss, &fsec, pres->diff_roociRes);
+
+  if (rc == OCI_ERROR)
+    return rc;
+
+  /* number of seconds since the beginning of 1970 in UTC timezone */
+  ROOCI_SECONDS_FROM_DAYS(date, dy, hr, mm, ss, 0);
+
+  if (pcon->timesten_rociCon)
+    *date -= pcon->secs_UTC_roociCon;
+
+  if (!isDate)
+    *date += ((double)fsec)/1e9;
+
+  return rc;
 } /* end of roociReadDateTimeData */
 
 /* ------------------------- roociWriteDateTimeData ------------------------ */
 
-sword roociWriteDateTimeData(roociRes *pres, OCIDateTime *tstm,
-                             const char *date_time, size_t date_time_len)
+sword roociWriteDateTimeData(roociRes *pres, OCIDateTime *tstm, double date)
 {
-  return (OCIDateTimeFromText(pres->con_roociRes->usr_roociCon,
-                   pres->con_roociRes->err_roociCon,
-                   (const OraText *)date_time, date_time_len,
-                   (const OraText *)"YYYY-MM-DD HH24:MI:SS.FF", 24,
-                   (OraText *)0, 0, tstm));
+  sword          rc = OCI_ERROR;
+  roociCon      *pcon = pres->con_roociRes;
+  roociCtx      *pctx = pcon->ctx_roociCon;
+  sb4            dy = 0;
+  sb4            hr = 0;
+  sb4            mm = 0;
+  sb4            ss = 0;
+  sb4            fsec = 0; 
+
+  if (!pres->epoch_roociRes)
+  {
+    rc = roociAllocateDateTimeDescriptors(pres);
+
+    if (rc == OCI_ERROR)
+      return rc;
+  }
+
+  if (pcon->timesten_rociCon)
+    date += pcon->secs_UTC_roociCon;
+
+  /* construct, day, hours, sec and fractional sec from date */
+  ROOCI_DAYS_FROM_SECONDS(date, dy, hr, mm, ss, fsec);
+
+  /* set interval components */
+  rc = OCIIntervalSetDaySecond(pres->con_roociRes->usr_roociCon, 
+                               pcon->err_roociCon,
+                               dy, hr, mm, ss, fsec, pres->diff_roociRes);
+  if (rc == OCI_ERROR)
+    return rc;
+
+  /* compute the date time from epoch */
+  rc = OCIDateTimeIntervalAdd(pres->con_roociRes->usr_roociCon, 
+                              pcon->err_roociCon,
+                              pres->epoch_roociRes, pres->diff_roociRes,
+                              tstm);
+  return rc;
 } /* end of roociWriteDateTimeData */
 
 /* ------------------------- roociReadDiffTimeData ------------------------ */
@@ -1708,6 +1867,16 @@ sword roociResFree(roociRes *pres)
   {
     ROOCI_MEM_FREE(pres->lobbuf_roociRes);
   }
+
+  /* free epoch descriptor */
+  if (pres->epoch_roociRes)
+    OCIDescriptorFree(pres->epoch_roociRes,
+                      pcon->timesten_rociCon ? OCI_DTYPE_TIMESTAMP :
+                                               OCI_DTYPE_TIMESTAMP_LTZ);
+
+  /* free interval descriptor */
+  if (pres->diff_roociRes)
+    OCIDescriptorFree(pres->diff_roociRes, OCI_DTYPE_INTERVAL_DS);
 
   /* release the statement */
   if (pres->stm_roociRes)

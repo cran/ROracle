@@ -65,9 +65,9 @@ Um valor inteiro que indica o número de linhas a serem extraídas por vez. O
     define buffers. A definição dessa opção para um valor grande resultará em mais memória
     alocada com base no número de colunas na lista de seleção e nos tipos
     de colunas. Para uma coluna de caracteres de tipo, os buffers de definição serão alocados
-    usando a largura máxima vezes a largura máxima de NLS. As aplicações devem
+    usando a largura máxima vezes a largura máxima de NLS. Os aplicativos devem
     ajustar esse valor com base no resultado da consulta e um valor maior beneficiará
-    as consultas que retornam um resultado maior. Uma aplicação pode ajustar esse valor conforme
+    as consultas que retornam um resultado maior. Um aplicativo pode ajustar esse valor conforme
     necessário.
 }
   \item{bulk_write}{

@@ -30,7 +30,7 @@ Cualquier otro argumento que transferir al controlador \code{drvName}.
     función \code{dbConnect}, de uno o más motores de Oracle Database.
   }
   \item{dbUnloadDriver}{
-    libera todos los recursos ocupados por el objeto de controlador.
+    Libera todos los recursos ocupados por el objeto de controlador.
   }
 }
 \section{Side Effects}{
@@ -93,14 +93,38 @@ Cualquier otro argumento que transferir al controlador \code{drvName}.
 }
 \examples{
   \dontrun{
+    # first load the library
+    library("ROracle")
+
     # create an Oracle instance
     drv <- dbDriver("Oracle")
 
     con <- dbConnect(drv, "scott", "tiger")
+    dbListTables(con)
+
+    # fetch all results from the emp table
+    res <- dbGetQuery(con, "select * from emp")
+
+    # dbSendQuery can be used to fetch data in chunks 
+    # as well as all of data at once
     res <- dbSendQuery(con, "select * from emp")
-    fetch(res, n = 5)
+
+    # fetch all results
     fetch(res)
+
+    # or a chunk at a time
+    fetch(res, n = 5)
+
+    # describing the schema for the emp table using dbGetInfo
+    dbGetInfo(res, what = 'fields')
+
+    # clear the result
     dbClearResult(res)
+
+    # disconnect from the database
+    dbDisconnect(con)
+
+    # free the driver object
     dbUnloadDriver(drv)
   }
 }

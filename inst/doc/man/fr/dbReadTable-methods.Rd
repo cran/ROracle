@@ -16,15 +16,14 @@
 Fonctions simplifiées de manipulation des tables SGBD
 }
 \description{
-Ces fonctions imitent leurs équivalents R 
+Ces fonctions imitent leurs équivalents R, sauf qu'elles génèrent 
+  un code exécuté à distance dans un moteur de base de données :
   \code{get},
   \code{assign},
   \code{exists}, 
   \code{remove},
   \code{objects} et
-  \code{names},
-  sauf qu'elles génèrent un code exécuté à distance dans un moteur
-  de base de données.
+  \code{names}.
 }
 \usage{
 \S4method{dbReadTable}{OraConnection,character}(conn, name, schema = NULL, row.names = NULL, ...)
@@ -124,29 +123,29 @@ inutilisé actuellement.
 
 
 \details{
-Les noms de table, de schéma et de colonne respectent les majuscules/minuscules. Par exemple, les noms
+Les noms de table, de schéma et de colonne respectent les majuscules/minuscules, par exemple, les noms
   de table \code{ABC} et \code{abc} ne sont pas identiques. Les noms d'objet de schéma
-  de base de données ne doivent pas comporter de guillemets car ils sont délimités par
+  de base de données ne doivent pas comprendre de guillemets car ils sont délimités par
   des guillemets lorsque l'instruction SQL correspondante est générée.
-   Les attributs suivants sont utilisés pour le mapping correct des colonnes BLOB, CLOB, NCLOB, NCHAR, VARCHAR2,
+   Les attributs suivants sont utilisés pour le mapping des colonnes BLOB, CLOB, NCLOB, NCHAR, VARCHAR2,
    NVARCHAR2, CHAR, TIMESTAMP WITH TIME ZONE et TIMESTAMP WITH LOCAL TIME ZONE
    dans \code{dbWriteTable} :
    1) Nom d'attribut : \code{ora.type}
-   Cet attribut indique le type de colonne sous-jacent et peut être
-   "CLOB", "BLOB", "CHAR", "VARCHAR2" ou "RAW". Il est possible d'autoriser l'utilisateur à spécifier
-   les colonnes d'horodatage, de date, d'horodatage avec fuseau horaire ou tout autre type de colonne
-   pris en charge par Oracle DB. Cet attribut ne sera pas analysé par ROracle et laissera l'instance DB
-   le valider. Les valeurs \code{ora.type} suivantes peuvent être fournies par l'utilisateur :
-   clob, blob, char, horodatage avec fuseau horaire, horodatage avec fuseau horaire local
-   et fractional_seconds_precision.
+   Cet attribut indique le type de la colonne sous-jacente et peut être
+   "CLOB", "BLOB", "CHAR", "VARCHAR2" ou "RAW". L'utilisateur peut spécifier
+   TIMESTAMP, DATE, TIMESTAMP WITH TIME ZONE ou tout autre type de colonne
+   pris en charge par Oracle Database. Cette valeur n'est pas analysée par ROacle et
+   est validée par la base de données. L'utilisateur peut fournir l'une des valeurs
+   suivantes pour \code{ora.type} : CLOB, BLOB, CHAR, TIMESTAMP WITH TIME
+   ZONE, TIMESTAMP WITH LOCAL TIME ZONE et fractional_seconds_precision.
    2) Nom d'attribut : \code{ora.encoding}
-   Si UTF-8 est spécifié,  les colonnes NCLOB, NCHAR ou NVARCHAR seront utilisées en fonction de
-   "ora.type".
+   Si UTF-8 est spécifié, la base de données utilise NCLOB, NCHAR ou NVARCHAR en fonction
+   de \code{ora.type}.
    3) Nom d'attribut : \code{ora.maxlength}
-   Il est possible de spécifier la longueur maximale des colonnes CHAR, VARCHAR, NCHAR, NVARCHAR2 ou
-   RAW. Cela ne s'applique pas pour d'autres types de données et sera dans ce cas ignoré.
-   Les valeurs par défaut suivantes sont utilisées pour certains types de données lorsque
-   \code{ora.maxlength} n'est pas spécifié pour \code{NULL}
+   Il est possible de spécifier la longueur maximale des colonnes CHAR, VARCHAR, NCHAR, NVARCHAR2 et
+   RAW. Pour les autres types de données, \code{ora.maxlength} ne
+   s'applique pas et est ignoré. Les valeurs par défaut suivantes sont utilisées pour
+   certains types de données lorsque \code{ora.maxlength} n'est pas spécifié.
    CHAR                                       2000
    NCHAR                                      1000
    VARCHAR2                                   4000
@@ -158,32 +157,32 @@ Les noms de table, de schéma et de colonne respectent les majuscules/minuscules
    Il peut s'agir d'un nombre compris entre 0 et 9. La valeur par défaut est 6.
   Les méthodes \\pkg{ROracle} telles que \code{dbReadTable}, \code{dbGetQuery},
   \code{fetch} et \code{dbWriteTable} utilisent le mapping suivant
-  entre \R et les types de données Oracle :
+  entre les types de données Oracle et \R :
   \itemize{
     \item \code{logical} et \code{integer} sont mappés avec Oracle \code{INTEGER}
     \item \code{numeric} est mappé avec Oracle \code{NUMBER} si l'argument
     \code{ora.number} est \code{TRUE} ou Oracle \code{BINARY_DOUBLE} si
     \code{FALSE}
-    \item \code{character} est mappé avec Oracle \code{CLOB} si l'attribut
-    \code{ora.type} est \code{"CLOB"}, Oracle \code{NCLOB} si l'attribut
-    \code{ora.type} est \code{"CLOB"} et si \code{ora.encoding} est \code{"UTF-8"},
-    Oracle \code{CHAR(ora.maxlength)} si l'attribut \code{ora.type} est 
-    \code{"CHAR"}, Oracle \code{NCHAR(ora.maxlength)} si l'attribut
-    \code{ora.type} est \code{"CHAR"} et si \code{ora.encoding} est \code{"UTF-8"},
-    Oracle \code{NVARCHAR2(ora.maxlength)} si l'attribut \code{ora.encoding}
+    \item \code{character} est mappé avec Oracle \code{CLOB} si l'attribut 
+    \code{ora.type} est \code{"CLOB"} ou Oracle \code{NCLOB} si l'attribut
+    \code{ora.type} est \code{"CLOB"} et \code{ora.encoding} est \code{"UTF-8"}
+    ou Oracle \code{CHAR(ora.maxlength)} si l'attribut \code{ora.type} est 
+    \code{"CHAR"} ou Oracle \code{NCHAR(ora.maxlength)} si l'attribut 
+    \code{ora.type} est \code{"CHAR"} et \code{ora.encoding} est \code{"UTF-8"}
+    ou Oracle \code{NVARCHAR2(ora.maxlength)} si l'attribut \code{ora.encoding}
     est \code{"UTF-8"} ou Oracle \code{VARCHAR2(ora.maxlength)}
     \item \code{Date} et \code{POSIXct} sont mappés avec Oracle \code{DATE}
     \\pkg{ROracle} - package ROracle
     \R - application R
     \item \code{POSIXct} est mappé avec Oracle 
     \code{TIMESTAMP WITH TIME ZONE(ora.fractional_seconds_precision)} si 
-    l'attribut \code{ora.type} est \code{"TIMESTAMP WITH TIME ZONE"}, Oracle 
+    l'attribut \code{ora.type} est \code{"TIMESTAMP WITH TIME ZONE"} ou Oracle 
     \code{TIMESTAMP WITH LOCAL TIME ZONE(ora.fractional_seconds_precision)} si
     l'attribut \code{ora.type} est \code{"TIMESTAMP WITH LOCAL TIME ZONE"} ou
-    Oracle \code{TIMESTAMP(ora.fractional_seconds_precision)} si 
+    Oracle \code{TIMESTAMP(ora.fractional_seconds_precision)} et si 
     \code{Date} est \code{FALSE} 
     \item \code{difftime} est mappé avec Oracle \code{INTERVAL DAY TO SECOND}
-    \item \code{list} vecteurs sur \code{raw} sont mappés avec Oracle \code{BLOB} si
+    \item \code{list} sur \code{raw} vecteurs sont mappés avec Oracle \code{BLOB} si 
     l'attribut \code{ora.type} est \code{"BLOB"} ou Oracle 
     \code{RAW(ora.maxlength)}
     \item les autres types \R tels que \code{factor} sont convertis vers
@@ -193,8 +192,8 @@ Les noms de table, de schéma et de colonne respectent les majuscules/minuscules
    horodatage, horodatage avec fuseau horaire et horodatage avec fuseau horaire local
    au format POSIXct de R. POSIXct fait référence à une heure
    stockée en interne correspondant au nombre de secondes écoulées depuis le début
-   de l'année 1970 en temps UTC. Le nombre de secondes est échangé du pilote ROracle et R au
-   format DOUBLE à virgule flottante. Dans la représentation POSIXct, R utilise la
+   de l'année 1970 en temps UTC. Le nombre de secondes est échangé à partir du pilote ROracle et R au
+   format double à virgule flottante. Dans la représentation POSIXct, R utilise la
    variable d'environnement TZ ou mappe la variable d'environnement de fuseau horaire du système
    d'exploitation avec la sienne afin que la date soit affichée dans ce format de fuseau horaire.
    Il est possible d'insérer des données dans les colonnes des 4 types de données répertoriés ci-dessus à l'aide d'une
@@ -206,43 +205,43 @@ Les noms de table, de schéma et de colonne respectent les majuscules/minuscules
    Les données dans ce format correspondent à NLS_TIMESTAMP_TZ_FORMAT
    "YYYY-MM-DD HH24:MI:SSXFF" et sont converties en SQLT_TIMESTAMP_LTZ pour être
    liées à la base de données Oracle. Une classe intermédiaire "datetime" est créée.
-   Elle représente les données de caractère dans le pilote ROracle interne.
-   Les colonnes possédant un type de données d'horodatage et de date sont extraites par ROracle à l'aide
-   du type de données SQLT_TIMESTAMP. Les colonnes avec les types de données d'horodatage avec fuseau horaire et
+   Elle représente les données de caractère dans le pilote ROracle en interne.
+   Les colonnes possédant un type de données d'horodatage sont extraites par ROracle à l'aide
+   du type de données SQLT_TIMESTAMP. Les colonnes avec les types de données d'horodatage avec fuseau horaire ou
    d'horodatage avec fuseau horaire local sont extraites à l'aide du
    type de données SQLT_TIMESTAMP_LTZ. Les colonnes avec les types de données d'horodatage avec fuseau horaire local
-   sont converties au fuseau horaire de la session exécutée par l'application R.
+   sont converties au fuseau horaire de la session exécutant l'application R.
    La définition de l'environnement de fuseau horaire TZ dans R aura donc une incidence sur les valeurs des données
-   de cette colonne. Le pilote ROracle mappe la variable d'environnement TZ
-   au fuseau horaire de la session et émet une instruction de modification DDL pour définir le fuseau horaire de la session
+   de cette colonne. Le pilote ROracle mappe la variable d'environnement TZ au
+   fuseau horaire de la session et émet une instruction de modification DDL pour définir le fuseau horaire de la session
    lorsque la connexion est établie avec la base de données.
-   Afin d'extraire les données des colonnes avec un horodatage avec fuseau horaire et avec un horodatage avec
+   Afin d'extraire les données des colonnes avec un horodatage avec fuseau horaire ou avec un horodatage avec
    fuseau horaire local, le client et le serveur doivent posséder le même fichier de données de fuseau horaire,
-   sinon une erreur sera signalée.
+   sinon une erreur est signalée.
    Lorsque ces types de données sont sélectionnés dans la base de données, ils sont convertis en
    représentation de chaîne à l'aide de NLS_TIMESTAMP_TZ_FORMAT
    "YYYY-MM-DD HH24:MI:SSXFF", qui correspond à "\%Y-\%m-\%d \%H:\%M:\%OS6"
    dans R. Une classe intermédiaire "datetime" est créée
-   pour représenter ces données de caractère dans le pilote ROracle. Le pilote ROracle
-   la convertit ensuite en POSIXct à l'aide de la fonction as.POSIXct(). Une application R
+   pour représenter ces données de caractère dans le pilote ROracle. Le pilote ROracle la convertit
+   ensuite en POSIXct à l'aide de la fonction as.POSIXct(). Une application R
    voit les données au format POSIXct dans la structure de données.
    \\preformatted{
 Fuseau horaire de session R :
- R a le concept d'un fuseau horaire dans lequel fonctionne le moteur R. Le fuseau
+ R comprend le concept d'un fuseau horaire dans lequel fonctionne le moteur R. Le fuseau
  horaire peut être défini sur une chaîne comme 'PST8PDT', 'America/Los_Angeles', etc.
  Ces chaînes sont explicites et spécifient le fuseau horaire dans lequel
  la session est en cours.
  Le fuseau horaire de session R peut être défini de deux manières :
  1. Entrez la chaîne suivante sur la ligne de commande Linux ou Unix avant
     le démarrage de R :
-    setenv TZ = America/Los_Angeles on Linux/UNIX
+    setenv TZ = America/Los_Angeles sur Linux/UNIX
     Remarque : n'utilisez pas cette option sous Windows car elle ne permet pas de
           définir des noms de fuseau horaire compatibles avec Oracle pour la variable d'environnement TZ.
  2. Entrez la chaîne suivante à l'invite R :
     Sys.setenv(TZ = "PST8PDT")
  Nous vous recommandons l'option 2 car le script R fonctionne
  sans problème de prise en charge sous Linux/Unix, ainsi que sous Windows. L'option 2 permet également
- de spécifier des noms de fuseau horaire compatibles avec Oracle, même sous Windows.
+ de spécifier des noms de fuseau horaire compatibles avec Oracle même sous Windows.
  Le fuseau horaire de session R détermine le fuseau horaire de tous les types de date et d'heure non qualifiés
  de fuseau horaire POSIXct. Il s'agit également du fuseau horaire vers lequel tous
  les types de date et d'heure qualifiés sont convertis lorsqu'ils sont affichés par R.
@@ -262,7 +261,7 @@ Fuseau horaire de session R :
  [5] "2010-03-13 00:00:00.000000 PST" "2010-03-13 03:47:30.123456 PST"
  [7] "2010-03-22 00:00:00.000000 PDT" "2010-03-22 07:02:30.000000 PDT"
 Les horodatages non qualifiés sont également supposés être dans le
-fuseau horaire de session de R lorsqu'ils sont affichés par R. Evidemment, R est 
+fuseau horaire de session de R lorsqu'ils sont affichés par R. Bien sûr, R est
 assez intelligent pour déterminer si l'heure est PST ou PDT
 en fonction de la date américaine de passage à l'heure d'été, et
 affiche PST ou PDT selon ce critère.
@@ -281,18 +280,18 @@ L'exemple suivant met cela en évidence.
 [3] "2010-03-22 03:00:00.000000 EDT" "2010-03-22 10:02:30.000000 EDT"
 [5] "2010-03-13 00:00:00.000000 EST" "2010-03-13 03:47:30.123456 EST"
 [7] "2010-03-22 00:00:00.000000 EDT" "2010-03-22 07:02:30.000000 EDT"
-Tous les horodatages non qualifiés du fuseau horaire sont supposés être
-dans le fuseau horaire de session. Toutefois, même les horodatages qualifiés du fuseau horaire
+Tous les horodatages non qualifiés de fuseau horaire sont supposés être
+dans le fuseau horaire de session. Toutefois, même les horodatages qualifiés de fuseau horaire
 sont convertis vers le fuseau horaire de session et affichés. Toutes les
-valeurs sont affichées par R dans le fuseau horaire de session R (le
-nom de fuseau horaire est également remplacé par EST ou EDT selon l'heure d'été,
-le cas échéant). Reportez-vous à la section sur les classes Date-Time sur
+valeurs sont affichées par R dans le fuseau horaire de la session R (le
+nom de fuseau horaire est également remplacé par EST ou EDT selon l'heure d'hiver
+ou d'été). Reportez-vous aux classes de date/heure sur
 http://stat.ethz.ch/R-manual/R-devel/library/base/html/DateTimeClasses.html
-et à celle sur les fuseaux horaires sur :
+et aux fuseaux horaires sur :
 http://stat.ethz.ch/R-manual/R-devel/library/base/html/timezones.html
-pour plus d'informations sur la manière dont R gère les dates, les heures et les fuseaux horaires).
+pour plus d'informations sur la manière dont R gère les dates, les heures et les fuseaux horaires)
 Voici un exemple dans lequel est utilisé un nom de fuseau horaire plus long
-(souvent nommé 'Olson Name'), et non une abréviation.
+(souvent appelé 'nom Olson') et non une abréviation.
 > Sys.setenv(TZ = "America/Los_Angeles")
 > dt <- c(as.POSIXct("2010/3/13", tz = "PST8PDT"),
 +         as.POSIXct("2010/3/13 3:47:30.123456", tz = "PST8PDT"),
@@ -318,7 +317,7 @@ et le fuseau horaire de session Oracle pour plus d'informations sur les fuseaux 
    l'environnement R :
    \\preformatted{   R> Sys.timezone()
    [1] "PST8PDT"
-   # !Sélection et affichage des données
+   # Selecting data and displaying it
    res <- dbGetQuery(con, selStr)
    R>     res[,1]
    [1] 1 2 3 4 5 6
@@ -358,7 +357,7 @@ et le fuseau horaire de session Oracle pour plus d'informations sur les fuseaux 
        "2012-01-05 03:00:00 EST" "2011-01-05 03:00:00 EST"
    [5] "2013-01-05 03:00:00 EST" "2020-01-05 03:00:00 EST"}
   De plus, \code{dbWriteTable} valide (commit) toujours automatiquement la transaction en cours et
-  les données qu'il insère, c'est-à-dire qu'il agit en tant qu'instruction DDL même si
+  les données qu'elle insère, c'est-à-dire qu'il agit en tant qu'instruction DDL même si
   des lignes sont ajoutées à une table existante.
 }
 \value{
@@ -374,7 +373,7 @@ et le fuseau horaire de session Oracle pour plus d'informations sur les fuseaux 
   For the Oracle Database documentation see 
   \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
   For Datetime Data Types and Time Zone Support in Oracle see
-  \url{http://docs.oracle.com/cd/E14072_01/server.112/e10729/ch4datetime.htm}.
+  \url{http://docs.oracle.com/cd/E11882_01/server.112/e10729/ch4datetime.htm}.
 }
 \seealso{
   \code{\link{Oracle}},

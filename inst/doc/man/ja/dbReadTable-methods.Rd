@@ -16,15 +16,14 @@
 DBMS表を操作するための便利な関数
 }
 \description{
-これらの関数はそれぞれのRにおける相対要素の
+これらの関数はそれぞれのRにおける次の相対要素を模倣しますが、
+  データベース・エンジンでリモートに実行されるコードは生成します。
   \code{get}、
   \code{assign}、
   \code{exists}、
   \code{remove}、
   \code{objects}および
   \code{names}
-  を模倣しますが、データベース・エンジンでリモートに実行されるコードは
-  生成します。
 }
 \usage{
 \S4method{dbReadTable}{OraConnection,character}(conn, name, schema = NULL, row.names = NULL, ...)
@@ -133,36 +132,36 @@ DBMSの既存の表に付加するかどうかを指定する論理値。
    正しくマッピングするために、次の属性を使用します。
    1) 属性名: \code{ora.type}
    この属性は基本の列の型を示し、有効値には"CLOB"、"BLOB"、"CHAR"、
-   "VARCHAR2"または"RAW"があります。タイムスタンプ、日付、
-   タイムゾーン付きタイムスタンプの他、Oracle DBでサポートされる列型を
-   指定できるようになります。ROracleでは解析されず、
-   DBで検証されます。次の\code{ora.type}値を指定できます:
-   clob、blob、char、time stamp with time zone、time stamp with local time zone
-   およびfractional_seconds_precision。
+   "VARCHAR2"または"RAW"があります。ユーザーは、タイムスタンプ、
+   日付、タイムゾーン付きタイムスタンプの他、Oracle Databaseでサポートされる
+   列型を指定できます。データはROracleでは解析されず、
+   データベースで検証されます。ユーザーは、次の\code{ora.type}の値の1つを指定できます。
+   CLOB、BLOB、CHAR、TIMESTAMP WITH TIME ZONE、
+   TIMESTAMP WITH LOCAL TIME ZONEおよびfractional_seconds_precision
    2) 属性名: \code{ora.encoding}
-   UTF-8を指定すると、"ora.type"に基づいてNCLOB、NCHARまたはNVARCHARが
+   UTF-8を指定すると、データベースでは、\code{ora.type}に基づいてNCLOB、NCHARまたはNVARCHARが
    使用されます。
    3) 属性名: \code{ora.maxlength}
-   CHAR、VARCHAR、NCHAR、NVARCHAR2またはRAWの列の最大長を指定できます。
-   他のデータ型については、適用されず無視されます。
-   \code{ora.maxlength}が\code{NULL}に指定されていない場合、
+   CHAR、VARCHAR、NCHAR、NVARCHAR2またはRAWの列の
+   最大長を指定できます。他のデータ型については、\code{ora.maxlength}では
+   適用されず無視されます。\code{ora.maxlength}が指定されていない場合、
    特定のデータ型には次のデフォルト値が使用されます。
    CHAR                                       2000
    NCHAR                                      1000
    VARCHAR2                                   4000
    NVARCHAR2                                  2000
    RAW                                        2000
-   4) 属性: \code{ora.fractional_seconds_precision}
+   4) 属性名: \code{ora.fractional_seconds_precision}
    TIMESTAMP、TIMESTAMP WITH TIME ZONEおよびTIMESTAMP WITH LOCAL TIME ZONEの
    列のSECOND datetimeフィールドの小数部分を指定できます。
    0から9の範囲の数値を指定できます。デフォルト値は6です。
-  \\pkg{ROracle}メソッド(\code{dbReadTable}、\code{dbGetQuery}、\code{fetch}、\code{dbWriteTable}など)は、
+  pkg{ROracle}メソッド(\code{dbReadTable}、\code{dbGetQuery}、\code{fetch}、\code{dbWriteTable}など)は、
   \RとOracleデータ型の間で次のマッピングを
   使用します。
   \itemize{
     \item \code{logical}および\code{integer}はOracle \code{INTEGER}にマップ
     \item \code{numeric}はOracle \code{NUMBER}にマップ(引数
-    \code{ora.number}が\code{TRUE}の場合)またはOracle \code{BINARY_DOUBLE}にマップ
+    \code{ora.number}が\code{TRUE}の場合)、Oracle  \code{BINARY_DOUBLE}にマップ
     (\code{FALSE}の場合)
     \item \code{character}はOracle \code{CLOB}にマップ(属性
     \code{ora.type}が\code{"CLOB"}の場合)、Oracle \code{NCLOB}にマップ(属性
@@ -285,11 +284,12 @@ Rのセッション・タイム・ゾーンにあると想定されます。
 想定されます。しかし、タイム・ゾーン修飾されたタイムスタンプでもセッション・タイム・ゾーンに
 変換されて、表示されます。Rでは、すべての値がRセッションのタイム・ゾーンで
 表示されます(タイムゾーン名付きで、該当するかぎり、夏時間を考慮するために
-ESTまたはEDTにも変更)。Rでの日付、時刻およびタイム・ゾーンの
-処理方法の詳細は、次のURLでDate-Timeを参照してください:
-http://stat.ethz.ch/R-manual/R-devel/library/base/html/DateTimeClasses.html。
-また、次のURLでtimezonesを参照してください:
-http://stat.ethz.ch/R-manual/R-devel/library/base/html/timezones.html。
+ESTまたはEDTにも変更)。
+Rでの日付、時刻およびタイム・ゾーンの
+処理方法の詳細は、次のURLでDate-Timeを参照してください。
+http://stat.ethz.ch/R-manual/R-devel/library/base/html/DateTimeClasses.html
+また、次のURLでtimezonesを参照してください。
+http://stat.ethz.ch/R-manual/R-devel/library/base/html/timezones.html
 略称ではなく長いタイム・ゾーン名('Olson名'とも呼ばれる)を使用する例を
 あげてみましょう。
 > Sys.setenv(TZ = "America/Los_Angeles")
@@ -373,7 +373,7 @@ http://stat.ethz.ch/R-manual/R-devel/library/base/html/timezones.html。
   For the Oracle Database documentation see 
   \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
   For Datetime Data Types and Time Zone Support in Oracle see
-  \url{http://docs.oracle.com/cd/E14072_01/server.112/e10729/ch4datetime.htm}.
+  \url{http://docs.oracle.com/cd/E11882_01/server.112/e10729/ch4datetime.htm}.
 }
 \seealso{
   \code{\link{Oracle}},

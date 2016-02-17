@@ -10,6 +10,8 @@
 #    NOTES
 #
 #    MODIFIED   (MM/DD/YY)
+#    rpingte     06/14/15 - [21128853] performance improvements for date time
+#                                      types
 #    ssjaiswa    04/29/15 - [20964968] copying attributes back to object after 
 #                           as.character() strips them
 #    rpingte     03/31/15 - add ora.attributes
@@ -316,19 +318,6 @@
   if (inherits(res, "try-error"))
     stop(res)
 
-  if (!is.null(res))
-  {
-    for (i in 1:length(res))
-    {
-      col <- res[[i]]
-      if (class(col) == "datetime")
-      {
-        class(col) <- "character"
-        res[[i]] <- as.POSIXct(strftime(col, "%Y-%m-%d %H:%M:%OS6"))
-        attr(res[[i]], "tzone") <- NULL
-      }
-    }
-  }
   res
 }
 
@@ -718,19 +707,6 @@
   if (inherits(res, "try-error"))
     stop(res)
 
-  if (!is.null(df))
-  {
-    for (i in 1:length(df))
-    {
-      col <- df[[i]]
-      if (class(col) == "datetime")
-      {
-        class(col) <- "character"
-        df[[i]] <- as.POSIXct(strftime(col, "%Y-%m-%d %H:%M:%OS6"))
-      }
-    }
-  }
-
   df
 }
 
@@ -814,13 +790,7 @@
           tzone <- TRUE
         }
 
-        if (datetime)
-        {
-          obj[[i]] <- strftime(col, "%Y-%m-%d %H:%M:%OS6")
-          class(obj[[i]]) <- "datetime"
-        }
-        else
-          obj[[i]] <- as.POSIXct(strptime(col, "%Y-%m-%d"))
+      obj[[i]] <- as.POSIXct(strptime(col, "%Y-%m-%d"))
       }
       else if (inherits(col, "POSIXct")) # integer storage mode
       {
@@ -831,12 +801,7 @@
         }
 
 
-        if (datetime)
-        {
-          obj[[i]] <- strftime(col, "%Y-%m-%d %H:%M:%OS6")
-          class(obj[[i]]) <- "datetime"
-        }
-        else
+        if (!datetime)
           storage.mode(obj[[i]]) <- "double"
       }
       else
@@ -857,9 +822,6 @@
         .oci.ValidateZoneInEnv(FALSE)
         tzone <- TRUE
       }
-
-      obj[[i]] <- strftime(col, "%Y-%m-%d %H:%M:%OS6")
-      class(obj[[i]]) <- "datetime"
     }
     else if (inherits(col, "difftime"))
       obj[[i]] <- as.difftime(as.numeric(col, units = "secs"), units = "secs")

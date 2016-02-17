@@ -25,8 +25,8 @@ Oracle 驅動程式初始化與關閉.
 }
 \value{
 \item{dbDriver}{
-    一個類別擴充 \code{OraDriver} 的物件 \code{ExtDriver} 或 \code{DBIDriver}.
-    可藉由使用函數 \code{dbConnect}, 使用此物件來建立
+    一個其類別擴充 \code{OraDriver} 的物件 \code{ExtDriver} 或 
+    \code{DBIDriver}. 可利用 \code{dbConnect} 函數, 使用此物件來建立
     與一或多個 Oracle 資料庫引擎的連線.
   }
   \item{dbUnloadDriver}{
@@ -93,14 +93,38 @@ Oracle 驅動程式初始化與關閉.
 }
 \examples{
   \dontrun{
+    # first load the library
+    library("ROracle")
+
     # create an Oracle instance
     drv <- dbDriver("Oracle")
 
     con <- dbConnect(drv, "scott", "tiger")
+    dbListTables(con)
+
+    # fetch all results from the emp table
+    res <- dbGetQuery(con, "select * from emp")
+
+    # dbSendQuery can be used to fetch data in chunks 
+    # as well as all of data at once
     res <- dbSendQuery(con, "select * from emp")
-    fetch(res, n = 5)
+
+    # fetch all results
     fetch(res)
+
+    # or a chunk at a time
+    fetch(res, n = 5)
+
+    # describing the schema for the emp table using dbGetInfo
+    dbGetInfo(res, what = 'fields')
+
+    # clear the result
     dbClearResult(res)
+
+    # disconnect from the database
+    dbDisconnect(con)
+
+    # free the driver object
     dbUnloadDriver(drv)
   }
 }

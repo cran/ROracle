@@ -1,6 +1,15 @@
+Version 1.2-2  (2015-06-20)
+
+* Performance improvements for fetching date, timestamp, timstamp with time zone
+  and time stamp with local time zone.
+
+* Atlantic Azores and America Scoresbysund timezone regions have an issue with
+  overlap times and hence these timezones are not supported with ROracle. The
+  issue is being investigated by Oracle. Bug #22558537 filed for this.
+
 Version 1.2-1  (2014-12-05)
 
-* ROracle on client now support NATIVE, UTF8 and LATIN1 encoded data in query
+* ROracle on client now supports NATIVE, UTF8 and LATIN1 encoded data in query
   and results. Please refer to man page. ROracle works with character sets that
   are supported by both R and Oracle NLS on the host platform. UTF-8 encoded
   character sets are usually supported on many Unix-like platforms.
