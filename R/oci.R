@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 #    NAME
 #      oci.R - OCI based implementaion for DBI
@@ -10,6 +10,13 @@
 #    NOTES
 #
 #    MODIFIED   (MM/DD/YY)
+#    ssjaiswa    08/25/16 - Handled upper and lower cases in ora.type, 
+#                           ora.parameter_mode and ora.encoding attributes
+#                           accept both cases (upper and lower)
+#    ssjaiswa    05/12/16 - validate data of OUT parameter with NA
+#    ssjaiswa    03/10/16 - add .oci.oracleProc() for stored procedure/function
+#    ssjaiswa    03/08/16 - copying attributes back to object after strftime,
+#                           as.data.frame, strptime and as.difftime strips them
 #    rpingte     06/14/15 - [21128853] performance improvements for date time
 #                                      types
 #    ssjaiswa    04/29/15 - [20964968] copying attributes back to object after 
@@ -260,6 +267,124 @@
   hdl <- .Call("rociResInit", con@handle, stmt, data, prefetch,
                bulk_read, bulk_write, PACKAGE = "ROracle")
   new("OraResult", handle = hdl)
+}
+
+.oci.oracleProc <- function(con, stmt, data = NULL, prefetch = FALSE,
+                           bulk_read = 1000L, bulk_write = 1000L)
+{
+  #validate
+  if (!is.logical(prefetch))
+    stop(gettextf(
+         "argument '%s' must be a single logical value and cannot be '%s'",
+         "prefetch", prefetch))
+
+  prefetch <- as.logical(prefetch)
+  if (length(prefetch) != 1L)
+    stop(gettextf("argument '%s' must be a single logical value", "prefetch"))
+
+  if (!is.numeric(bulk_read))
+    stop(gettextf(
+         "argument '%s' must be a single integer value and cannot be '%s'",
+         "bulk_read", bulk_read))
+
+  bulk_read <- as.integer(bulk_read)
+  if (length(bulk_read) != 1L)
+    stop(gettextf("argument '%s' must be a single integer", "bulk_read"))
+  if (bulk_read < 1L)
+    stop(gettextf("argument '%s' must be greater than 0", "bulk_read"))
+
+  if (!is.numeric(bulk_write))
+    stop(
+     gettextf(
+      "argument '%s' must be a single integer value and cannot be '%s'",
+      "bulk_write", bulk_write))
+
+  bulk_write <- as.integer(bulk_write)
+  if (length(bulk_write) != 1L)
+    stop(gettextf("argument '%s' must be a single integer", "bulk_write"))
+  if (bulk_write < 1L)
+    stop(gettextf("argument '%s' must be greater than 0", "bulk_write"))
+
+  stmt <- as.character(stmt)
+  .oci.ValidateString("statement",stmt)
+
+  if (!is.null(data))
+  {
+    data <- .oci.pls.data.frame(data, TRUE)
+    mode = attr(data, "ora.parameter_mode", exact=TRUE)
+
+    # verify ora.parameter_mode for data.frame
+    if (!is.null(mode))
+    {
+      mode <- toupper(mode)
+      attr(data, "ora.parameter_mode") <- mode
+      if ((mode != "IN") && (mode != "OUT") && (mode != "IN OUT"))
+         stop(gettextf("argument '%s' must be IN, OUT or IN OUT", 
+                        "ora.parameter_mode"))
+      else if ((mode == "OUT") && ((length(data) && !is.na(data)) || (is.raw(data) && length(data))))
+         stop(gettextf("argument '%s' must be NA for argument '%s' '%s'", "data",
+                        "ora.parameter_mode", mode))
+    }    
+    
+    # verify maxlength for CLOB/BLOB/NCLOB 
+    oratype = attr(data, "ora.type", exact=TRUE)
+    if (!is.null(oratype))
+    {
+      oratype <- tolower(oratype)
+      attr(data, "ora.type") <- oratype
+      maxlen = attr(data, "ora.maxlength", exact=TRUE)
+      if ((oratype == "clob") && !is.null(maxlen))
+        stop(gettextf("attribute '%s' must not be specified for CLOB", "ora.maxlength"))
+      else if ((oratype == "blob") && !is.null(maxlen))
+        stop(gettextf("attribute '%s' must not be specified for BLOB", "ora.maxlength"))
+    }
+    for (i in seq_len(ncol(data)))
+    {
+      col <- data[[i]]
+      mode <- attr(col, "ora.parameter_mode", exact=TRUE)
+      type <- attr(col, "ora.type", exact=TRUE)
+      if (!is.null(mode))
+      {
+        mode <- toupper(mode)
+        attr(data[[i]], "ora.parameter_mode") <- mode
+        if ((mode != "IN") && (mode != "OUT") && (mode != "IN OUT"))
+           stop(gettextf("argument '%s' must be IN, OUT or IN OUT",
+                          "ora.parameter_mode"))
+        else if ((mode == "OUT") && ((length(col) && !is.na(col)) || (is.raw(data) && length(col))))
+         stop(gettextf("argument '%s' must be NA for argument '%s' '%s'", "data",
+                        "ora.parameter_mode", mode))
+      }
+
+      if (!is.null(type))
+      {
+        type <- tolower(type)
+        attr(data[[i]], "ora.type") <- type
+        max = attr(col, "ora.maxlength", exact=TRUE)
+        if ((type == "clob") && !is.null(max))
+          stop(gettextf("attribute '%s' must not be specified for CLOB", "ora.maxlength"))
+        else if ((type == "blob") && !is.null(max))
+          stop(gettextf("attribute '%s' must not be specified for BLOB", "ora.maxlength"))
+      }
+    }
+  }
+
+  hdl <- .Call("rociResInit", con@handle, stmt, data,
+               prefetch, bulk_read, bulk_write, PACKAGE = "ROracle")
+  res <- try(
+  {
+    eof_res <- .Call("rociEOFRes", hdl, PACKAGE = "ROracle")
+    if (eof_res)
+      TRUE
+    else
+      .Call("rociResFetch", hdl, -1L, PACKAGE = "ROracle")
+  }, silent = TRUE)
+
+  .Call("rociResTerm", hdl, PACKAGE = "ROracle")
+
+  if (inherits(res, "try-error"))
+    stop(res)
+
+  res
 }
 
 .oci.GetQuery <- function(con, stmt, data = NULL, prefetch = FALSE,
@@ -775,11 +900,23 @@
 .oci.data.frame <- function(obj, datetime = FALSE)
 {
   tzone <- FALSE
+
   if (!is.data.frame(obj))
+  {
+    if (!is.null(attr(obj, "ora.parameter_mode")))
+      stop(gettextf("argument '%s' must be NULL for SQL query",
+                    "ora.parameter_mode"))
+    name <- attr(obj, "ora.parameter_name")
     obj <- as.data.frame(obj)
+    attr(obj, "ora.parameter_name") <- name
+  }
+
   for (i in seq_len(ncol(obj)))
   {
     col <- obj[[i]]
+    if (!is.null(attr(col, "ora.parameter_mode")))
+      stop(gettextf("argument '%s' must be NULL for SQL query",
+                    "ora.parameter_mode"))
     if (!.oci.dbTypeCheck(col))
     {
       if (inherits(col, "Date"))
@@ -790,7 +927,7 @@
           tzone <- TRUE
         }
 
-      obj[[i]] <- as.POSIXct(strptime(col, "%Y-%m-%d"))
+        obj[[i]] <- as.POSIXct(strptime(col, "%Y-%m-%d"))
       }
       else if (inherits(col, "POSIXct")) # integer storage mode
       {
@@ -806,10 +943,12 @@
       }
       else
       {
+        name <- attr(obj, "ora.parameter_name")
         typ <- attr(col, "ora.type")
         enc <- attr(col, "ora.encoding")
         mxl <- attr(col, "ora.maxlength")
         obj[[i]] <- as.character(col)
+        attr(obj, "ora.parameter_name") <- name
         attr(obj[[i]], "ora.type") <- typ
         attr(obj[[i]], "ora.encoding") <- enc
         attr(obj[[i]], "ora.maxlength") <- mxl
@@ -825,6 +964,91 @@
     }
     else if (inherits(col, "difftime"))
       obj[[i]] <- as.difftime(as.numeric(col, units = "secs"), units = "secs")
+  }
+  obj
+}  
+.oci.pls.data.frame <- function(obj, datetime = FALSE)
+{
+  tzone <- FALSE
+
+# for PL/SQL queries
+  if (!is.data.frame(obj))
+  {
+    mode <- attr(obj, "ora.parameter_mode")
+    name <- attr(obj, "ora.parameter_name")
+    typ <- attr(obj, "ora.type")
+    enc <- attr(obj, "ora.encoding")
+    mxl <- attr(obj, "ora.maxlength")
+    obj <- as.data.frame(obj)
+    attr(obj, "ora.parameter_mode") <- mode
+    attr(obj, "ora.parameter_name") <- name
+    attr(obj, "ora.type") <- typ
+    attr(obj, "ora.encoding") <- enc
+    attr(obj, "ora.maxlength") <- mxl
+  }
+
+  for (i in seq_len(ncol(obj)))
+  {
+    col <- obj[[i]]
+    if (!.oci.dbTypeCheck(col))
+    {
+      if (inherits(col, "Date"))
+      {
+        if (!tzone)
+        {
+          .oci.ValidateZoneInEnv(FALSE)
+          tzone <- TRUE
+        }
+
+        mode <- attr(col, "ora.parameter_mode")
+        name <- attr(col, "ora.parameter_name")
+        obj[[i]] <- as.POSIXct(strptime(col, "%Y-%m-%d"))
+        attr(obj[[i]], "ora.parameter_mode") <- mode
+        attr(obj[[i]], "ora.parameter_name") <- name
+      }
+      else if (inherits(col, "POSIXct")) # integer storage mode
+      {
+        if (!tzone)
+        {
+          .oci.ValidateZoneInEnv(FALSE)
+          tzone <- TRUE
+        }
+
+
+        if (!datetime)
+          storage.mode(obj[[i]]) <- "double"
+      }
+      else
+      {
+        mode <- attr(col, "ora.parameter_mode")
+        name <- attr(col, "ora.parameter_name")
+        typ <- attr(col, "ora.type")
+        enc <- attr(col, "ora.encoding")
+        mxl <- attr(col, "ora.maxlength")
+        obj[[i]] <- as.character(col)
+        attr(obj[[i]], "ora.parameter_mode") <- mode
+        attr(obj[[i]], "ora.parameter_name") <- name
+        attr(obj[[i]], "ora.type") <- typ
+        attr(obj[[i]], "ora.encoding") <- enc
+        attr(obj[[i]], "ora.maxlength") <- mxl
+      }
+    }
+    else if (inherits(col, "POSIXct") && datetime)
+    {
+      if (!tzone)
+      {
+        .oci.ValidateZoneInEnv(FALSE)
+         tzone <- TRUE
+      }
+    }
+    else if (inherits(col, "difftime"))
+    {
+      mode <- attr(col, "ora.parameter_mode")
+      name <- attr(col, "ora.parameter_name")
+      obj[[i]] <- as.difftime(as.numeric(col, units = "secs"), units = "secs")
+      attr(obj[[i]], "ora.parameter_mode") <- mode
+      attr(obj[[i]], "ora.parameter_name") <- name
+    }
   }
   obj
 }
@@ -864,9 +1088,13 @@
   {
 
     oratype = attr(obj, "ora.type", exact=TRUE)
+    if (!is.null(oratype))
+      oratype <- tolower(oratype)
     enc = attr(obj, "ora.encoding", exact=TRUE)
     if (is.null(enc))
       enc = "unknown"
+    else
+      enc <- toupper(enc)
 
     # Oracle type map
     switch(typeof(obj),

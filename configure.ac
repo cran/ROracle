@@ -1,4 +1,4 @@
-AC_INIT([ROracle], 1.2-2)
+AC_INIT([ROracle], 1.3-1)
 
 dnl find standard Instant Client installation
 : ${R_HOME=`R RHOME`}
@@ -74,8 +74,14 @@ if test [ ! -d "${ROCI_CPPFLAGS}" ] ; then
 fi
 
 dnl set complier flags
-ROCI_LIBS="-L${ROCI_LIBS} -lclntsh"
+ROCI_LIBS="-L${ROCI_LIBS} -lclntsh -Wl,-rpath,${ROCI_LIBS}"
 ROCI_CPPFLAGS="-I${ROCI_CPPFLAGS}"
+## For Mac use rpath to link
+case "${host_os}" in
+  darwin*)
+    ROCI_LIBS="-L${ROCI_LIBS} -lclntsh -Wl,-rpath,${ROCI_LIBS}"
+  ;;
+esac
 
 dnl substitute complier flags
 AC_SUBST(ROCI_CPPFLAGS)

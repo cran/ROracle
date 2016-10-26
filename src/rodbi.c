@@ -52,6 +52,7 @@ All rights reserved.*/
          rodbiResExecQuery
          rodbiResExecBind
          rodbiResBind
+         rodbiPlsqlResBind
          rodbiResBindCopy
          rodbiResAlloc
          rodbiResExpand
@@ -70,6 +71,22 @@ All rights reserved.*/
    NOTES
 
    MODIFIED   (MM/DD/YY)
+   rpingte     10/05/16 - fix compilation on windows
+   ssjaiswa    08/03/16 - 22329115: Initialize CursorCount by 1 instead of 0
+   ssjaiswa    07/14/16 - update ROracle version to 1.3-1
+   ssjaiswa    05/12/16 - add new function rodbiPlsqlResBind
+   ssjaiswa    03/15/16 - pre-incrementing CursorCount variable to avoid passing
+                          0 for calloc (number of items) argument, Bug[22329115]
+   ssjaiswa    03/12/16 - removing break from OCI_SUCCESS_WITH_INFO check, 
+                          Bug [22233938]
+   ssjaiswa    03/11/16 - REFETCH state added for multiple cursor fetch
+   ssjaiswa    03/11/16 - SQLT_RSET bind type is set for cursor case
+   ssjaiswa    03/10/16 - add list and name fields for list return from ResFetch
+   ssjaiswa    03/08/16 - set indicator buffer to NULL if Plsql OUT parameter
+   ssjaiswa    03/07/16 - set state to FETCH for Plsql OUT in rodbiResExecBind
+   ssjaiswa    03/07/16 - add PlsqlResPopulate for Plsql result populating
+   ssjaiswa    03/04/16 - add numOut field
+   rpingte     02/23/16 - remove unused variables
    rpingte     08/05/15 - 21128853: performance improvements for datetime types
    ssjaiswa    08/03/15 - update version to 1.2-2
    rpingte     03/31/15 - add ora.attributes
@@ -164,6 +181,9 @@ All rights reserved.*/
 #include "rooci.h"
 #include "rodbi.h"
 
+#include <R.h>
+#include <Rdefines.h>
+   
 #define RODBI_ERR_INVALID_DRV      _("invalid driver")
 #define RODBI_ERR_INVALID_CON      _("invalid connection")
 #define RODBI_ERR_INVALID_RES      _("invalid result set")
@@ -244,8 +264,8 @@ while (0)
 #define RODBI_DRV_NAME       "Oracle (OCI)"
 #define RODBI_DRV_EXTPROC    "Oracle (extproc)"
 #define RODBI_DRV_MAJOR       1
-#define RODBI_DRV_MINOR       2
-#define RODBI_DRV_UPDATE      2
+#define RODBI_DRV_MINOR       3
+#define RODBI_DRV_UPDATE      1
 
 /* RODBI R classes */
 #define RODBI_R_LOG           1                                  /* LOGICAL */
@@ -329,6 +349,15 @@ struct rodbiCon;
 struct rodbiRes;
 typedef struct rodbichdl rodbichdl;
 
+/* parameter modes for PL/SQL */
+enum mode
+{
+  IN_mode,
+  INOUT_mode,
+  OUT_mode,
+};
+typedef enum mode mode;
+
 /* RODBI fetch STATEs */
 enum rodbiState
 {
@@ -336,6 +365,7 @@ enum rodbiState
   SPLIT_rodbiState,                               /* SPLIT pre-fetch buffer */
   ACCUM_rodbiState,        /* ACCUMulate pre-fetched data into a data frame */
   OUTPUT_rodbiState,                                 /* OUTPUT a data frame */
+  REFETCH_rodbiState,  /* For multiple cursor case to set FETCH state again */ 
   CLOSE_rodbiState                                    /* CLOSE the satement */
 };
 typedef enum rodbiState rodbiState;
@@ -391,6 +421,11 @@ struct rodbiRes
   SEXP       name_rodbiRes;                          /* column NAMEs vector */
   SEXP       list_rodbiRes;                                    /* data LIST */
   rodbiState state_rodbiRes;                      /* query processing STATE */
+  int        numOut;                  /* Number of OUT or IN OUT parameters */
+                                                 /* in PLSQL statement call */
+  SEXP       list;                                    /* OUT bind data list */
+  SEXP       name;                                 /* OUT bind NAMEs vector */
+  mode      *mode_rodbiRes;               /* paramater mode for PL/SQL bind */
 };
 typedef struct rodbiRes rodbiRes;
 
@@ -530,6 +565,10 @@ do                                                                     \
                (fun), (pos), rc, errMsg, sizeof(errMsg));              \
     if (free_res)                                                      \
     {                                                                  \
+      if (res->mode_rodbiRes)                                          \
+      {                                                                \
+        ROOCI_MEM_FREE(res->mode_rodbiRes);                            \
+      }                                                                \
       roociResFree(&(res)->res_rodbiRes);                              \
       ROOCI_MEM_FREE((res));                                           \
     }                                                                  \
@@ -543,6 +582,10 @@ do                                                                     \
 {                                                                      \
   if (free_res)                                                        \
   {                                                                    \
+    if (res->mode_rodbiRes)                                            \
+    {                                                                  \
+      ROOCI_MEM_FREE(res->mode_rodbiRes);                              \
+    }                                                                  \
     roociResFree(&(res)->res_rodbiRes);                                \
     ROOCI_MEM_FREE((res));                                             \
   }                                                                    \
@@ -614,7 +657,7 @@ typedef struct rodbild rodbild;
 do                                                                            \
 {                                                                             \
   ROOCI_MEM_ALLOC((hdl)->begpg_rodbichdl,                                     \
-                  ((pgsize) + sizeof(struct rodbiPg *)), sizeof(ub1));        \
+                  ((pgsize) + sizeof(rodbiPg *)), sizeof(ub1));               \
   if (!(hdl)->begpg_rodbichdl)                                                \
     RODBI_ERROR(RODBI_ERR_MEMORY_ALC);                                        \
   (hdl)->pgsize_rodbichdl = (pgsize);                                         \
@@ -711,7 +754,7 @@ do                                                                         \
   while(npg--)                                                             \
   {                                                                        \
     ROOCI_MEM_MALLOC(tmppg->next_rodbiPg,                                  \
-                     ((hdl)->pgsize_rodbichdl + sizeof(struct rodbiPg *)), \
+                     ((hdl)->pgsize_rodbichdl + sizeof(rodbiPg *)),        \
                      sizeof(ub1));                                         \
     if (!tmppg->next_rodbiPg)                                              \
       RODBI_ERROR(RODBI_ERR_MEMORY_ALC);                                   \
@@ -746,6 +789,7 @@ do                                                                         \
 #define RODBI_ADD_FIXED_DATA_ITEM(hdl, T, data)                               \
 do                                                                            \
 {                                                                             \
+  T *pdata;                                                                   \
   if ((hdl)->offset_rodbichdl + sizeof(T) > (hdl)->pgsize_rodbichdl)          \
   {                                                                           \
     if ((hdl)->currpg_rodbichdl->next_rodbiPg)                                \
@@ -759,8 +803,8 @@ do                                                                            \
     (hdl)->extpgs_rodbichdl--;                                                \
     (hdl)->offset_rodbichdl = 0;                                              \
   }                                                                           \
-  *((T *)&((hdl)->currpg_rodbichdl->buf_rodbiPg[(hdl)->offset_rodbichdl])) =  \
-            (data);                                                           \
+  pdata = (T *)(&(hdl)->currpg_rodbichdl->buf_rodbiPg[(hdl)->offset_rodbichdl]);\
+  *pdata = (data);                                                           \
   (hdl)->offset_rodbichdl += sizeof(T);                                       \
 } while (0)
 
@@ -786,6 +830,7 @@ do                                                                            \
 #define RODBI_GET_FIXED_DATA_ITEM(hdl, T, data)                               \
 do                                                                            \
 {                                                                             \
+  T *pdata;                                                                   \
   if ((hdl)->offset_rodbichdl + sizeof(T) > (hdl)->pgsize_rodbichdl)          \
   {                                                                           \
     if ((hdl)->currpg_rodbichdl->next_rodbiPg)                                \
@@ -794,8 +839,8 @@ do                                                                            \
       RODBI_FATAL(__FUNCTION__, 1, "no more data");                           \
     (hdl)->offset_rodbichdl = 0;                                              \
   }                                                                           \
-  *(data) = *((T *)                                                           \
-           &((hdl)->currpg_rodbichdl->buf_rodbiPg[(hdl)->offset_rodbichdl])); \
+  pdata = (T *)&((hdl)->currpg_rodbichdl->buf_rodbiPg[(hdl)->offset_rodbichdl]); \
+  *((T *)data) = *pdata;                                                      \
   (hdl)->offset_rodbichdl += sizeof(T);                                       \
 } while(0)
 
@@ -944,6 +989,11 @@ static void rodbiResExecBind(rodbiRes *res, SEXP data, boolean free_res);
 static void rodbiResBind(rodbiRes *res, SEXP data, int bulk_write,
                          boolean free_res);
 
+/* ----------------------- rodbiPlsqlResBind ------------------------------ */
+/* bind PL/SQL input data */
+static void rodbiPlsqlResBind(rodbiRes *res, SEXP data, int bulk_write,
+                              boolean free_res);
+
 /* ------------------------ rodbiResBindCopy ------------------------------ */
 /* bind data */
 static void rodbiResBindCopy(rodbiRes *res, SEXP data, int beg, int end,
@@ -980,6 +1030,10 @@ static void rodbiResPopulate(rodbiRes *res);
 /* ---------------------- rodbiResDataFrame ------------------------------- */
 /* make input data list a data frame  */
 static void rodbiResDataFrame(rodbiRes *res);
+
+/* -------------------------- rodbiPlsqlResPopulate ----------------------- */
+/* populate the plsql result set */
+static void rodbiPlsqlResPopulate(rodbiRes *res, ub4 *flag);
 
 /* ---------------------- rodbiResStateNext ------------------------------- */
 /* move to next state to process result set */
@@ -1569,6 +1623,7 @@ SEXP rociResInit(SEXP hdlCon, SEXP statement, SEXP data,
   cetype_t    enc;                                 /* encoding of statement */
   ub1         qry_encoding    = CE_NATIVE;
   ub4         stmt_cache_size = 0;
+  int         bid;
 
   pref = ((*LOGICAL(prefetch) == TRUE) ? TRUE :
                                         (con->ociprefetch_rodbiCon ? TRUE : 
@@ -1589,6 +1644,7 @@ SEXP rociResInit(SEXP hdlCon, SEXP statement, SEXP data,
 
   res->con_rodbiRes = con;
   con->err_checked_rodbiCon = FALSE;
+  res->numOut = 0;
 
   rows_per_fetch = (INTEGER(nrows)[0] == RODBI_BULK_READ) ?
                                    ((con->nrows_rodbiCon == RODBI_BULK_READ) ? 
@@ -1639,14 +1695,41 @@ SEXP rociResInit(SEXP hdlCon, SEXP statement, SEXP data,
 
   (res->res_rodbiRes).parent_roociRes = res;
 
-  /* bind data */
+  /* validate data then count PLSQL OUT/IN OUT variable present */
+  if (!isNull(data) && LENGTH(data) == (res->res_rodbiRes).bcnt_roociRes && 
+      ((res->styp_rodbiRes == OCI_STMT_BEGIN) ||
+      (res->styp_rodbiRes == OCI_STMT_DECLARE)))
+  {
+    for(bid =0; bid < (res->res_rodbiRes).bcnt_roociRes; bid++)
+    {
+      SEXP elem = VECTOR_ELT(data, bid);
+      SEXP mode = Rf_getAttrib(elem, install("ora.parameter_mode"));
+      SEXP mode1 = Rf_getAttrib(data,  install("ora.parameter_mode"));
+      if ((!isNull(mode) && (!strcmp(CHAR(STRING_ELT(mode, 0)), "OUT") ||
+          !strcmp(CHAR(STRING_ELT(mode, 0)), "IN OUT"))) ||
+          (!isNull(mode1) && (!strcmp(CHAR(STRING_ELT(mode1, 0)), "OUT") ||
+          !strcmp(CHAR(STRING_ELT(mode1, 0)), "IN OUT"))))
+      {
+        res->numOut++;
+      }
+    }
+  }
+
   if  ((res->res_rodbiRes).bcnt_roociRes)
-    rodbiResBind(res, data, rows_per_write, TRUE);
+  {
+    if (res->numOut)
+     /* bind Pl/SQL data */
+      rodbiPlsqlResBind(res, data, rows_per_write, TRUE);
+    else
+      rodbiResBind(res, data, rows_per_write, TRUE);
+  }
 
   /* execute the statement */
   rodbiResExecStmt(res, data, TRUE);
 
-  if (res->styp_rodbiRes == OCI_STMT_SELECT)
+  /* define data for SELECT statement case or REF cursor case */
+  if (res->styp_rodbiRes == OCI_STMT_SELECT || 
+                                             res->res_rodbiRes.stm_cur_roociRes)
   {
     /* define data */
     RODBI_CHECK_RES(res, __FUNCTION__, 3, TRUE,
@@ -1698,6 +1781,13 @@ SEXP rociResFetch(SEXP hdlRes, SEXP numRec)
   boolean      hasOutput = FALSE;
   ub4          fch_rows  = 0;
 
+  /* use this flag to communicate between successive rodbiPlsqlResPopulate() */
+  ub4          flag      = 1;
+
+  /* Create new result set for PLSQL OUT or IN OUT case */
+  if (res->numOut)
+    rodbiPlsqlResPopulate(res, &flag);
+
   con->err_checked_rodbiCon = FALSE;
 
   /* setup adaptive fetching */
@@ -1721,6 +1811,12 @@ SEXP rociResFetch(SEXP hdlRes, SEXP numRec)
     switch (res->state_rodbiRes)
     {
     case FETCH_rodbiState:
+      if (res->numOut && !res->res_rodbiRes.stm_cur_roociRes)
+      {
+        /* if cursor is not present (simple OUT), return output list directly */
+        res->state_rodbiRes = OUTPUT_rodbiState;
+        break;
+      }
       /* fetch data */
       RODBI_CHECK_RES(res, __FUNCTION__, 1, FALSE,
                       roociFetchData(&(res->res_rodbiRes), &fch_rows, 
@@ -1769,9 +1865,25 @@ SEXP rociResFetch(SEXP hdlRes, SEXP numRec)
       break;
 
     case OUTPUT_rodbiState: 
-      rodbiResTrim(res);
-      rodbiResDataFrame(res);
-      hasOutput = TRUE;
+      if (!res->numOut || res->res_rodbiRes.stm_cur_roociRes)
+      {
+        /* for select and PLSQL cursor statement only */
+        rodbiResTrim(res);
+        rodbiResDataFrame(res);
+      }
+
+      /* add data frame fetched from cursor to output result list */
+      if (res->numOut > 1 && res->res_rodbiRes.stm_cur_roociRes)
+      {
+        /* skip rodbiPlsqlResPopulate() call if single OUT cursor only */
+          rodbiPlsqlResPopulate(res, &flag);
+      }
+
+      /* if more than one cursor present, FETCH again */
+      if (res->state_rodbiRes == REFETCH_rodbiState)
+        break;
+      else
+        hasOutput = TRUE;
       break;
 
     default:
@@ -1781,12 +1893,28 @@ SEXP rociResFetch(SEXP hdlRes, SEXP numRec)
     rodbiResStateNext(res);
   }
 
-  /* release output data frame and column names vector */
-  UNPROTECT(2);
-
   RODBI_TRACE("result fetched");
 
-  return res->list_rodbiRes;
+  /* release output data frame and column names vector */
+  if (res->numOut)
+  {
+    /* return data frame if single OUT cursor only */ 
+    if (res->res_rodbiRes.stm_cur_roociRes && (res->numOut == 1))
+    {
+      UNPROTECT(2);
+      return res->list_rodbiRes;
+    }
+    else
+    /* else return output list */
+      return res->list;
+  }
+  else
+  {
+    /* for non-PLSQL case, return data frame */
+    UNPROTECT(2);
+    return res->list_rodbiRes;
+  }
+
 } /* end rociResFetch */
 
 /* ------------------------------ rociResInfo ----------------------------- */
@@ -2199,10 +2327,12 @@ static void rodbiResExecBind(rodbiRes *res, SEXP data, boolean free_res)
     rows -= (int)iters;
   }
 
-  /* set state */
-  res->state_rodbiRes = CLOSE_rodbiState;
+  /* set state -if PLSQL OUT then set state to FETCH */
+  if (res->numOut)
+    res->state_rodbiRes = FETCH_rodbiState;
+  else
+    res->state_rodbiRes = CLOSE_rodbiState;
 } /* end rodbiResExecBind */
-
 
 /* ----------------------------- rodbiResBind ----------------------------- */
 
@@ -2239,17 +2369,21 @@ static void rodbiResBind(rodbiRes *res, SEXP data, int bulk_write,
   ROOCI_MEM_ALLOC((res->res_rodbiRes).btyp_roociRes,
                   (res->res_rodbiRes).bcnt_roociRes, sizeof(ub2));
 
+  ROOCI_MEM_ALLOC((res->res_rodbiRes).param_name_roociRes,
+                  (res->res_rodbiRes).bcnt_roociRes, sizeof(void *));
+
   if (!((res->res_rodbiRes).bdat_roociRes) ||
       !((res->res_rodbiRes).bind_roociRes) ||
       !((res->res_rodbiRes).alen_roociRes) ||
       !((res->res_rodbiRes).bsiz_roociRes) ||
-      !((res->res_rodbiRes).btyp_roociRes))
+      !((res->res_rodbiRes).btyp_roociRes) ||
+      !((res->res_rodbiRes).param_name_roociRes))
     RODBI_ERROR_RES(RODBI_ERR_MEMORY_ALC, free_res);
 
   /* bind data */
   for (bid = 0; bid < (res->res_rodbiRes).bcnt_roociRes; bid++)
   {
-    SEXP      vec = VECTOR_ELT(data, bid);
+    SEXP        vec = VECTOR_ELT(data, bid);
 
     /* set bind parameters */
     if (isReal(vec))
@@ -2282,7 +2416,6 @@ static void rodbiResBind(rodbiRes *res, SEXP data, int bulk_write,
     }
     else if (isString(vec))
     {
-      SEXP class = Rf_getAttrib(vec, R_ClassSymbol);
       int    len = LENGTH(VECTOR_ELT(data, 0));
       int    i;
       sb8    bndsz = 0;
@@ -2396,6 +2529,449 @@ static void rodbiResBind(rodbiRes *res, SEXP data, int bulk_write,
   }
 } /* end rodbiResBind */
 
+/* --------------------------- rodbiPlsqlResBind -------------------------- */
+
+static void rodbiPlsqlResBind(rodbiRes *res, SEXP data, int bulk_write,
+                              boolean free_res)
+{
+  int  bid;
+  char err_buf[ROOCI_ERR_LEN];
+  SEXP col_names;
+
+
+  /* Number of cursors present in PLSQL stmt */
+  int  CursorCount = 1; 
+
+  /* validate data */
+  if (isNull(data) || LENGTH(data) != (res->res_rodbiRes).bcnt_roociRes)
+    RODBI_ERROR_RES(RODBI_ERR_BIND_MISMATCH, free_res);
+
+  /* set bind buffer size */
+  (res->res_rodbiRes).bmax_roociRes = LENGTH(VECTOR_ELT(data, 0));
+  if (!(res->res_rodbiRes).bmax_roociRes)
+    RODBI_ERROR_RES(RODBI_ERR_BIND_EMPTY, free_res);
+  else if ((res->res_rodbiRes).bmax_roociRes > bulk_write)
+    (res->res_rodbiRes).bmax_roociRes = bulk_write;
+
+  /* allocate bind vectors */
+  ROOCI_MEM_ALLOC((res->res_rodbiRes).bdat_roociRes, 
+                  (res->res_rodbiRes).bcnt_roociRes, sizeof(void *));
+
+  ROOCI_MEM_ALLOC((res->res_rodbiRes).bind_roociRes, 
+                  (res->res_rodbiRes).bcnt_roociRes, sizeof(sb2 *));
+
+  ROOCI_MEM_ALLOC((res->res_rodbiRes).alen_roociRes, 
+                  (res->res_rodbiRes).bcnt_roociRes, sizeof(ub2 *));
+
+  ROOCI_MEM_ALLOC((res->res_rodbiRes).bsiz_roociRes, 
+                  (res->res_rodbiRes).bcnt_roociRes, sizeof(sb4));
+
+  ROOCI_MEM_ALLOC((res->res_rodbiRes).btyp_roociRes,
+                  (res->res_rodbiRes).bcnt_roociRes, sizeof(ub2));
+
+  ROOCI_MEM_ALLOC((res->res_rodbiRes).bform_roociRes, 
+                  (res->res_rodbiRes).bcnt_roociRes, sizeof(int));
+
+  ROOCI_MEM_ALLOC((res->res_rodbiRes).param_name_roociRes,
+                  (res->res_rodbiRes).bcnt_roociRes, sizeof(void *));
+
+  ROOCI_MEM_ALLOC(res->mode_rodbiRes,
+                  (res->res_rodbiRes).bcnt_roociRes, sizeof(int));
+
+  if (!((res->res_rodbiRes).bdat_roociRes) ||
+      !((res->res_rodbiRes).bind_roociRes) ||
+      !((res->res_rodbiRes).alen_roociRes) ||
+      !((res->res_rodbiRes).bsiz_roociRes) ||
+      !((res->res_rodbiRes).btyp_roociRes) ||
+      !((res->res_rodbiRes).bform_roociRes)||
+      !(res->mode_rodbiRes)||
+      !((res->res_rodbiRes).param_name_roociRes))
+    RODBI_ERROR_RES(RODBI_ERR_MEMORY_ALC, free_res);
+
+  /* alloc column names vector for OUT/IN OUT data.frame */
+  PROTECT(col_names = allocVector(STRSXP, (res->res_rodbiRes).bcnt_roociRes));
+  col_names = getAttrib (data, R_NamesSymbol);
+
+  /* bind data */
+  for (bid = 0; bid < (res->res_rodbiRes).bcnt_roociRes; bid++)
+  {
+    SEXP              vec = VECTOR_ELT(data, bid);
+    const char *bind_type = NULL;
+    const char *bind_enc  = NULL;
+    const char *colName   = NULL;
+    sb4 bind_length       = 0;
+
+    /* Read "ora.type", "ora.encoding", "ora.maxlength" attributes */
+    SEXP mode = Rf_getAttrib(vec, install("ora.parameter_mode"));
+    SEXP mode1 = Rf_getAttrib(data,  install("ora.parameter_mode"));
+
+    if ((!isNull(mode) && (!strcmp(CHAR(STRING_ELT(mode, 0)), "OUT"))) ||
+        (!isNull(mode1) && (!strcmp(CHAR(STRING_ELT(mode1, 0)), "OUT"))))
+      res->mode_rodbiRes[bid] = OUT_mode;
+    else if ((!isNull(mode) &&
+                       (!strcmp(CHAR(STRING_ELT(mode, 0)), "IN OUT"))) ||
+            (!isNull(mode1) &&
+                        (!strcmp(CHAR(STRING_ELT(mode1, 0)), "IN OUT"))))
+      res->mode_rodbiRes[bid] = INOUT_mode;
+    else
+      res->mode_rodbiRes[bid] = IN_mode;
+
+    /* setting attributes to bind buffers for simple OUT/IN OUT case */
+    if (res->mode_rodbiRes[bid] != IN_mode)
+    {
+      if (Rf_getAttrib(vec,
+                       Rf_mkString((const char *)"ora.type")) != R_NilValue)
+        bind_type = CHAR(STRING_ELT(Rf_getAttrib(vec,
+                         Rf_mkString((const char *)"ora.type")), 0));
+      else if (Rf_getAttrib(data,
+                           Rf_mkString((const char *)"ora.type")) != R_NilValue)
+        bind_type = CHAR(STRING_ELT(Rf_getAttrib(data,
+                         Rf_mkString((const char *)"ora.type")), 0));
+
+      /* "ora.encoding" for deciding bind_length for OUT string/raw */
+      if (Rf_getAttrib(vec,
+                       Rf_mkString((const char *)"ora.encoding")) != R_NilValue)
+        bind_enc = CHAR(STRING_ELT(Rf_getAttrib(vec,
+                        Rf_mkString((const char *)"ora.encoding")), 0));
+      else if (Rf_getAttrib(data,
+                       Rf_mkString((const char *)"ora.encoding")) != R_NilValue)
+        bind_enc = CHAR(STRING_ELT(Rf_getAttrib(data,
+                        Rf_mkString((const char *)"ora.encoding")), 0));
+
+      if (bind_enc && !strcmp(bind_enc, "UTF-8"))
+        res->res_rodbiRes.bform_roociRes[bid] = SQLCS_NCHAR;
+      else
+        res->res_rodbiRes.bform_roociRes[bid] = 0;
+
+      /* "ora.maxlength" for extracting length for OUT case e.g. string */
+      if (Rf_getAttrib(vec,
+                      Rf_mkString((const char *)"ora.maxlength")) != R_NilValue)
+      {
+        if (isInteger(Rf_getAttrib(vec,
+                      Rf_mkString((const char *)"ora.maxlength"))))
+          bind_length = INTEGER(Rf_getAttrib(vec,
+                                Rf_mkString((const char *)"ora.maxlength")))[0];
+        else if (isReal(Rf_getAttrib(vec,
+                        Rf_mkString((const char *)"ora.maxlength"))))
+          bind_length = REAL(Rf_getAttrib(vec,
+                             Rf_mkString((const char *)"ora.maxlength")))[0];
+      }
+      else if (Rf_getAttrib(data,
+                      Rf_mkString((const char *)"ora.maxlength")) != R_NilValue)
+      {
+        if (isInteger(Rf_getAttrib(data,
+                      Rf_mkString((const char *)"ora.maxlength"))))
+          bind_length = INTEGER(Rf_getAttrib(data,
+                                Rf_mkString((const char *)"ora.maxlength")))[0];
+        else if (isReal(Rf_getAttrib(data,
+                        Rf_mkString((const char *)"ora.maxlength"))))
+          bind_length = REAL(Rf_getAttrib(data,
+                             Rf_mkString((const char *)"ora.maxlength")))[0];
+      }  
+      else
+        bind_length = 32767;
+    }
+
+    /* set bind parameters */
+    if (isReal(vec))
+    {
+      if (Rf_inherits(vec, RODBI_R_DAT_NM))
+      {
+        if (res->con_rodbiRes->con_rodbiCon.timesten_rociCon)
+          (res->res_rodbiRes).btyp_roociRes[bid] = SQLT_TIMESTAMP;
+        else
+          (res->res_rodbiRes).btyp_roociRes[bid] = SQLT_TIMESTAMP_LTZ;
+        (res->res_rodbiRes).bsiz_roociRes[bid] = (ub2)sizeof(OCIDateTime *);
+      }
+      else if (Rf_inherits(vec, RODBI_R_DIF_NM) &&
+      /* TimesTen binds difftime as SQLT_BDOUBLE */
+               !res->con_rodbiRes->con_rodbiCon.timesten_rociCon)
+      {
+        (res->res_rodbiRes).btyp_roociRes[bid] = SQLT_INTERVAL_DS;
+        (res->res_rodbiRes).bsiz_roociRes[bid] = (sb4)sizeof(OCIInterval *);
+      }
+      else
+      {
+        (res->res_rodbiRes).btyp_roociRes[bid] = SQLT_BDOUBLE;
+        (res->res_rodbiRes).bsiz_roociRes[bid] = (sb4)sizeof(double);
+      }
+    }
+    else if (isInteger(vec) || isLogical(vec))
+    {
+      /* check if cursor is present (NA- logical type) */
+      if (bind_type && !strcmp(bind_type, "cursor"))
+      {
+        /* passing CursorCount from bsiz to roociBindData */
+        (res->res_rodbiRes).btyp_roociRes[bid] = SQLT_RSET;
+        /* Bug 22329115 */
+        (res->res_rodbiRes).bsiz_roociRes[bid] = (sb4)(CursorCount++); 
+      }
+      /* check if raw type */
+      else if (bind_type && !strcmp(bind_type, "raw"))
+      {
+        (res->res_rodbiRes).btyp_roociRes[bid] = SQLT_BIN;
+        (res->res_rodbiRes).bsiz_roociRes[bid] = bind_length;
+      }
+      
+      else if (bind_type && !strcmp(bind_type, "clob"))
+      {
+        (res->res_rodbiRes).btyp_roociRes[bid] = SQLT_CLOB;
+        (res->res_rodbiRes).bsiz_roociRes[bid] = (sb4)sizeof(OCILobLocator *);
+      }
+      /* check if BLOB type */
+      else if (bind_type && !strcmp(bind_type, "blob"))
+      {
+        (res->res_rodbiRes).btyp_roociRes[bid] = SQLT_BLOB;
+        (res->res_rodbiRes).bsiz_roociRes[bid] = (sb4)sizeof(OCILobLocator *);
+      }
+      /* check if bfile type */
+      else if (bind_type && !strcmp(bind_type, "bfile"))
+      {
+        (res->res_rodbiRes).btyp_roociRes[bid] = SQLT_BFILE;
+        (res->res_rodbiRes).bsiz_roociRes[bid] = (sb4)sizeof(OCILobLocator *);
+      }
+      /* check if string type */
+      else if (bind_type && (!strcmp(bind_type, "char") || 
+                                                 !strcmp(bind_type, "varchar")))
+      {
+        (res->res_rodbiRes).btyp_roociRes[bid] = SQLT_STR;
+        (res->res_rodbiRes).bsiz_roociRes[bid] = bind_length;
+      }
+      /* check if date or timestamp or timestamp with timezone type */
+      else if (bind_type && (!strcmp(bind_type, "date") || 
+                                               !strcmp(bind_type, "timestamp")))
+      {
+        (res->res_rodbiRes).btyp_roociRes[bid] = SQLT_TIMESTAMP;
+        (res->res_rodbiRes).bsiz_roociRes[bid] = (ub2)sizeof(OCIDateTime *);
+      }
+      /* check timestamp with timezone or timestamp with local timezone type */
+      else if (bind_type && (!strcmp(bind_type, "timestamp with timezone") ||
+                           !strcmp(bind_type, "timestamp with local timezone")))
+      {
+        (res->res_rodbiRes).btyp_roociRes[bid] = SQLT_TIMESTAMP_LTZ;
+        (res->res_rodbiRes).bsiz_roociRes[bid] = (ub2)sizeof(OCIDateTime *);
+      } 
+      /* check if difftime type */
+      else if (bind_type && !strcmp(bind_type, "difftime"))
+      {
+        /* TimesTen binds difftime as SQLT_BDOUBLE */
+        if (!res->con_rodbiRes->con_rodbiCon.timesten_rociCon)
+        {
+          (res->res_rodbiRes).btyp_roociRes[bid] = SQLT_INTERVAL_DS;
+          (res->res_rodbiRes).bsiz_roociRes[bid] = (sb4)sizeof(OCIInterval *);
+        }
+        else
+        {
+          (res->res_rodbiRes).btyp_roociRes[bid] = SQLT_BDOUBLE;
+          (res->res_rodbiRes).bsiz_roociRes[bid] = (sb4)sizeof(double);
+        }
+      }
+      else
+      {
+        (res->res_rodbiRes).btyp_roociRes[bid] = SQLT_INT;
+        (res->res_rodbiRes).bsiz_roociRes[bid] = (sb4)sizeof(int);
+      }
+    }
+    else if (isString(vec))
+    {
+      /* Using attributes to set bind buffer type & size if simple OUT case */
+      if (res->mode_rodbiRes[bid] == OUT_mode)
+      {
+        if (bind_type)
+        {
+          if (!strcmp(bind_type, "clob") || !strcmp(bind_type, "blob") ||
+                   !strcmp(bind_type, "bfile"))
+          {
+            if (!strcmp(bind_type, "clob"))
+                (res->res_rodbiRes).btyp_roociRes[bid] = SQLT_CLOB;
+            else if (!strcmp(bind_type, "blob"))
+                     (res->res_rodbiRes).btyp_roociRes[bid] = SQLT_BLOB;
+            else
+              (res->res_rodbiRes).btyp_roociRes[bid] = SQLT_BFILE;
+            (res->res_rodbiRes).bsiz_roociRes[bid] = 
+                                                 (sb4)sizeof(OCILobLocator *);
+          }
+        }
+        else
+        {
+          res->res_rodbiRes.btyp_roociRes[bid] = SQLT_STR;
+          res->res_rodbiRes.bsiz_roociRes[bid] = bind_length;
+        }
+      }
+      else
+      {
+        int    len = LENGTH(VECTOR_ELT(data, 0));
+        int    i;
+        sb8    bndsz = 0;
+
+        /* find the max len of the bind data */
+        for (i=0; i<len; i++)
+        {
+          size_t ellen = strlen(CHAR(STRING_ELT(vec, i)));
+          bndsz = (bndsz < ellen) ? ellen : bndsz;
+        }
+
+        if (bndsz > SB4MAXVAL)
+        {
+          sprintf(err_buf, RODBI_ERR_BIND_VAL_TOOBIG, bndsz);
+          RODBI_ERROR_RES(err_buf, free_res);
+        }
+
+        /* Limitation of OCIBindByPos API, where alen is ub2 for array binds */
+        /* For strings larger than UB2MAXVAL - NULL terminator, use SQLT_LVC */
+        if (bndsz > (UB2MAXVAL -
+                      res->con_rodbiRes->con_rodbiCon.nlsmaxwidth_roociCon))
+        {
+          res->res_rodbiRes.btyp_roociRes[bid] = SQLT_LVC;
+          bndsz += sizeof(sb4);
+        }
+        else
+        {
+          bndsz += res->con_rodbiRes->con_rodbiCon.nlsmaxwidth_roociCon;
+          res->res_rodbiRes.btyp_roociRes[bid] = SQLT_STR;
+        }
+
+        /* align buffer to even boundary */
+        bndsz += (sizeof(char *) - (bndsz % sizeof(char *)));
+        res->res_rodbiRes.bsiz_roociRes[bid] = (sb4)bndsz;
+      }
+    }
+    else if (IS_LIST(vec) && IS_RAW(VECTOR_ELT(vec, 0)))
+    {
+      if (bind_length)
+      {
+        res->res_rodbiRes.bsiz_roociRes[bid] = bind_length;
+        res->res_rodbiRes.btyp_roociRes[bid] = SQLT_BIN;
+      }
+      else
+      {
+        int    len = LENGTH(VECTOR_ELT(data, 0));
+        int    i;
+        sb8    bndsz = 0;
+  
+        /* find the max len of the bind data */
+        for (i=0; i<len; i++)
+        {
+          size_t ellen = (sb4)(LENGTH(VECTOR_ELT(vec, i)));
+          bndsz = (bndsz < ellen) ? ellen : bndsz;
+        }
+
+        if (bndsz > SB4MAXVAL)
+        {
+          sprintf(err_buf, RODBI_ERR_BIND_VAL_TOOBIG, bndsz);
+          RODBI_ERROR_RES(err_buf, free_res);
+        }
+
+        /* Limitation of OCIBindByPos API, where alen is ub2 for array binds */
+        /* For strings larger than UB2MAXVAL, use SQLT_LVB */
+        if (bndsz > UB2MAXVAL)
+        {
+          res->res_rodbiRes.btyp_roociRes[bid] = SQLT_LVB;
+          bndsz += sizeof(sb4);
+        }
+        else
+          res->res_rodbiRes.btyp_roociRes[bid] = SQLT_BIN;
+
+        /* align buffer to even boundary */
+        bndsz += (sizeof(char *) - (bndsz % sizeof(char *)));
+        res->res_rodbiRes.bsiz_roociRes[bid] = (sb4)bndsz;
+      }
+    }
+    else
+      RODBI_ERROR_RES(RODBI_ERR_UNSUPP_BIND_TYPE, free_res);
+
+    /* allocate bind buffers */
+    ROOCI_MEM_ALLOC((res->res_rodbiRes).bdat_roociRes[bid], 
+                    ((res->res_rodbiRes).bmax_roociRes * 
+                    (res->res_rodbiRes).bsiz_roociRes[bid]), sizeof(ub1));
+
+    ROOCI_MEM_ALLOC((res->res_rodbiRes).bind_roociRes[bid],
+                    (res->res_rodbiRes).bmax_roociRes, sizeof(sb2));
+
+    ROOCI_MEM_ALLOC((res->res_rodbiRes).alen_roociRes[bid],
+                    (res->res_rodbiRes).bmax_roociRes, sizeof(ub2));
+
+    if (!((res->res_rodbiRes).bdat_roociRes[bid]) ||
+        !((res->res_rodbiRes).bind_roociRes[bid]) ||
+        !((res->res_rodbiRes).alen_roociRes[bid]))
+      RODBI_ERROR_RES(RODBI_ERR_MEMORY_ALC, free_res);
+
+    if ((res->res_rodbiRes).btyp_roociRes[bid] == SQLT_TIMESTAMP_LTZ)
+    {
+      void **tsdt = (void **)((res->res_rodbiRes).bdat_roociRes[bid]);
+      RODBI_CHECK_RES(res, __FUNCTION__, 1, free_res,
+                      roociAllocDescBindBuf(&(res->res_rodbiRes), tsdt, bid,
+                      (ub4)OCI_DTYPE_TIMESTAMP_LTZ));
+    } 
+    else if ((res->res_rodbiRes).btyp_roociRes[bid] == SQLT_TIMESTAMP)
+    {
+      void **tsdt = (void **)((res->res_rodbiRes).bdat_roociRes[bid]);
+      RODBI_CHECK_RES(res, __FUNCTION__, 2, free_res,
+                      roociAllocDescBindBuf(&(res->res_rodbiRes), tsdt, bid,
+                      (ub4)OCI_DTYPE_TIMESTAMP));
+    } 
+    else if (((res->res_rodbiRes).btyp_roociRes[bid] == SQLT_INTERVAL_DS) &&
+             /* TimesTen binds difftime as SQLT_BDOUBLE */
+             !res->con_rodbiRes->con_rodbiCon.timesten_rociCon)
+    {
+      void **invl = (void **)((res->res_rodbiRes).bdat_roociRes[bid]);
+      RODBI_CHECK_RES(res, __FUNCTION__, 3, free_res,
+                      roociAllocDescBindBuf(&(res->res_rodbiRes), invl, bid,
+                      OCI_DTYPE_INTERVAL_DS));
+    } 
+    else if (((res->res_rodbiRes).btyp_roociRes[bid] == SQLT_CLOB) ||
+             ((res->res_rodbiRes).btyp_roociRes[bid] == SQLT_BLOB))
+    {
+      void **lb = (void **)((res->res_rodbiRes).bdat_roociRes[bid]);
+      RODBI_CHECK_RES(res, __FUNCTION__, 4, free_res,
+                      roociAllocDescBindBuf(&(res->res_rodbiRes), lb, bid,
+                      OCI_DTYPE_LOB));
+    }
+    else if ((res->res_rodbiRes).btyp_roociRes[bid] == SQLT_BFILE)
+    {
+      void **lf = (void **)((res->res_rodbiRes).bdat_roociRes[bid]);
+      RODBI_CHECK_RES(res, __FUNCTION__, 5, free_res,
+                      roociAllocDescBindBuf(&(res->res_rodbiRes), lf, bid,
+                      OCI_DTYPE_FILE));
+    }
+
+    /* set param_name_roociRes field for column names of OUT/INOUT date.frame */
+    colName = CHAR(STRING_ELT(col_names, bid));
+    if (colName)
+    {
+      ROOCI_MEM_ALLOC((res->res_rodbiRes).param_name_roociRes[bid],
+                    1, strlen(colName)+1);
+      if (!((res->res_rodbiRes).param_name_roociRes[bid]))
+        RODBI_ERROR_RES(RODBI_ERR_MEMORY_ALC, free_res);
+      strcpy((res->res_rodbiRes).param_name_roociRes[bid], colName);
+    }
+    else
+      (res->res_rodbiRes).param_name_roociRes[bid] = NULL;
+  }
+  UNPROTECT(1);
+
+
+  /* if Cursor is present */
+  if (CursorCount-1)
+  {
+    /* allocate cursor statement handle buffer */
+    ROOCI_MEM_ALLOC((res->res_rodbiRes).stm_cur_roociRes,
+                    CursorCount-1, sizeof(OCIStmt *));
+
+    if (!(res->res_rodbiRes).stm_cur_roociRes)
+      RODBI_ERROR_RES(RODBI_ERR_MEMORY_ALC, free_res);
+
+    /* Initialize each cursor statement handle */
+    for (bid = 0; bid < CursorCount-1; bid++)
+    {
+      (res->res_rodbiRes).stm_cur_roociRes[bid] = NULL;
+    }
+  }
+  else
+    (res->res_rodbiRes).stm_cur_roociRes = NULL;
+
+} /* end rodbiPlsqlResBind */
+
 /* ---------------------------- rodbiResBindCopy -------------------------- */
 
 static void rodbiResBindCopy(rodbiRes *res, SEXP data, int beg, int end,
@@ -2406,12 +2982,41 @@ static void rodbiResBindCopy(rodbiRes *res, SEXP data, int beg, int end,
 
   for (bid = 0; bid < (res->res_rodbiRes).bcnt_roociRes; bid++)
   {
-    SEXP     elem = VECTOR_ELT(data, bid);
-    ub1     *dat  = (ub1 *)(res->res_rodbiRes).bdat_roociRes[bid];
-    sb2     *ind  = (res->res_rodbiRes).bind_roociRes[bid];
-    ub2     *alen  = (res->res_rodbiRes).alen_roociRes[bid];
-    ub1      form_of_use = 0;
-    SEXP     class = Rf_getAttrib(elem, R_ClassSymbol);
+    SEXP             elem = VECTOR_ELT(data, bid);
+    ub1             *dat  = (ub1 *)(res->res_rodbiRes).bdat_roociRes[bid];
+    sb2             *ind  = (res->res_rodbiRes).bind_roociRes[bid];
+    ub2             *alen = (res->res_rodbiRes).alen_roociRes[bid];
+    ub1         form_of_use = 0;
+    const char *bind_type = NULL;
+    const char *bind_name = NULL;
+
+
+    if (res->numOut)
+    {
+      /* use "ora.type" attribute to check if PLSQL simple OUT is present */
+      if (Rf_getAttrib(elem,
+                   Rf_mkString((const char *)"ora.type")) != R_NilValue)
+        bind_type = CHAR(STRING_ELT(Rf_getAttrib(elem,
+                         Rf_mkString((const char *)"ora.type")), 0));
+      else if (Rf_getAttrib(data,
+                   Rf_mkString((const char *)"ora.type")) != R_NilValue)
+        bind_type = CHAR(STRING_ELT(Rf_getAttrib(data,
+                         Rf_mkString((const char *)"ora.type")), 0));
+      else
+        bind_type = NULL;
+    }
+
+      /* use "ora.parameter_name" attribute to call OCIBindByName */
+    if (Rf_getAttrib(elem,
+                 Rf_mkString((const char *)"ora.parameter_name")) != R_NilValue)
+      bind_name = CHAR(STRING_ELT(Rf_getAttrib(elem,
+                   Rf_mkString((const char *)"ora.parameter_name")), 0));
+    else if (Rf_getAttrib(data,
+             Rf_mkString((const char *)"ora.parameter_name")) != R_NilValue)
+      bind_name = CHAR(STRING_ELT(Rf_getAttrib(data,
+                       Rf_mkString((const char *)"ora.parameter_name")), 0));
+    else
+      bind_name = NULL;
 
     /* copy vector */
     for (i = beg; i < end; i++)
@@ -2419,7 +3024,12 @@ static void rodbiResBindCopy(rodbiRes *res, SEXP data, int beg, int end,
       *ind = OCI_IND_NOTNULL;
       *alen = (res->res_rodbiRes).bsiz_roociRes[bid];
 
-      if (isReal(elem))
+      /* For PLSQL OUT case set *ind to NULL */
+      if (res->numOut && bind_type)
+      {
+         *ind = OCI_IND_NULL;
+      }
+      else if (isReal(elem))
       {
 
         if (ISNA(REAL(elem)[i]))
@@ -2530,7 +3140,7 @@ static void rodbiResBindCopy(rodbiRes *res, SEXP data, int beg, int end,
     /* bind data buffers */
     RODBI_CHECK_RES(res, __FUNCTION__, 1, free_res,
                     roociBindData(&(res->res_rodbiRes), (ub4)(bid+1), 
-                                  form_of_use));
+                                  form_of_use, bind_name));
 
   }
 } /* end rodbiResBindCopy */
@@ -2744,7 +3354,7 @@ static void rodbiResAccum(rodbiRes *res)
             /* read LOB data */
             RODBI_CHECK_RES(res, __FUNCTION__, 3, FALSE,
                             roociReadLOBData(&(res->res_rodbiRes), &lob_len,
-                                             fcur, cid));
+                                             fcur, cid, 0));
 
             if ((res->con_rodbiRes->con_rodbiCon.timesten_rociCon) &&
                 (enc == CE_UTF8))
@@ -2773,7 +3383,7 @@ static void rodbiResAccum(rodbiRes *res)
             /* read LOB data */
             RODBI_CHECK_RES(res, __FUNCTION__, 4, FALSE,
                             roociReadBLOBData(&(res->res_rodbiRes), &lob_len,
-                                              fcur, cid));
+                                              fcur, cid, 0));
 
             PROTECT(rawVec = NEW_RAW(lob_len));
             b = RAW(rawVec);
@@ -3245,6 +3855,354 @@ static void rodbiResDataFrame(rodbiRes *res)
   UNPROTECT(1);
 } /* end rodbiResDataFrame */
 
+/* -------------------------- rodbiPlsqlResPopulate ----------------------- */
+
+static void rodbiPlsqlResPopulate(rodbiRes *res, ub4 *flip)
+{
+ /* check if already called once */
+ if (!*flip)
+ {
+  /* if cursor is present, add data frame fetched from cursor to output list */
+  if (res->res_rodbiRes.stm_cur_roociRes)
+  {
+    int cid;
+    /* use flag to handle case (Cursor OUT, Simple OUT) */
+    boolean flag = FALSE; 
+    /* use static variable to keep cursor count */
+    static int CursorCount = 1;
+    for (cid = 0; cid < res->numOut; cid++)
+    {
+      /* add dataframe fetched by cursor handle to NULL places in output list */
+      if (isNull(VECTOR_ELT(res->list, cid)))
+      {
+        if (!flag)
+        {
+          SET_VECTOR_ELT(res->list, cid, res->list_rodbiRes);
+          UNPROTECT(2);
+          flag = TRUE;
+        }
+        else
+          break;
+      }
+    }
+    /* check if more cursors are present */
+    if (cid < res->numOut)
+    {
+      /* set state to REFETCH to fetch for next cursor */
+      res->state_rodbiRes = REFETCH_rodbiState;
+
+      /* free result set of old cursor statement handle */
+      RODBI_CHECK_RES(res, __FUNCTION__, 1, FALSE,
+                      roociResFree(&(res->res_rodbiRes)));
+
+      /* Using current value of static variable(CursorCount) move cursor 
+       * statement handle buffer to next position */
+      *res->res_rodbiRes.stm_cur_roociRes =
+                              res->res_rodbiRes.stm_cur_roociRes[CursorCount++];
+
+      /* define data for new cursor statement handle */
+      RODBI_CHECK_RES(res, __FUNCTION__, 2, TRUE,
+                      roociResDefine(&res->res_rodbiRes));
+    }
+    else 
+    {
+      /* reset static variable for new call */
+      CursorCount = 1;
+    }
+  }
+ }
+ else
+ {
+  /* variables declared/defined for R bind data frame */
+  int    bid;
+  int    i;
+  /* variables declared/defined for output list that needs to be returned */
+  int    cid = 0;
+  int    ncol = 0;
+  int    j; 
+  int    lob_len;
+  char  *tempbuf= (char *)0;
+  size_t tempbuflen = 0;
+  SEXP   list;
+  SEXP   row_names;
+  SEXP   cla;
+
+  ncol = res->numOut;
+
+  /* allocate column list and names vector based on PLSQL OUT/IN OUT count */
+  PROTECT(res->list = allocVector(VECSXP, ncol));
+  PROTECT(res->name = allocVector(STRSXP, ncol));
+
+  /*  allocate column vectors based on bind buffer type (btyp_roociRes) */ 
+  for(bid =0, cid = 0; bid < (res->res_rodbiRes).bcnt_roociRes; bid++)
+  {
+    char *name = (res->res_rodbiRes).param_name_roociRes[bid];
+    /* check if OUT/IN OUT case */
+    if (res->mode_rodbiRes[bid] != IN_mode)
+    {
+      /* set column name -accept "" (empty string) cases */
+      SET_STRING_ELT(res->name, cid, mkChar((const char *)name));
+
+      switch (res->res_rodbiRes.btyp_roociRes[bid])
+      {
+        case SQLT_INT:
+          SET_VECTOR_ELT(res->list, cid, allocVector(INTSXP, 1));
+          break;
+
+        case SQLT_BDOUBLE:
+        case SQLT_FLT:
+        case SQLT_INTERVAL_DS:
+        case SQLT_TIMESTAMP:
+        case SQLT_TIMESTAMP_LTZ:
+          SET_VECTOR_ELT(res->list, cid, allocVector(REALSXP, 1));
+          break;
+
+        case SQLT_STR:
+        case SQLT_CLOB:
+          SET_VECTOR_ELT(res->list, cid, allocVector(STRSXP, 1));
+          break;
+
+        case SQLT_BIN:
+        case SQLT_BLOB:
+        case SQLT_BFILE:
+        case SQLT_RSET:
+          SET_VECTOR_ELT(res->list, cid, allocVector(VECSXP, 1));
+          break;
+
+        default:
+          RODBI_FATAL(__FUNCTION__, 1,
+                                      (res->res_rodbiRes).btyp_roociRes[bid]);
+          break;
+      }
+      cid++;
+    }
+  }
+
+  list = res->list;
+
+  /* copy bind data to output list column vectors which is to be returned */
+  for(bid =0, cid = 0; bid < (res->res_rodbiRes).bcnt_roociRes; bid++)
+  {
+    if (res->mode_rodbiRes[bid] != IN_mode)
+    {
+      ub1        *dat  = (ub1 *)(res->res_rodbiRes).bdat_roociRes[bid];
+      SEXP        vec  = VECTOR_ELT(list, cid);
+      double      tstm;
+      cetype_t    enc;
+
+      /* set encoding method */
+      if (res->res_rodbiRes.bform_roociRes[cid] == SQLCS_NCHAR)
+      {
+        if (res->con_rodbiRes->drv_rodbiCon->unicode_as_utf8)
+          enc = CE_UTF8;
+        else
+          enc = CE_NATIVE;
+      }
+      else
+        enc = CE_NATIVE;
+
+      for (i = 0, j = 0; i < 1; i++, j++)
+      {
+        switch (res->res_rodbiRes.btyp_roociRes[bid])
+        {
+          case SQLT_INT:
+            INTEGER(vec)[j] = *(int *)dat;
+            break;
+          case SQLT_BDOUBLE:
+          case SQLT_FLT:
+            REAL(vec)[j] = *(double *)dat;
+            break;
+
+          case SQLT_STR:
+            {
+              int len = strlen((char *)dat);
+              if ((res->con_rodbiRes->con_rodbiCon.timesten_rociCon) &&
+                  (enc == CE_UTF8))
+              {
+                rodbiTTConvertUCS2UTF8Data(res, (const ub2 *)dat, len,
+                                           &tempbuf, &tempbuflen);
+
+                SET_STRING_ELT(vec, j, Rf_mkCharLenCE((char *)tempbuf,
+                               tempbuflen, enc));
+              }
+              else
+                SET_STRING_ELT(vec, j,
+                               Rf_mkCharLenCE((char *)dat, len, enc));
+            }
+            break;
+
+          case SQLT_BIN:
+            {
+              int  len = (int)((res->res_rodbiRes).bsiz_roociRes[bid]);
+              SEXP rawVec;
+              Rbyte *b;
+
+              PROTECT(rawVec = NEW_RAW(len));
+              b = RAW(rawVec);
+              memcpy((void *)b, (void *)dat, len);
+              SET_VECTOR_ELT(vec,  j, rawVec);
+              UNPROTECT(1);
+            }
+            break;
+
+          case SQLT_CLOB:
+            {
+              /* read LOB data */
+              RODBI_CHECK_RES(res, __FUNCTION__, 3, FALSE,
+                              roociReadLOBData(&(res->res_rodbiRes), &lob_len,
+                                              i, bid, res->numOut));
+
+              if ((res->con_rodbiRes->con_rodbiCon.timesten_rociCon) &&
+                  (enc == CE_UTF8))
+              {
+                rodbiTTConvertUCS2UTF8Data(res,
+                               (const ub2 *)res->res_rodbiRes.lobbuf_roociRes,
+                               (size_t)(lob_len),
+                               &tempbuf, &tempbuflen);
+
+                SET_STRING_ELT(vec, j,
+                              Rf_mkCharLenCE((char *)tempbuf, tempbuflen, enc));
+              }
+              /* make character element */
+              SET_STRING_ELT(vec, j, mkCharLenCE((const char *)
+                          ((res->res_rodbiRes).lobbuf_roociRes), lob_len, enc));
+            }
+            break;
+
+          case SQLT_BLOB:
+          case SQLT_BFILE:
+            {
+              SEXP rawVec;
+              Rbyte *b;
+
+              /* read LOB data */
+              RODBI_CHECK_RES(res, __FUNCTION__, 4, FALSE,
+                              roociReadBLOBData(&(res->res_rodbiRes), &lob_len,
+                                              i, bid, res->numOut));
+
+              PROTECT(rawVec = NEW_RAW(lob_len));
+              b = RAW(rawVec);
+              memcpy((void *)b, (void *)res->res_rodbiRes.lobbuf_roociRes,
+                     lob_len);
+              SET_VECTOR_ELT(vec, j, rawVec);
+              UNPROTECT(1);
+            }
+            break;
+
+          case SQLT_TIMESTAMP:
+          case SQLT_TIMESTAMP_LTZ:
+            RODBI_CHECK_RES(res, __FUNCTION__, 5, FALSE,
+                            roociReadDateTimeData(&(res->res_rodbiRes),
+                            *(OCIDateTime **)dat, &tstm, 0));
+            REAL(vec)[j] = tstm;
+            break;
+
+          case SQLT_INTERVAL_DS:
+            RODBI_CHECK_RES(res, __FUNCTION__, 6, FALSE,
+                            roociReadDiffTimeData(&(res->res_rodbiRes),
+                                               *(OCIInterval **)dat, &tstm));
+            REAL(vec)[j] = tstm;
+            break;
+
+          case SQLT_RSET:
+            SET_VECTOR_ELT(list, cid, R_NilValue);
+            break;
+
+          default:
+            RODBI_FATAL(__FUNCTION__, 6, 
+                                      (res->res_rodbiRes).btyp_roociRes[bid]);
+            break;
+        }
+      }
+      cid++;
+    }
+  }
+
+  /* set names attribute */
+  setAttrib(res->list, R_NamesSymbol, res->name);
+
+  for(bid = 0, cid = 0; bid < (res->res_rodbiRes).bcnt_roociRes; bid++)
+  {
+    if (res->mode_rodbiRes[bid] != IN_mode)
+    {
+      /* make datetime columns a POSIXct */
+      if ((res->res_rodbiRes.btyp_roociRes[bid] == SQLT_TIMESTAMP) ||
+          (res->res_rodbiRes.btyp_roociRes[bid] == SQLT_TIMESTAMP_LTZ))
+      {
+        PROTECT(cla = allocVector(STRSXP, 2));
+        SET_STRING_ELT(cla, 0, mkChar(RODBI_R_DAT_NM));
+        SET_STRING_ELT(cla, 1, mkChar("POSIXt"));
+        setAttrib(VECTOR_ELT(res->list, cid), R_ClassSymbol, cla);
+        UNPROTECT(1);
+      }
+      else if (res->res_rodbiRes.btyp_roociRes[bid] == SQLT_INTERVAL_DS)
+      {
+        setAttrib(VECTOR_ELT(res->list, cid), install("units"),
+
+                  ScalarString(mkChar("secs")));
+        setAttrib(VECTOR_ELT(res->list, cid), R_ClassSymbol,
+                  ScalarString(mkChar(RODBI_R_DIF_NM)));
+      }
+      else if (res->con_rodbiRes->drv_rodbiCon->ora_attributes)
+      {
+        sb4 bind_length = 0;
+        switch (res->res_rodbiRes.btyp_roociRes[bid])
+        {
+          case SQLT_STR:
+          {
+            if (res->res_rodbiRes.bform_roociRes[cid] == SQLCS_NCHAR)
+              setAttrib(VECTOR_ELT(res->list, cid), install("ora.encoding"),
+                        ScalarString(mkChar("UTF-8")));
+            bind_length = res->res_rodbiRes.bsiz_roociRes[bid];
+            setAttrib(VECTOR_ELT(res->list, cid), install("ora.maxlength"),
+                    ScalarInteger(bind_length));
+            break;
+          }
+          case SQLT_CLOB:
+          {
+            if (res->res_rodbiRes.bform_roociRes[cid] == SQLCS_NCHAR)
+              setAttrib(VECTOR_ELT(res->list, cid), install("ora.encoding"),
+                        ScalarString(mkChar("UTF-8")));
+            setAttrib(VECTOR_ELT(res->list, cid), install("ora.type"),
+                      ScalarString(mkChar("clob")));
+            break;
+          }
+          case SQLT_BLOB:
+          {
+            setAttrib(VECTOR_ELT(res->list, cid), install("ora.type"),
+                      ScalarString(mkChar("blob")));
+            break;
+          }
+          case SQLT_BFILE:
+          {
+            setAttrib(VECTOR_ELT(res->list, cid), install("ora.type"),
+                      ScalarString(mkChar("bfile")));
+            break;
+          }
+        }
+      }
+      cid++;
+    }
+  }
+
+  if (!res->res_rodbiRes.stm_cur_roociRes)
+  {
+    /* make result set list a data.frame if cursor is not present */
+    PROTECT(row_names     = allocVector(INTSXP, 2));
+    INTEGER(row_names)[0] = NA_INTEGER;
+    INTEGER(row_names)[1] = - LENGTH(VECTOR_ELT(res->list, 0));
+    setAttrib(res->list, R_RowNamesSymbol, row_names);
+    setAttrib(res->list, R_ClassSymbol, mkString("data.frame"));
+    UNPROTECT(3);
+  }
+  else
+    UNPROTECT(2);
+
+  /* unset this flag so that it goes to other part of the function */
+  *flip = 0;
+ }
+} /* end rodbiPlsqlResPopulate */
+
 /* -------------------------- rodbiResStateNext --------------------------- */
 
 static void rodbiResStateNext(rodbiRes *res)
@@ -3270,6 +4228,9 @@ static void rodbiResStateNext(rodbiRes *res)
       res->state_rodbiRes = SPLIT_rodbiState;
     else
       res->state_rodbiRes = CLOSE_rodbiState;
+    break;
+  case REFETCH_rodbiState:
+    res->state_rodbiRes = FETCH_rodbiState;
     break;
   default:
     RODBI_FATAL(__FUNCTION__, 1, res->state_rodbiRes);
@@ -3451,8 +4412,9 @@ static void rodbiCheck(rodbiDrv *drv, rodbiCon *con, const char *fun,
   switch (status)
   {
   case OCI_SUCCESS:
-  case OCI_SUCCESS_WITH_INFO:
     break;
+  /* Bug 22233938 */
+  case OCI_SUCCESS_WITH_INFO:
 
   case OCI_ERROR:
     /* get error */

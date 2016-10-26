@@ -16,7 +16,7 @@ exportMethods(
 
   ## DBIConnection
   dbConnect, dbDisconnect, dbSendQuery, dbGetQuery, dbGetException,
-  dbListResults,
+  dbListResults, oracleProc,
 
   ## DBIConnection: Convenience
   dbListTables, dbReadTable, dbWriteTable, dbExistsTable, dbRemoveTable,
@@ -25,15 +25,9 @@ exportMethods(
   ## DBIConnection: Transaction management
   dbCommit, dbRollback,
 
-  ## DBIConnection: Stored procedures
-  dbCallProc,
-
   ## DBIResult
   fetch, dbClearResult, dbColumnInfo, dbGetStatement, dbHasCompleted,
   dbGetRowsAffected, dbGetRowCount,
-
-  ## DBIResult: Data conversion
-  dbSetDataMappings,
 
   ## DBIResult: DBI extensions
   execute)

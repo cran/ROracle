@@ -1,3 +1,25 @@
+Version 1.3-1  (2016-02-16)
+
+* Handled both upper and lower cases in ora.type, ora.parameter_mode and 
+  ora.encoding attributes.
+
+* Support for OCIBindByName has been added for SQL and PL/SQL calls by 
+  specifying ora.parameter_name attribute and bind valiables used in SQL or 
+  PL/SQL calls must be bound by the name specified in ora.parameter_name.
+
+* Support for PL/SQL stored procedure/function and REF cursors have been added.
+  The OUT bind parameter must be initialized with 'NA' or 'NA' coerced to any 
+  other vector type .
+
+* Use OCIArrayDescriptorAlloc instead of OCIDescriptorAlloc for performance
+  improvements when Oracle client release 11.1 or higher is used to build and
+  run ROracle.
+
+* Removed unused variables
+
+* Removed functions (dbSetDataMappings and dbCallProc) that will not be
+  available in 0.3.1 DBI specifications.
+
 Version 1.2-2  (2015-06-20)
 
 * Performance improvements for fetching date, timestamp, timstamp with time zone

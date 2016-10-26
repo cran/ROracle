@@ -11,6 +11,12 @@ All rights reserved.*/
    NOTES
 
    MODIFIED   (MM/DD/YY)
+   rpingte     10/05/16 - add c headers
+   ssjaiswa    03/10/16 - Added statement handle buffer support field
+   ssjaiswa    03/08/16 - Changed roociReadBLOBData() and roociReadLOBData()
+                          signature to support Plsql OUT/IN OUT return
+   ssjaiswa    03/04/16 - Added Plsql OUT/IN OUT parameter name support field 
+                          param_name_roociRes
    rpingte     08/05/15 - added epoch_roociRes and diff_roociRes fields
    rpingte     08/05/15 - 21128853: changing roociReadDateTimeData and 
                           roociWriteDateTimeData prototype
@@ -60,6 +66,10 @@ All rights reserved.*/
 
 #ifndef _rooci_H
 #define _rooci_H
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #ifndef OCI_ORACLE
 # include <oci.h>
@@ -210,10 +220,12 @@ struct roociRes
   int              bcnt_roociRes;                             /* Bind CouNT */
   int              bmax_roociRes;                          /* Bind MAX rows */
   void           **bdat_roociRes;                      /* Bind DATa buffers */
+  void           **param_name_roociRes;    /* parameter name for OUT/IN OUT */
   sb2            **bind_roociRes;                 /* Bind INDicator buffers */
   ub2            **alen_roociRes;                     /* Bind actual length */
   sb4             *bsiz_roociRes;              /* Bind buffer maximum SIZes */
   ub2             *btyp_roociRes;                      /* Bind buffer TYPes */
+  int             *bform_roociRes;    /* character set form for PL/SQL bind */
   /* ------------------------------- DEFINE ------------------------------- */
   int              ncol_roociRes;                      /* Number of COLumns */
   ub1             *typ_roociRes;                          /* internal TYPes */
@@ -230,6 +242,10 @@ struct roociRes
   int              nrows_write_roociRes; /* # of elements to bind at a time */
   OCIDateTime     *epoch_roociRes;             /* epoch from 1970/01/01 UTC */
   OCIInterval     *diff_roociRes; /* time interval difference from 1970 UTC */
+  OCIStmt        **stm_cur_roociRes;   /* statement handle buffer which are */
+                                              /* bound to each plsql cursor */
+  OCIStmt         *curstm_roociRes;    /* statement handle based on whether */
+                                    /* fetch from main SELECT or REF cursor */
   /* TODO: add mutex when R is thread-safe */
 };
 typedef struct roociRes roociRes;
@@ -301,7 +317,8 @@ sword roociStmtExec(roociRes *pres, ub4 noOfRows, ub2 styp,
 
 /* ----------------------------- roociBindData ---------------------------- */
 /* Bind input data for statement execution */
-sword roociBindData(roociRes *pres, ub4 bufPos, ub1 form_of_use);
+sword roociBindData(roociRes *pres, ub4 bufPos, ub1 form_of_use, 
+                    const char *name);
 
 /* ----------------------------- roociResDefine --------------------------- */
 /* Allocate memory and define ouput buffer */
@@ -325,11 +342,13 @@ sword roociFetchData(roociRes *pres, ub4 *rows_affected,
 
 /* ------------------------------ roociReadLOBData ------------------------ */
 /* Read CLOB data */
-sword roociReadLOBData(roociRes *pres, int *lob_len, int rowpos, int cid);
+sword roociReadLOBData(roociRes *pres, int *lob_len, int rowpos, int cid, 
+                       boolean isSimpleOut);
 
 /* ----------------------------- roociReadBLOBData ------------------------ */
 /* Read BLOB/BFILE data */
-sword roociReadBLOBData(roociRes *pres, int *lob_len, int rowpos, int cid);
+sword roociReadBLOBData(roociRes *pres, int *lob_len, int rowpos, int cid,
+                        boolean isSimpleOut);
 
 /* -------------------------- rociReadDateTimeData ------------------------- */
 /* Read DateTime data */

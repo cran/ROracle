@@ -1,4 +1,4 @@
-/* Copyright (c) 2011, 2015, Oracle and/or its affiliates. 
+/* Copyright (c) 2011, 2016, Oracle and/or its affiliates. 
 All rights reserved.*/
 
 /*
@@ -21,6 +21,7 @@ All rights reserved.*/
    NOTES
 
    MODIFIED   (MM/DD/YY)
+   rpingte     10/05/16 - move R includes into rodbi.c
    rpingte     03/25/15 - add NCHAR, NVARCHAR2 and NCLOB
    rpingte     01/09/14 - Copyright update
    jfeldhau    06/18/12 - ROracle support for TimesTen.
@@ -35,10 +36,6 @@ All rights reserved.*/
 #ifndef _rodbi_H
 #define _rodbi_H
 
-
-#include <R.h>
-#include <Rdefines.h>
-   
 #ifdef ENABLE_NLS
 # include <libintl.h>
 # define _(String) dgettext("ROracle", String)

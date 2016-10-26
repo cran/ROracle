@@ -25,6 +25,19 @@
     criteria can significantly reduce its footprint if it uses the Basic Lite
     package.
 
+  Mac OS X
+  --------
+
+  For compiling on Linux, ROracle needs the Oracle Instant Client. Then you need
+  either the Basic or Basic Lite packages in addition to the SDK package.
+
+  NOTE: Basic Lite is geared toward applications that require English-only
+    error messages and use either US7ASCII, WE8DEC, or a Unicode characterset.
+    It also has no restrictions on the TERRITORY field of the NLS_LANG setting.
+    As a result, an application that meets these characterset and territory
+    criteria can significantly reduce its footprint if it uses the Basic Lite
+    package.
+
   Windows
   -------
 
@@ -74,7 +87,7 @@
   Client, change LD_LIBRARY_PATH as follows:
 
   export LD_LIBRARY_PATH=/usr/lib/oracle/11.2/client64/lib:$LD_LIBRARY_PATH
-  R CMD INSTALL ROracle_1.2-2.tar.gz
+  R CMD INSTALL ROracle_1.3-1.tar.gz
  
   Alternatively, you can extract Oracle Instant Client from a zip package. In
   this case, a symbolic link libclntsh.so needs to be created manually before
@@ -93,13 +106,13 @@
   
   export OCI_LIB=/scratch/instantclient_11_2
   export LD_LIBRARY_PATH=/scratch/instantclient_11_2:$LD_LIBRARY_PATH
-  R CMD INSTALL ROracle_1.2-2.tar.gz
+  R CMD INSTALL ROracle_1.3-1.tar.gz
 
   Alternatively, if using the --with-oci-lib configure option, you can do 
   the following:
 
   export LD_LIBRARY_PATH=/scratch/instantclient_11_2:$LD_LIBRARY_PATH
-  R CMD INSTALL --configure-args='--with-oci-lib=/scratch/instantclient_11_2' ROracle_1.2-2.tar.gz
+  R CMD INSTALL --configure-args='--with-oci-lib=/scratch/instantclient_11_2' ROracle_1.3-1.tar.gz
 
   Both methods assume that the Basic and SDK packages were unzipped into the 
   same directory and Oracle Client headers are located under 
@@ -113,7 +126,40 @@
   the Oracle Client libraries. Additionally, set ORACLE_HOME. Then install the
   ROracle package by running
 
-  R CMD INSTALL ROracle_1.2-2.tar.gz
+  R CMD INSTALL ROracle_1.3-1.tar.gz
+
+
+  Mac OS X - Instant Client
+  -------------------------
+
+  The ROracle build depends on Oracle Client libraries and header files. To
+  build with 11.2 client version, you can get Instant Client 11.2 from zip
+  package. It has both the Basic and the SDK packages. 
+  You can extract Oracle Instant Client from a zip package. In this case, 
+  a symbolic link libclntsh.so needs to be created manually before
+  proceeding to install ROracle.
+
+  To Install Oracle Instant Client and ROracle package, do the following:
+  1. Download Instant Client from:
+     http://www.oracle.com/technetwork/topics/intel-macsoft-096467.html
+     into (for example):
+     /path/to/dnlds/
+  2. Extract Oracle Instant Client from zip packages:
+     cd /path/to/dnlds
+     unzip -o instantclient-basic-macos.x64-12.1.0.2.0.zip     -d /opt/ora12
+     unzip -o instantclient-sdk-macos.x64-12.1.0.2.0.zip       -d /opt/ora12
+  3. Change directories to the directory where Oracle Instant Client is
+     installed and then issue the following command: 
+     cd /opt/ora12/instantclient_12_1
+     ln -s libclntsh.dylib.12.1 libclntsh.dylib
+  4. Download the ROracle source package (ROracle_1.3-1.tar.gz) from CRAN
+     into (for example):
+     /path/to/pkg/
+  5. Install ROracle package by issuing following command:
+     cd /path/to/pkg
+     R CMD INSTALL --configure-args='--with-oci-lib=/opt/ora12/instantclient_12_1' ROracle_1.3-1.tar.gz
+     Or, within R, using the modified package:
+     install.packages('ROracle_1.3-1.tar.gz', repos=NULL, configure.args='--with-oci-lib=/opt/ora12/instantclient_12_1')
 
 
   Windows
@@ -252,7 +298,7 @@
 
   Build the ROracle package using:
 
-  R CMD INSTALL ROracle_1.2-2.tar.gz
+  R CMD INSTALL ROracle_1.3-1.tar.gz
 
   To build both 32-bit and 64-bit versions of ROracle, add both the 32-bit and
   64-bit versions of Oracle Client to the PATH environment variable before
@@ -266,7 +312,7 @@
   set OCI_INC=C:/app/xyz/product/11.2.0/32_bit_client_1/oci/include
   set OCI_LIB32=C:/app/xyz/product/11.2.0/32_bit_client_1/bin
   set OCI_LIB64=C:/app/xyz/product/11.2.0/64_bit_client_1/bin
-  R CMD INSTALL --build --merge-multiarch ROracle_1.2-2.tar.gz
+  R CMD INSTALL --build --merge-multiarch ROracle_1.3-1.tar.gz
 
   When mixing Oracle Instant Client and ORACLE_HOME-based client, above
   environment variables must be set carefully to point to the specific Client
@@ -283,7 +329,7 @@
   c:/TimesTen/tt1122_64 directory, then issue the following commands:
   
   set OCI_LIB64=c:/TimesTen/tt1122_64/ttoracle_home/instantclient_11_2
-  R CMD INSTALL --build ROracle_1.2-2.tar.gz
+  R CMD INSTALL --build ROracle_1.3-1.tar.gz
   
   At runtime the directories for both the TimesTen Instant Client shared 
   libraries and the TimesTen database shared libraries must be present on the
@@ -308,7 +354,7 @@
      database/database-technologies/r/roracle/downloads/index.html
   2. Run the following command in R, substituting the file path:
      setwd('xxxxx')   # set to path of download
-     install.packages('ROracle_1.2-2.zip', repos = NULL)
+     install.packages('ROracle_1.3-1.zip', repos = NULL)
   3. Load the library and use the package; you may have to change DBNAME to the
      one listed in your tnsnames.ora file, as in the following example:
      library('ROracle')

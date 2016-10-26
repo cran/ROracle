@@ -1,13 +1,13 @@
-e5905426b58dd6e837335644874ff314 *DESCRIPTION
-eaac490abd2443c08b51917c1108ca0e *INSTALL
-e15c8d75b22941c38cefcc6cb46edcbe *NAMESPACE
-489efed9432b69ef033b0880463673fa *NEWS
-7aefa16fd4f40dce7c825a32f1882dfb *R/dbi.R
-b7d400a5c3049f7ea6a483dfe7e7ab6e *R/oci.R
+c5e2636f5e8e6ff7fb66cc7c05208dcf *DESCRIPTION
+b844d0d83d44abd31a49f9661714e149 *INSTALL
+3646701ca97e619690017d6e35fff19c *NAMESPACE
+ab800c076d0ed4660c263c6ca93f0a32 *NEWS
+4bb502808176cb8fd61920c6c9aa583a *R/dbi.R
+ac75f6b8aec32b579d48687cdc9b357a *R/oci.R
 8ccdffc0fe707634a62410d1608b7893 *R/zzz.R
 c3cded853a2388ad53569a7105d1c1e3 *cleanup
-aeff7520c82611d30a1c53b773361e7a *configure
-8ab9240c1f752f863774f34596a1c16e *configure.ac
+695808e8c0ec5ef59dddcc348d25a334 *configure
+5e4341a473c99987f89402dfaa5e4145 *configure.ac
 5769bd213aa115d89f5b2bbf2b501759 *configure.win
 0017ccc05a2d11018bc7a500b97b5da1 *inst/Copyrights
 4c8b31054980f943d80f4f47386adc3e *inst/THANKS
@@ -16,7 +16,6 @@ cf5bc85763f1b1b6ef4074717ef315e6 *inst/doc/man/de/ExtDriver-class.Rd
 65419ee9428919c63b00272068ca6ab2 *inst/doc/man/de/OraDriver-class.Rd
 87cb8aa0b54fe3a93eb1922d890ee191 *inst/doc/man/de/OraResult-class.Rd
 a37bb133ba1681c9c090683f999fc86b *inst/doc/man/de/Oracle.Rd
-0bb90048e1571337377262582072c77d *inst/doc/man/de/dbCallProc-methods.Rd
 ec275f86d0c180e0b22c963fd355ebcc *inst/doc/man/de/dbCommit-methods.Rd
 a5387522fb494af2f3df30b653d90ec9 *inst/doc/man/de/dbConnect-methods.Rd
 36ea6de4aaf95affb04956a553e498ad *inst/doc/man/de/dbDriver-methods.Rd
@@ -24,7 +23,6 @@ b8345912316ba31616d57143e27d93e7 *inst/doc/man/de/dbGetInfo-methods.Rd
 f038f381dd7a1f12954b8549d917602c *inst/doc/man/de/dbListConnections-methods.Rd
 857f1b7968772e9882e929de6179a4eb *inst/doc/man/de/dbReadTable-methods.Rd
 7c521c17ecb3715b984ff023cbb3beb5 *inst/doc/man/de/dbSendQuery-methods.Rd
-04d8631f4a3ae2c9e79aae132989706f *inst/doc/man/de/dbSetDataMappings-methods.Rd
 93516e0286bb6a5db34daa4f8d9d7191 *inst/doc/man/de/fetch-methods.Rd
 13fddcbf9da2490060c16ee9cfda7766 *inst/doc/man/de/summary-methods.Rd
 ffb6dad61f79f7824cfdfc8072a8fc72 *inst/doc/man/en/ExtDriver-class.Rd
@@ -32,7 +30,6 @@ ffb6dad61f79f7824cfdfc8072a8fc72 *inst/doc/man/en/ExtDriver-class.Rd
 ce2921c736c4c33c7fa00a9024380e8a *inst/doc/man/en/OraDriver-class.Rd
 5b0f4d874ae1a66f708095e780b98ef3 *inst/doc/man/en/OraResult-class.Rd
 b138de9a2a6518cfddb3a332ab7d162f *inst/doc/man/en/Oracle.Rd
-19e24af3cc942c07c5b0af5a5b3013a2 *inst/doc/man/en/dbCallProc-methods.Rd
 242059bbe7c443c2ad7142f814aef4cb *inst/doc/man/en/dbCommit-methods.Rd
 d56848295d6292bae5f2805f485ccb1b *inst/doc/man/en/dbConnect-methods.Rd
 358bce75664e2ebaf8b5e34a8bf328fb *inst/doc/man/en/dbDriver-methods.Rd
@@ -40,15 +37,14 @@ d56848295d6292bae5f2805f485ccb1b *inst/doc/man/en/dbConnect-methods.Rd
 ed18acc9a0156b79bc124f7fe756451d *inst/doc/man/en/dbListConnections-methods.Rd
 df494b368237df19da05310c0222a4e9 *inst/doc/man/en/dbReadTable-methods.Rd
 c86ec2f7bbc6b250a6f2701b7b4b10b5 *inst/doc/man/en/dbSendQuery-methods.Rd
-e6a818abd6644adb0ef3daf8c5ad4c40 *inst/doc/man/en/dbSetDataMappings-methods.Rd
 dc6dd4757d81e89e43096e14e3b1880d *inst/doc/man/en/fetch-methods.Rd
+87777787e66bfd2581f047a0775e7029 *inst/doc/man/en/oracleProc-methods.Rd
 6b0f31ac0f9f9f362641760c95144f90 *inst/doc/man/en/summary-methods.Rd
 19e000aba915c07a80299853203b46eb *inst/doc/man/es/ExtDriver-class.Rd
 790dcca2c2cdf498e0819f62b3369196 *inst/doc/man/es/OraConnection-class.Rd
 83fb87928b8f3ba1bc6fddbabe2ad536 *inst/doc/man/es/OraDriver-class.Rd
 b9bc68e5624b025878f5518b4ad26eed *inst/doc/man/es/OraResult-class.Rd
 b7bb4a7bbef37c90f3cfc6cb120f834d *inst/doc/man/es/Oracle.Rd
-61a537f5da9da37cd15c0edd3fa3e04c *inst/doc/man/es/dbCallProc-methods.Rd
 0795b3e1208d7e5217288ab4867233b0 *inst/doc/man/es/dbCommit-methods.Rd
 4ca726ed3f798593e55a32ae182d43dd *inst/doc/man/es/dbConnect-methods.Rd
 37d0ce1a743ae9ba80c4a3bbbe02fa03 *inst/doc/man/es/dbDriver-methods.Rd
@@ -56,7 +52,6 @@ f4730827e91dfb84ac6e5bd066614918 *inst/doc/man/es/dbGetInfo-methods.Rd
 cf49576c64a2fb71da3d0edb89bf4fc3 *inst/doc/man/es/dbListConnections-methods.Rd
 5c77366f3ca5f0344f1fe956ab57ccdf *inst/doc/man/es/dbReadTable-methods.Rd
 8ce70fb321cf07afaf1f88a456ae6fd3 *inst/doc/man/es/dbSendQuery-methods.Rd
-6d7514bc29b76184136d02ea62e6ed33 *inst/doc/man/es/dbSetDataMappings-methods.Rd
 3186f44f25a140fb1f3a049430789546 *inst/doc/man/es/fetch-methods.Rd
 8d2284eee902d2809d85815fc4d5270a *inst/doc/man/es/summary-methods.Rd
 9029e2e328e9c8974cc763a3836b6ae6 *inst/doc/man/fr/ExtDriver-class.Rd
@@ -64,7 +59,6 @@ cf49576c64a2fb71da3d0edb89bf4fc3 *inst/doc/man/es/dbListConnections-methods.Rd
 83fba9e46d3be29e347e35cc7dedc8ee *inst/doc/man/fr/OraDriver-class.Rd
 5a29e92ceb7081c037bfc6a7e9eb25f3 *inst/doc/man/fr/OraResult-class.Rd
 d0349aef18192a55b125623f09225ed0 *inst/doc/man/fr/Oracle.Rd
-095e4b56e3c217073c6f5e7ac87da312 *inst/doc/man/fr/dbCallProc-methods.Rd
 d5e4e15873604c29b381cd474e67557b *inst/doc/man/fr/dbCommit-methods.Rd
 24081c3ebebc17ea0bd8d3a8a6cc898a *inst/doc/man/fr/dbConnect-methods.Rd
 6b299a09f1a0e233096ef727e9004301 *inst/doc/man/fr/dbDriver-methods.Rd
@@ -72,7 +66,6 @@ d5e4e15873604c29b381cd474e67557b *inst/doc/man/fr/dbCommit-methods.Rd
 8e890a81c452f343115b6027038354b1 *inst/doc/man/fr/dbListConnections-methods.Rd
 f15d70de44a60d394a456c27da9b0c50 *inst/doc/man/fr/dbReadTable-methods.Rd
 1e1c4e0fe4704a1bbdeefd074553c562 *inst/doc/man/fr/dbSendQuery-methods.Rd
-7fe939d58922b213968feb43de43fb8a *inst/doc/man/fr/dbSetDataMappings-methods.Rd
 e957cb0c1b40592a940ee68a4b8b0934 *inst/doc/man/fr/fetch-methods.Rd
 7ce488fcd78cf981dd320d7e82949709 *inst/doc/man/fr/summary-methods.Rd
 fd14029c105d0d5cb6e9923ee990df06 *inst/doc/man/it/ExtDriver-class.Rd
@@ -80,7 +73,6 @@ fd14029c105d0d5cb6e9923ee990df06 *inst/doc/man/it/ExtDriver-class.Rd
 62ece7e23b23651ca8aa8acd03e8ce02 *inst/doc/man/it/OraDriver-class.Rd
 f88ab2421947e0cf8bbdeed98417d34f *inst/doc/man/it/OraResult-class.Rd
 bc5357dd9259ceee0b55e366612b2792 *inst/doc/man/it/Oracle.Rd
-5b3418c5c27ee9c2201ac00bac44a731 *inst/doc/man/it/dbCallProc-methods.Rd
 b600e52e79d2c4bec84fc83e8bd68dcd *inst/doc/man/it/dbCommit-methods.Rd
 88b4a142cf816f0e469a759f1a0ccf4a *inst/doc/man/it/dbConnect-methods.Rd
 bcf6b65026eb2b1b00b00af229f17161 *inst/doc/man/it/dbDriver-methods.Rd
@@ -88,7 +80,6 @@ bcf6b65026eb2b1b00b00af229f17161 *inst/doc/man/it/dbDriver-methods.Rd
 4ae92912e593f71242e7f28305de25f2 *inst/doc/man/it/dbListConnections-methods.Rd
 6d7f2a94856358c71b4d11768c96ef02 *inst/doc/man/it/dbReadTable-methods.Rd
 9611f04bbbbdd1946fccab7ecaffba85 *inst/doc/man/it/dbSendQuery-methods.Rd
-85540bd3034786714cef265370fd0119 *inst/doc/man/it/dbSetDataMappings-methods.Rd
 478a3cde61490f7f33af6be624440128 *inst/doc/man/it/fetch-methods.Rd
 d110ba588611b6d4912432baea63aab5 *inst/doc/man/it/summary-methods.Rd
 30157c95caa5ce469030b16988417dd7 *inst/doc/man/ja/ExtDriver-class.Rd
@@ -96,7 +87,6 @@ a17681f95df9604c63cd027c464f4102 *inst/doc/man/ja/OraConnection-class.Rd
 ced3a2e983b818902b1e692a43808945 *inst/doc/man/ja/OraDriver-class.Rd
 a145178955eaf511e28a7605dc0d89c6 *inst/doc/man/ja/OraResult-class.Rd
 813a8cbc2512dc87c9e6e2c558181ef4 *inst/doc/man/ja/Oracle.Rd
-ef379e21cd34253a1842c73b5cb9277e *inst/doc/man/ja/dbCallProc-methods.Rd
 bc16c7532fd36126770920585a2db64d *inst/doc/man/ja/dbCommit-methods.Rd
 562fa0d5e5e6420ac58e994b45cb3154 *inst/doc/man/ja/dbConnect-methods.Rd
 bc6f57c66f4b3830671d6ac7ccec4e68 *inst/doc/man/ja/dbDriver-methods.Rd
@@ -104,7 +94,6 @@ bc6f57c66f4b3830671d6ac7ccec4e68 *inst/doc/man/ja/dbDriver-methods.Rd
 0104a21d80d60e4d10a620b86a050650 *inst/doc/man/ja/dbListConnections-methods.Rd
 25e2972e5df3945f5360ad15d68e9b45 *inst/doc/man/ja/dbReadTable-methods.Rd
 5dc19edb6383049751d5d7bd91319ff0 *inst/doc/man/ja/dbSendQuery-methods.Rd
-1aea5740d8b117c51380bcd8314aa882 *inst/doc/man/ja/dbSetDataMappings-methods.Rd
 9d30cb4f889d3b768c0038e5500f1924 *inst/doc/man/ja/fetch-methods.Rd
 aa9e09138764d578b34209d1ab2a7dcb *inst/doc/man/ja/summary-methods.Rd
 4d4965bece95c8de05728ea76bc5afb7 *inst/doc/man/ko/ExtDriver-class.Rd
@@ -112,7 +101,6 @@ aa9e09138764d578b34209d1ab2a7dcb *inst/doc/man/ja/summary-methods.Rd
 9897896b199e1c27cc00eef350f9d636 *inst/doc/man/ko/OraDriver-class.Rd
 5b0567f862129a73ac712df9a3a83d17 *inst/doc/man/ko/OraResult-class.Rd
 183dd35fca7c17c08d915b4833fdfaaf *inst/doc/man/ko/Oracle.Rd
-2752a5b9549e1cfa3f5d72b650e844e4 *inst/doc/man/ko/dbCallProc-methods.Rd
 bf105f11833aeb91decf6280f2c2a0e2 *inst/doc/man/ko/dbCommit-methods.Rd
 c25e2c516595904a7f2e2ed186021e35 *inst/doc/man/ko/dbConnect-methods.Rd
 8206d3492db3ae1d25a44b7f19219f40 *inst/doc/man/ko/dbDriver-methods.Rd
@@ -120,7 +108,6 @@ c25e2c516595904a7f2e2ed186021e35 *inst/doc/man/ko/dbConnect-methods.Rd
 4be659683e793b027ceaedddf31dde1f *inst/doc/man/ko/dbListConnections-methods.Rd
 a2ef48e679e60334d62dd2eee2e2e4e4 *inst/doc/man/ko/dbReadTable-methods.Rd
 09305631465aa78e83dee0c5d42b68de *inst/doc/man/ko/dbSendQuery-methods.Rd
-ae2f9e165b9c9968759a2efdd553c293 *inst/doc/man/ko/dbSetDataMappings-methods.Rd
 ceeac260dc72a15394d698507097aca8 *inst/doc/man/ko/fetch-methods.Rd
 aeebee0944920ae84f6b7e0e75e6f4f1 *inst/doc/man/ko/summary-methods.Rd
 c47f4b3b9ab2299588debb8e031c92f2 *inst/doc/man/pt_BR/ExtDriver-class.Rd
@@ -128,7 +115,6 @@ c47f4b3b9ab2299588debb8e031c92f2 *inst/doc/man/pt_BR/ExtDriver-class.Rd
 00d2ce8c89463f5537e33a3f5de89235 *inst/doc/man/pt_BR/OraDriver-class.Rd
 4ee5fd7dd468490bd4abf426c3a88507 *inst/doc/man/pt_BR/OraResult-class.Rd
 50fe5aa46ac0be9708f5376da24df852 *inst/doc/man/pt_BR/Oracle.Rd
-9eed9c8603bc056c6da3ac0b892339df *inst/doc/man/pt_BR/dbCallProc-methods.Rd
 efe7ab5ae7fc37eb5a0df19374d06c3d *inst/doc/man/pt_BR/dbCommit-methods.Rd
 f68b0823e37e76bff4b1dc0a71b001d1 *inst/doc/man/pt_BR/dbConnect-methods.Rd
 350c60cc368052f258f0f16cfaa65ed5 *inst/doc/man/pt_BR/dbDriver-methods.Rd
@@ -136,7 +122,6 @@ f68b0823e37e76bff4b1dc0a71b001d1 *inst/doc/man/pt_BR/dbConnect-methods.Rd
 90f57cfa373de7906fb76154297d08c3 *inst/doc/man/pt_BR/dbListConnections-methods.Rd
 e155a4870797100ae0489084a14cde08 *inst/doc/man/pt_BR/dbReadTable-methods.Rd
 7ef071291d99636da02059e482043759 *inst/doc/man/pt_BR/dbSendQuery-methods.Rd
-56d7bfc12cef8bf2c0b0f70d7846663a *inst/doc/man/pt_BR/dbSetDataMappings-methods.Rd
 2440521740354cbde8dd2d69429aa152 *inst/doc/man/pt_BR/fetch-methods.Rd
 26f6e79ad67803965d9be47f4cb9e760 *inst/doc/man/pt_BR/summary-methods.Rd
 d69d151f9095f941985a07bbc197ba1e *inst/doc/man/zh_CN/ExtDriver-class.Rd
@@ -144,7 +129,6 @@ d69d151f9095f941985a07bbc197ba1e *inst/doc/man/zh_CN/ExtDriver-class.Rd
 9db335c1fd8ce197877339a77885bfb0 *inst/doc/man/zh_CN/OraDriver-class.Rd
 7cd34dba2f6d7bb472892dbdd7f0b37a *inst/doc/man/zh_CN/OraResult-class.Rd
 f3491f56740da83cc937a748fc0ebbd5 *inst/doc/man/zh_CN/Oracle.Rd
-26daa3689561a050b2505f21c760012d *inst/doc/man/zh_CN/dbCallProc-methods.Rd
 e307b863e45f4eebc08180ea09df5605 *inst/doc/man/zh_CN/dbCommit-methods.Rd
 93b3b1460475dd00bf4b89cb8d119ddf *inst/doc/man/zh_CN/dbConnect-methods.Rd
 b486ab78f48ee08bfdf0ec71f644f6cc *inst/doc/man/zh_CN/dbDriver-methods.Rd
@@ -152,7 +136,6 @@ b486ab78f48ee08bfdf0ec71f644f6cc *inst/doc/man/zh_CN/dbDriver-methods.Rd
 a52dc70c1232a53a068ad3e06c845032 *inst/doc/man/zh_CN/dbListConnections-methods.Rd
 3131c5ae267ee4dc9b92530787a89e32 *inst/doc/man/zh_CN/dbReadTable-methods.Rd
 c9e99e180c41fc52dea4db54e0f953a8 *inst/doc/man/zh_CN/dbSendQuery-methods.Rd
-e4b68503709bb2829f08959598216795 *inst/doc/man/zh_CN/dbSetDataMappings-methods.Rd
 9aa629784d26af2c4d270c91f6550c2d *inst/doc/man/zh_CN/fetch-methods.Rd
 62716a317b63e2a6e815442a84c69871 *inst/doc/man/zh_CN/summary-methods.Rd
 38c9affa65b67a9db6d11b805324f6f0 *inst/doc/man/zh_TW/ExtDriver-class.Rd
@@ -160,7 +143,6 @@ e4b68503709bb2829f08959598216795 *inst/doc/man/zh_CN/dbSetDataMappings-methods.R
 5ca7001490700c0930a85ea26d81bb4c *inst/doc/man/zh_TW/OraDriver-class.Rd
 70a52ed05e166c962f0d537c53cdd143 *inst/doc/man/zh_TW/OraResult-class.Rd
 d117783bbdd9abc982737591d712505b *inst/doc/man/zh_TW/Oracle.Rd
-d94ef1aa2f60847c4f7aee226f084a33 *inst/doc/man/zh_TW/dbCallProc-methods.Rd
 fc795f59db7b298ce9b76fdb09689437 *inst/doc/man/zh_TW/dbCommit-methods.Rd
 c42ff2416a54d00b4b9de765a0574b51 *inst/doc/man/zh_TW/dbConnect-methods.Rd
 72f703b4d0662b8a3a4b35ff01c809c5 *inst/doc/man/zh_TW/dbDriver-methods.Rd
@@ -168,7 +150,6 @@ ace095fae3c48a58c2430c9fe6479267 *inst/doc/man/zh_TW/dbGetInfo-methods.Rd
 4686c3061b172aa358cbdd78b335dfe6 *inst/doc/man/zh_TW/dbListConnections-methods.Rd
 f299533fabbf9926195bbd2de6f38ec5 *inst/doc/man/zh_TW/dbReadTable-methods.Rd
 86e01dfa14bff51318e2d3ddbb47eb73 *inst/doc/man/zh_TW/dbSendQuery-methods.Rd
-95d44b72acdfc83db367f62df20a601a *inst/doc/man/zh_TW/dbSetDataMappings-methods.Rd
 bfaf1c590229334ccb700c96f37c8fd8 *inst/doc/man/zh_TW/fetch-methods.Rd
 e62302f4ac9a81052677f69b1ff8785d *inst/doc/man/zh_TW/summary-methods.Rd
 ffb6dad61f79f7824cfdfc8072a8fc72 *man/ExtDriver-class.Rd
@@ -176,7 +157,6 @@ ffb6dad61f79f7824cfdfc8072a8fc72 *man/ExtDriver-class.Rd
 ce2921c736c4c33c7fa00a9024380e8a *man/OraDriver-class.Rd
 5b0f4d874ae1a66f708095e780b98ef3 *man/OraResult-class.Rd
 b138de9a2a6518cfddb3a332ab7d162f *man/Oracle.Rd
-19e24af3cc942c07c5b0af5a5b3013a2 *man/dbCallProc-methods.Rd
 242059bbe7c443c2ad7142f814aef4cb *man/dbCommit-methods.Rd
 d56848295d6292bae5f2805f485ccb1b *man/dbConnect-methods.Rd
 358bce75664e2ebaf8b5e34a8bf328fb *man/dbDriver-methods.Rd
@@ -184,7 +164,6 @@ d56848295d6292bae5f2805f485ccb1b *man/dbConnect-methods.Rd
 ed18acc9a0156b79bc124f7fe756451d *man/dbListConnections-methods.Rd
 df494b368237df19da05310c0222a4e9 *man/dbReadTable-methods.Rd
 c86ec2f7bbc6b250a6f2701b7b4b10b5 *man/dbSendQuery-methods.Rd
-e6a818abd6644adb0ef3daf8c5ad4c40 *man/dbSetDataMappings-methods.Rd
 dc6dd4757d81e89e43096e14e3b1880d *man/fetch-methods.Rd
 6b0f31ac0f9f9f362641760c95144f90 *man/summary-methods.Rd
 cfc0d304092368d6bbaa8a10e7ee9264 *po/R-ROracle.pot
@@ -212,7 +191,7 @@ b3a518654952a02e965523db4d23585f *po/zh_TW.po
 543aa2bf445671680b39a998d36e33d2 *src/Makevars.in
 2da674a5f139e17a953951a1b304b3f9 *src/Makevars.win
 dd90e5748e9ef66e153d218102bc27fd *src/oci/oratypes.h
-b211e9bc4a59cd1df6086796d7c3bab7 *src/rodbi.c
-70927db82fea2869fd376dc9587bd146 *src/rodbi.h
-774d99a850cdd771a2dc0d3b8b8b5d77 *src/rooci.c
-ef72e81860576d7f1ac5acb9378bbba8 *src/rooci.h
+6f80ddcda15c6a3d0e9bf99f471b7a64 *src/rodbi.c
+dac7e22f7206c855aee0ae658378d2d9 *src/rodbi.h
+31db853385c6e64bc11badd842a04c9b *src/rooci.c
+9dfbf12f32cde3566c284dfc802c4b18 *src/rooci.h

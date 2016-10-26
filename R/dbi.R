@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
 #
 #    NAME
 #      dbi.R - DBI implementation for Oracle RDBMS based on OCI
@@ -10,6 +10,9 @@
 #    NOTES
 #
 #    MODIFIED   (MM/DD/YY)
+#    ssjaiswa    03/10/16 - add oracleProc() to invoke PLSQL stored procedures/
+#                           functions
+#    ssjaiswa    02/18/16 - remove deprecated fun dbCallProc & dbSetDataMappings
 #    rpingte     03/31/15 - add ora.attributes
 #    rpingte     01/29/15 - add unicode_as_utf8
 #    ssjaiswa    12/16/14 - [16907374] Add date argument in .oci.WriteTable
@@ -171,6 +174,18 @@ function(conn, statement, data = NULL, prefetch = FALSE,
               bulk_read = bulk_read, bulk_write = bulk_write)
 )
 
+setGeneric("oracleProc",
+function(conn, statement, ...) standardGeneric("oracleProc"),
+)
+
+setMethod("oracleProc",
+signature(conn = "OraConnection", statement = "character"),
+function(conn, statement, data = NULL, prefetch = FALSE,
+         bulk_read = 1000L, bulk_write = 1000L, ...)
+.oci.oracleProc(conn, statement, data = data, prefetch = prefetch,
+                bulk_read = bulk_read , bulk_write = bulk_write)
+)
+
 setMethod("dbGetException",
 signature(conn = "OraConnection"),
 function(conn, ...) .oci.GetException(conn)
@@ -262,14 +277,6 @@ function(conn, ...) .oci.Rollback(conn, ...)
 )
 
 ##
-## DBIConnection: Stored procedures
-##
-setMethod("dbCallProc",
-signature(conn = "OraConnection"),
-function(conn, ...) .NotYetImplemented()
-)
-
-##
 ## Class: DBIResult
 ##
 setClass("OraResult",
@@ -336,14 +343,6 @@ function (object)
   .oci.ResultSummary(object)
   invisible()
 }
-)
-
-##
-## DBIResult: Data conversion
-##
-setMethod("dbSetDataMappings",
-signature(res = "OraResult", flds = "data.frame"),
-function(res, flds, ...) .NotYetImplemented()
 )
 
 ##
