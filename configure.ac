@@ -1,4 +1,4 @@
-AC_INIT([ROracle], 1.3-1)
+AC_INIT([ROracle],[1.3-1])
 
 dnl find standard Instant Client installation
 : ${R_HOME=`R RHOME`}
@@ -18,8 +18,7 @@ fi
 dnl select library path from a configure option or from an environment
 dnl variable or from a standard location.
 AC_ARG_WITH([oci-lib],
-            AC_HELP_STRING([--with-oci-lib=OCI_LIBRARY_PATH],
-                           [the location of OCI libraries]),
+            AS_HELP_STRING([--with-oci-lib=OCI_LIBRARY_PATH],[the location of OCI libraries]),
             [oci_library=$withval])
 if test [ -n "$oci_library" ] ; then
   ROCI_LIBS=${oci_library}
@@ -45,8 +44,7 @@ fi
 dnl select include path from a configure option or from an environment
 dnl variable or from a standard location.
 AC_ARG_WITH([oci-inc],
-            AC_HELP_STRING([--with-oci-inc=OCI_INCLUDE_PATH],
-                           [the location of OCI header files]),
+            AS_HELP_STRING([--with-oci-inc=OCI_INCLUDE_PATH],[the location of OCI header files]),
             [oci_include=$withval])
 if test [ -n "$oci_include" ] ; then
   ROCI_CPPFLAGS=${oci_include}
