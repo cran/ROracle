@@ -1,19 +1,36 @@
 Package: ROracle
-Version: 1.3-1.1
-Date: 2016-10-05
-Author: Denis Mukhin, David A. James and Jake Luciani
-Maintainer: Rajendra S. Pingte <rajendra.pingte@oracle.com>
+Version: 1.5-1
+Date: 2025-10-21
 Title: OCI Based Oracle Database Interface for R
+Authors@R: c(person(given = "Denis",
+                    family = "Mukhin",
+                    role = "aut"),
+             person(given = c("David", "A."),
+                    family = "James",
+                    role = "aut"),
+             person(given = "Jake",
+                    family = "Luciani",
+                    role = "aut"),
+             person(given = c("Rajendra", "S."),
+                    family = "Pingte",
+                    role = c("aut", "cre"),
+                    email = "rajendra.pingte@oracle.com"))
+Maintainer: Rajendra S. Pingte <rajendra.pingte@oracle.com>
 Description: Oracle Database interface (DBI) driver for R.
    This is a DBI-compliant Oracle driver based on the OCI.
-SystemRequirements: Oracle Instant Client or Oracle Database Client
+SystemRequirements: curl Oracle Instant Client or Oracle Database
+        Client
 LazyLoad: yes
-Depends: methods, DBI (>= 0.2-5)
+Depends: R (>= 4.4), methods, DBI (>= 0.2-5)
 Imports: utils
 License: LGPL
-URL: http://www.oracle.com
+URL: https://www.oracle.com
 Collate: dbi.R oci.R zzz.R
 NeedsCompilation: yes
-Packaged: 2021-11-10 11:43:18 UTC; hornik
+Packaged: 2025-10-27 18:08:12 UTC; rpingte
 Repository: CRAN
-Date/Publication: 2021-11-10 12:22:19 UTC
+Date/Publication: 2025-10-27 19:30:02 UTC
+Author: Denis Mukhin [aut],
+  David A. James [aut],
+  Jake Luciani [aut],
+  Rajendra S. Pingte [aut, cre]

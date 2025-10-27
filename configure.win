@@ -1,5 +1,4 @@
 #
-#
 # select library path from an environment variable
 #
 if [ -n "${OCI_LIB64}" -a $R_ARCH = '/x64' ] ; then
@@ -8,65 +7,43 @@ else
   if [ -n "${OCI_LIB32}" -a $R_ARCH = '/i386' ] ; then
     ROCI_LIB=${OCI_LIB32}
   else
-    echo "ERROR: cannot find Oracle Client." >&2
-    if [ $R_ARCH = '/x64' ] ; then
-      echo "       Please set OCI_LIB64 to specify its location." >&2
+
+    CURL=curl
+    UNZIP=unzip
+
+    if [ ! -d "${ROCI_LIB}" ] ; then
+      if test "$CURL" != ""; then
+
+        downloaded_file_url="https://download.oracle.com/otn_software/nt/instantclient/instantclient-sdk-windows.zip"
+        downloaded_file_name="instantclient-sdk-windows.zip"
+        echo $CURL -o $downloaded_file_name $downloaded_file_url >&2
+        $CURL -o $downloaded_file_name $downloaded_file_url >&2
+        echo $UNZIP -uo $downloaded_file_name >&2
+        $UNZIP -uo $downloaded_file_name >&2
+
+        directory=`$UNZIP -l $downloaded_file_name | grep -m1 'instantclient_' | awk '{print $4}' | awk -F/ '{print $1}'`
+
+        ROCI_LIB=./$directory
+        OCI_LIB64=./$directory
+      else
+        echo "ERROR: " ${ROCI_LIB} " directory does not exist." >&2
+        if [ $R_ARCH = '/x64' ] ; then
+          echo "       Please set OCI_LIB64 to specify its location." >&2
+        else
+          echo "       Please set OCI_LIB32 to specify its location." >&2
+        fi
+        exit 1
+      fi
     else
-      echo "       Please set OCI_LIB32 to specify its location." >&2
+      echo "ERROR: " ${ROCI_LIB} " directory does not exist." >&2
+      if [ $R_ARCH = '/x64' ] ; then
+        echo "       Please set OCI_LIB64 to specify its location." >&2
+      else
+        echo "       Please set OCI_LIB32 to specify its location." >&2
+      fi
+      exit 1
     fi
-    exit 1
   fi
-fi
-if [ ! -d "${ROCI_LIB}" ] ; then
-  echo "ERROR: " ${ROCI_LIB} " directory does not exist." >&2
-  exit 1
-fi
-
-#
-# check Oracle Client oci.dll in ROCI_LIB
-#
-if test ! -f $ROCI_LIB/oci.dll ; then
-  echo "ERROR: cannot find Oracle Client library in "${ROCI_LIB}"." >&2
-  if [ $R_ARCH = '/x64' ] ; then
-    echo "       Please set OCI_LIB64 to correct location." >&2
-  else
-    echo "       Please set OCI_LIB32 to correct location." >&2
-  fi
-  exit 1
-fi
-
-#
-# check Oracle Client shared library details if genezi utility is available
-#
-if test -f $ROCI_LIB/genezi ; then
-  # Get the Client Shared Library details
-  ROCI_LIB_INFO=`${ROCI_LIB}/genezi -v | grep Shared`
-
-  # get the Client Shared Libraray operating mode
-  ROCI_LIB_OPER=`${ROCI_LIB}/genezi -v | grep Operating`
-
-  # 64-bit version of Oracle Client library cannot be used when building with
-  # 32-bit R with --merge-multiarch, R reports following error:
-  #  Error in inDL(x, as.logical(local), as.logical(now), ...) :
-  #    unable to load shared object '.../library/ROracle/libs/x64/ROracle.dll':
-  #    LoadLibrary failure:  %1 is not a valid Win32 application.
-  #
-  ROCI_LIB_ARCH=`echo $ROCI_LIB_INFO | gawk '{print $4}'`
-  if [ $R_ARCH = '/i386' -a $ROCI_LIB_ARCH = '64-bit' ] ; then
-    echo $ROCI_LIB_INFO "cannot be used to install with 32-bit R." >&2
-    exit 1
-  fi
-
-  # 32-bit version of Oracle Client library cannot be used when building with
-  # 64-bit R with --merge-multiarch, R reports following error:
-  #  " collect2: ld returned 5 exit status"
-  if [ $R_ARCH = '/x64' -a $ROCI_LIB_ARCH = '32-bit' ] ; then
-    echo $ROCI_LIB_INFO "cannot be used to install with 64-bit R." >&2
-    exit 1
-  fi
-
-  # display details and operating mode of Oracle Client Library
-  echo "Oracle" $ROCI_LIB_INFO $ROCI_LIB_OPER >&2
 fi
 
 #
@@ -114,6 +91,11 @@ cp ${ROCI_INC}/ociextp.h ./src/oci
 cp ${ROCI_INC}/ocixmldb.h ./src/oci
 cp ${ROCI_INC}/ocixstream.h ./src/oci
 cp ${ROCI_INC}/ori.h ./src/oci
+cp ${ROCI_INC}/orid.h ./src/oci
 cp ${ROCI_INC}/orl.h ./src/oci
 cp ${ROCI_INC}/oro.h ./src/oci
 cp ${ROCI_INC}/ort.h ./src/oci
+if test -f $ROCI_INC/ociver.h ; then
+  cp ${ROCI_INC}/ociver.h ./src/oci
+fi
+

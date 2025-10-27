@@ -132,7 +132,7 @@
    1) 屬性名稱: \code{ora.type}
    此屬性代表現有資料欄的類型, 可以是
    "CLOB"、"BLOB"、"CHAR"、"VARCHAR2" 或 "RAW". 使用者可以指定
-   TIMESTAMP、DATE、TIMESTAMP WITH TIME ZONE 或 Oracle 資料庫支援的
+   TIMESTAMP、DATE、TIMESTAMP WITH TIME ZONE 或 Oracle Database 支援的
    任何其他資料欄類型. ROacle 不會剖析值; 而是由
    資料庫來進行驗證. 使用者可針對 \code{ora.type} 提供下列
    其中一個值: CLOB、BLOB、CHAR、TIMESTAMP WITH TIME
@@ -191,7 +191,7 @@
    字串資料會被直接傳送給資料庫, 而 ROracle 會倚賴資料庫將其轉換成日期時間表示法.
    ROracle 驅動程式會在用於 DML 作業的資料框架中使用 "\%Y-\%m-\%d \%H:\%M:\%OS6" 格式,
    將 POSIXct 表示法轉換成字串表示法. 此格式的資料會對應至 NLS_TIMESTAMP_TZ_FORMAT
-   "YYYY-MM-DD HH24:MI:SSXFF", 並會轉換成要連結至 Oracle 資料庫的 SQLT_TIMESTAMP_LTZ.
+   "YYYY-MM-DD HH24:MI:SSXFF", 並會轉換成要連結至 Oracle Database 的 SQLT_TIMESTAMP_LTZ.
    系統會建立在內部代表 ROracle 驅動程式之字元資料的中繼類別 "datetime".
    ROracle 會使用 SQLT_TIMESTAMP 資料類型來擷取日期和時戳資料類型的資料欄.
    擷取含時區的時戳或含當地時區的時戳資料類型的資料欄時, 則是使用 SQLT_TIMESTAMP_LTZ 資料類型.
@@ -326,7 +326,7 @@ http://stat.ethz.ch/R-manual/R-devel/library/base/html/timezones.html
        "2012-01-05 03:00:00 EST" "2011-01-05 03:00:00 EST"
    [5] "2013-01-05 03:00:00 EST" "2020-01-05 03:00:00 EST"}
   此外, 即使是將資料列附加至已經存在的表格,
-  \code{dbWriteTable} 也一律會自動確認目前的交易及其插入
+  \code{dbWriteTable} 也一律會自動確認目前的異動及其插入
   的資料 (亦即會扮演 DDL 敘述句的角色).
 }
 \value{

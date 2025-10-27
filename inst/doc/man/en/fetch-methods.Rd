@@ -30,8 +30,8 @@
   and if \code{n} is missing it returns all records.
 }
 \section{References}{
-  For the Oracle Database documentaion see
-  \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
+  For the Oracle Database documentation see
+  \url{https://docs.oracle.com/en/}.
 }
 \seealso{
   \code{\link{Oracle}},

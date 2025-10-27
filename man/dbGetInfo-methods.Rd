@@ -51,61 +51,61 @@
   The \pkg{ROracle} method \code{dbGetInfo} provides following details about
   the driver object:
   \itemize{
-    \item {\$driverName} The name of the driver, "Oracle (OCI)"
-    \item {\$driverVersion} The version of the ROracle driver used
-    \item {\$clientVersion} The version of the Oracle Client library used
-    \item {\$conTotal} The number of connections instantiated by the driver
-    \item {\$conOpen} The number of connections open currently
-    \item {\$interruptible} TRUE when a long-running query can be interrupted
-    \item {\$unicode_as_utf8} TRUE when character data is to be fetched in UTF8
+    \item {$driverName} The name of the driver, "Oracle (OCI)"
+    \item {$driverVersion} The version of the ROracle driver used
+    \item {$clientVersion} The version of the Oracle Client library used
+    \item {$conTotal} The number of connections instantiated by the driver
+    \item {$conOpen} The number of connections open currently
+    \item {$interruptible} TRUE when a long-running query can be interrupted
+    \item {$unicode_as_utf8} TRUE when character data is to be fetched in UTF8
                               encoded format
-    \item {\$ora_attributes} TRUE when each column in a result set data frame
+    \item {$ora_attributes} TRUE when each column in a result set data frame
                              has corresponding Oracle DBMS attributes
-    \item {\$connections} Information about each connection currently open, see
+    \item {$connections} Information about each connection currently open, see
                           \code{dbGetInfo} of connection object for details
   }
   The \pkg{ROracle} method \code{dbGetInfo} provides following the details
   about the connection object:
   \itemize{
-    \item {\$username} The name of the user on this connection
-    \item {\$dbname} The connect alias or the connect string used
-    \item {\$serverVersion} The version of the Oracle Database server
-    \item {\$serverType} The value "Oracle RDBMS"
-    \item {\$resTotal} The number of result sets on this connection
-    \item {\$resOpen} The number of result sets open on this connection
-    \item {\$prefetch} TRUE when prefetch mechanism is used to fetch data
-    \item {\$bulk_read} The number of rows to fetch at a time from DBMS
-    \item {\$bulk_write} The number of rows to write at a time to DBMS
-    \item {\$stmt_cache} TRUE when the statement cache is used
-    \item {\$results} Information about each result set currently open, see
+    \item {$username} The name of the user on this connection
+    \item {$dbname} The connect alias or the connect string used
+    \item {$serverVersion} The version of the Oracle Database server
+    \item {$serverType} The value "Oracle RDBMS"
+    \item {$resTotal} The number of result sets on this connection
+    \item {$resOpen} The number of result sets open on this connection
+    \item {$prefetch} TRUE when prefetch mechanism is used to fetch data
+    \item {$bulk_read} The number of rows to fetch at a time from DBMS
+    \item {$bulk_write} The number of rows to write at a time to DBMS
+    \item {$stmt_cache} TRUE when the statement cache is used
+    \item {$results} Information about each result set currently open, see
                       \code{dbGetInfo} of result set for details
   }
   The \pkg{ROracle} method \code{dbGetInfo} provides the following details
   about the result set object:
   \itemize{
-    \item {\$statement} SQL statement used to produce the result set object
-    \item {\$isSelect} TRUE when a select statement is specified
-    \item {\$rowsAffected} The number of rows affected by DML statment
-    \item {\$rowCount} The number of rows in result set currently
-    \item {\$completed} TRUE if there are no more rows in the result set
-    \item {\$prefetch} TRUE when the prefetch mechanism used to fetch data
-    \item {\$bulk_read} The number of rows to fetch at a time from DBMS
-    \item {\$bulk_write} The number of rows to write at a time to DBMS
-    \item {\$fields} Information about each column in the the result set, see
+    \item {$statement} SQL statement used to produce the result set object
+    \item {$isSelect} TRUE when a select statement is specified
+    \item {$rowsAffected} The number of rows affected by DML statement
+    \item {$rowCount} The number of rows in result set currently
+    \item {$completed} TRUE if there are no more rows in the result set
+    \item {$prefetch} TRUE when the prefetch mechanism used to fetch data
+    \item {$bulk_read} The number of rows to fetch at a time from DBMS
+    \item {$bulk_write} The number of rows to write at a time to DBMS
+    \item {$fields} Information about each column in the result set, see
                      \code{dbColumnInfo} for details
   }
   The \pkg{ROracle} method  \code{dbColumnInfo} provides following details
   about each column in the result set:
   \itemize{
-    \item {\$name} The name of the column
-    \item {\$Sclass} The R type of the object containing the data returned by
+    \item {$name} The name of the column
+    \item {$Sclass} The R type of the object containing the data returned by
                      the Oracle RDBMS
-    \item {\$type} The type of column as created in Oracle RDBMS
-    \item {\$len} Length of VARCHAR, CHAR and RAW column type in Oracle RDBMS.
+    \item {$type} The type of column as created in Oracle RDBMS
+    \item {$len} Length of VARCHAR, CHAR and RAW column type in Oracle RDBMS.
                   All other columns will have NA.
-    \item {\$precision} The precision of number column
-    \item {\$scale} The scale of number column
-    \item {\$nullOK} TRUE when a NULL value can be present in the column
+    \item {$precision} The precision of number column
+    \item {$scale} The scale of number column
+    \item {$nullOK} TRUE when a NULL value can be present in the column
   }
 
    The example below shows the driver, connection, result set, and column
@@ -126,7 +126,9 @@
      n timestamp with time zone,
      o timestamp with local time zone,
      r interval day to second,
-     s raw(234)
+     s raw(234),
+     t boolean,
+     u vector(*,*)
    );
  }
 
@@ -141,10 +143,10 @@ $driverName
 [1] "Oracle (OCI)"
 
 $driverVersion
-[1] "1.1-12"
+[1] "1.5-1"
 
 $clientVersion
-[1] "11.2.0.4.0"
+[1] "23.6.0.24.10"
 
 $conTotal
 [1] 1
@@ -165,7 +167,7 @@ $connections
 $connections[[1]]
 User name:             scott 
 Connect string:         
-Server version:        11.2.0.4.0 
+Server version:        23.6.0.24.10 
 Server type:           Oracle RDBMS 
 Results processed:     1 
 OCI prefetch:          FALSE 
@@ -183,7 +185,7 @@ $dbname
 [1] ""
 
 $serverVersion
-[1] "11.2.0.4.0"
+[1] "23.6.0.24.10"
 
 $serverType
 [1] "Oracle RDBMS"
@@ -260,7 +262,10 @@ $fields
 13    O   POSIXct TIMESTAMP WITH LOCAL TIME ZONE  NA         0     6   TRUE
 14    R  difftime         INTERVAL DAY TO SECOND  NA         2     6   TRUE
 15    S       raw                            RAW 234         0     0   TRUE
+16    T   logical                        BOOLEAN  NA         0     0   TRUE
+17    U      list                      VECTOR(*)  NA         0     0   TRUE
 
+>
    }
 }
 \value{
@@ -268,7 +273,7 @@ $fields
 }
 \section{References}{
   For the Oracle Database documentaion see
-  \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
+  \url{https://docs.oracle.com/en/}.
 }
 \seealso{
   \code{\link{Oracle}},

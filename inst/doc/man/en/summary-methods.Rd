@@ -32,7 +32,7 @@
 }
 \section{References}{
   For the Oracle Database documentaion see
-  \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
+  \url{https://docs.oracle.com/en/}.
 }
 \seealso{
   \code{\link{Oracle}},

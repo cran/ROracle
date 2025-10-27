@@ -235,7 +235,7 @@ Rセッション・タイム・ゾーン:
  1. Rの起動前に、LinuxまたはUnixのコマンドラインで次のように入力し
     ます。
     setenv TZ = America/Los_Angeles on Linux/UNIX
-    注意: このオプションはWindowsで使用しないでください。環境変数TZに
+    ノート: このオプションはWindowsで使用しないでください。環境変数TZに
           Oracle互換のタイムゾーン名を設定できないためです。
  2. Rプロンプトで次のように入力します。
     Sys.setenv(TZ = "PST8PDT")

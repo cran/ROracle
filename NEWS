@@ -1,3 +1,45 @@
+Version 1.5-1  (2025-09-05)
+
+* Add support for sparse vectors
+
+* Make package uploadable to CRAN
+
+* Bug 37777349: support data longer than 32767 in bind to CLOB
+
+Version 1.5-0  (2024-10-11)
+
+* Add dynamic load of Oracle client library
+
+* Add support for vector data types
+  This feature is only available with 23AI database, source package
+  built with Oracle client lower than version 23 mjust be rebuilt with
+  higher version 
+
+* Add support for PLSQL boolean types
+
+* Fix configure.ac
+
+* if one sees differences with precision after ROracle driver is loaded
+  then one can set environment variable ORA_FPU_PRECISION to EXTENDED
+
+  NOTE: dbWriteTable on boolean and object types fetched from DB is not
+        supported in this version, it will be added in future version
+
+Version 1.4-1  (2019-11-22)
+
+* Add support for user defined types
+
+* bug 30087742 - Modify WriteTable() to insert into generated columns
+
+Version 1.3-2  (2018-11-01)
+
+* Use ora.encoding for DML when specified
+
+* Updated INSTALL
+
+* One can now specify type of Oracle DBMS column using ora.type attribute in
+  dataframe when using dbWriteTable
+
 Version 1.3-1  (2016-02-16)
 
 * Handled both upper and lower cases in ora.type, ora.parameter_mode and 
@@ -359,7 +401,7 @@ Version 0.4-0
 
 Version 0.3-3
 
-   NOTE: Next major version will comply with the emerging common
+*  NOTE: Next major version will comply with the emerging common
          database interface DBI, if agreed by the R-SIG-DB.  This 
          will probably change the function names, but not the basic 
          functionality.

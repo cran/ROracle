@@ -59,7 +59,7 @@ Ein logischer Wert, der TRUE oder FALSE angibt. Wenn der Wert auf TRUE gesetzt i
 }
   \item{bulk_read}{
 Ein ganzzahliger Wert, der die Anzahl von Zeilen angibt, die gleichzeitig abgerufen werden sollen.
-    Der Standardwert beträgt 1000L. Wenn die Prefetch-Option gewählt ist, wird der Speicher für
+    Der Standardwert ist 1000L. Wenn die Prefetch-Option ausgewählt ist, wird der Speicher für
     Prefetch-Puffer verwendet und OCI ruft diese Anzahl von Zeilen gleichzeitig ab.
     Wenn Prefetch nicht verwendet wird (Standard), wird der Speicher in RODBI/ROOCI-
     Define-Puffern zugewiesen. Wenn hier ein hoher Wert festgelegt wird, wird mehr Speicher
@@ -136,7 +136,7 @@ Aktuell nicht verwendet
       Das \code{bulk_write}-Argument wird verwendet, um einen ganzzahligen Wert festzulegen,
       der die Anzahl der gleichzeitig zu schreibenden Zeilen angibt.
       Das \code{stmt_cache}-Argument wird zur Aktivierung oder Deaktivierung des Features zum
-      Anweisungscaching verwendet. Sein Wert gibt die Größe des Anweisungscaches an.
+      Anweisungscaching verwendet. Sein Wert gibt die Größe des Anweisungscache an.
       Das \code{external_credentials}-Argument wird verwendet, um die OCI-Session, die mit externen Zugangsdaten
       authentifiziert ist, für die Verbindung zu beginnen.
       Das \code{sysdba}-Argument wird verwendet, um die OCI-Session mit SYSDBA-

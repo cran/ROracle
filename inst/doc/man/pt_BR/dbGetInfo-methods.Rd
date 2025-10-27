@@ -84,7 +84,7 @@ Não utilizado no momento.
 
 \details{
 Os nomes de tabela, esquema e coluna distinguem maiúsculas de minúsculas, por exemplo, os nomes
-  de tabela \code{ABC} e \code{abc} não são iguais. Todos os nomes de objeto de esquema
+ de tabela \code{ABC} e \code{abc} não são iguais. Todos os nomes de objeto de esquema
   de banco de dados não devem incluir aspas duplas, uma vez que eles são colocados entre
   aspas duplas quando a instrução SQL correspondente é gerada.
   O método \code{dbGetInfo} do \\pkg{ROracle} fornece os seguintes detalhes sobre

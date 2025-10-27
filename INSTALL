@@ -1,337 +1,390 @@
+Contents
+========
+
+1    -  Introduction
+1.1  -    Installing ROracle Directly from Binary File
+
+2    -  Requirements
+2.1  -    Prerequisites
+2.2  -    Linux
+2.3  -    macOS
+2.4  -    Windows
+2.5  -    TimesTen
+2.6  -    Instant Client
+
+3    -  Installation
+3.1  -    Linux Instant Client
+3.2  -    Linux Oracle Client (Oracle home installation)
+3.3  -    macOS Instant Client
+3.4  -    Windows
+3.5  -    Windows - Instant Client
+3.6  -    Windows - Oracle Client (ORACLE_HOME-Based Client)
+3.7  -    TimesTen
+3.8  -    Installing ROracle on Windows Directly from Binary File
+3.9  -    Installing ROracle on AIX and Solaris platforms
+3.10 -    Optional Oracle Net Configuration
+3.11 -    Oracle client connection settings
+3.12 -    Post-installation Validation
+
+4    -  Troubleshooting
+4.1  -    Linux
+4.2  -    Windows
+
+
+
 1. Introduction
 ===============
 
-  ROracle has been built and tested with R versions 2.15 through 3.2.0 and with
-  Oracle Instant Client and Oracle Database Client versions 10.2 to 12.1.0.1 on
-  both the 32 and 64-bit versions of the Linux and Windows operating systems.
+  ROracle has been built and tested with R versions 2.15 through 4.5.1 and with
+  Oracle Instant Client and Oracle Database Client versions 10.2 to 23.9.0.0,
+  compatible with Oracle's supported client architectures on Linux and 
+  Windows operating systems.
+
+  Precompiled binaries for ROracle can be obtained from:
+  https://www.oracle.com/database/technologies/roracle-downloads.html
 
 2. Requirements
 ===============
-
-  Linux
-  -----
+  
+  2.1 Prerequisites
+  -----------------
+  Before proceeding with the Installation of the ROracle Driver and Oracle
+  Instant Client, ensure the following are installed:
+  1. Install R 
+     Download and install R from https://cran.r-project.org/ 
+     Make sure to select the version compatible with your operating system.
+  2. Install DBI from: https://cran.r-project.org/web/packages/DBI/index.html
+  3. For Windows, ensure that Rtools is installed from:
+     https://cran.r-project.org/bin/windows/Rtools/rtools44/rtools.html   
+  
+  2.2 Linux
+  ---------
 
   For compiling on Linux, ROracle needs either the Oracle Instant Client or
   the Oracle Database Client part of the Oracle Database distribution
   (ORACLE_HOME-based client). If using an Oracle Instant Client, you need
-  either the Basic or Basic Lite packages in addition to the SDK package. You
-  can use either the RPM or ZIP package. You can simplify the ROracle
-  installation process by using Instant Client RPM packages.
+  the Basic or Basic Light packages and the SDK package.
+  You can use either the RPM or the ZIP package. You can simplify the
+  ROracle installation process by using Instant Client RPM packages.
 
-  NOTE: Basic Lite is geared toward applications that require English-only
-    error messages and use either US7ASCII, WE8DEC, or a Unicode characterset.
-    It also has no restrictions on the TERRITORY field of the NLS_LANG setting.
-    As a result, an application that meets these characterset and territory
-    criteria can significantly reduce its footprint if it uses the Basic Lite
-    package.
+  2.3 macOS
+  ---------
 
-  Mac OS X
-  --------
+  For compiling on macOS, ROracle needs the Oracle Instant Client. Then you 
+  need either the Basic or Basic Light packages in addition to the SDK package.
 
-  For compiling on Linux, ROracle needs the Oracle Instant Client. Then you need
-  either the Basic or Basic Lite packages in addition to the SDK package.
-
-  NOTE: Basic Lite is geared toward applications that require English-only
-    error messages and use either US7ASCII, WE8DEC, or a Unicode characterset.
-    It also has no restrictions on the TERRITORY field of the NLS_LANG setting.
-    As a result, an application that meets these characterset and territory
-    criteria can significantly reduce its footprint if it uses the Basic Lite
-    package.
-
-  Windows
-  -------
+  2.4 Windows
+  -----------
 
   For compiling on Windows, ROracle needs either an Oracle Instant Client or
   Oracle Database Client. If using Oracle Instant Client, you need either
-  a Basic or Basic Lite package in addition to the SDK package of Instant
-  Client. If you are not using Oracle Instant Client, you only need the Oracle
+  a Basic or Basic Light package in addition to the SDK package. 
+
+  If you are not using Oracle Instant Client, you only need the Oracle
   Database Client part of the Oracle Database distribution (ORACLE_HOME-based
-  client). When building on a 64-bit platform, you can build both the 32-bit and
-  64-bit packages. If you need both, you need to install both the 32 and
+  client). 
+
+  When building on a 64-bit platform, you can build either the 32-bit or
+  64-bit packages. If you need both, you need to install both the 32-bit and
   64-bit versions of Oracle Instant Client or Oracle Database Client. 
 
-  NOTE: Basic Lite is geared toward applications that require English-only
-    error messages and use either US7ASCII, WE8DEC, or a Unicode characterset.
-    It also has no restrictions on the TERRITORY field of the NLS_LANG setting.
-    As a result, applications that meet these characterset and territory
-    criteria can significantly reduce its footprint if they use the Basic Lite
-    package.
-
-  TimesTen
-  --------
+  2.5 TimesTen
+  ------------
   
   For TimesTen connection support, ROracle should be compiled using the Oracle
   Instant Client included in the local TimesTen installation directory. For 
-  more information on TimesTen see http://www.oracle.com/technetwork/database/
-  timesten/documentation/.
+  more information on TimesTen, see https:
+  https://www.oracle.com/database/technologies/related/timesten.html
 
-  Instant Client
-  --------------
+  2.6 Instant Client
+  ------------------
 
-  For more information on Oracle Instant Client see http://www.oracle.com/
-  technetwork/database/features/instant-client/index-100365.html.
+  For more information on Oracle Instant Client, see https:
+  https://www.oracle.com/database/technologies/instant-client.html
+
+  The Oracle Instant Client specifically compatible with Oracle 23ai Database, 
+  is needed to support VECTOR. Ensure that the Instant Client path is included 
+  in your $PATH before installing ROracle.
+
+  To confirm the successful installation of Instant Client, follow the 
+  instructions from section 3.12.
+
+  Note: 32-bit Oracle Database clients are not supported starting from 
+  Oracle Database 23ai. Oracle has discontinued developing 32-bit Oracle 
+  Database clients and recommends that you use 64-bit Oracle Database 
+  clients. If you are using 32-bit applications, you can continue to use 
+  older 32-bit Oracle Database clients, but be aware that you will not be 
+  able to use features that are only available in 23ai, such as vector support.
 
 3. Installation
 ===============
 
-  Linux - Instant Client
-  ----------------------
+  3.1 Linux - Instant Client
+  --------------------------
 
   The ROracle build depends on Oracle Client libraries and header files. To
-  build with 11.2 client version, you can get Instant Client 11.2 from 
-  an RPM. It has both the Basic and the SDK packages. It places the files in
-  standard locations that the ROracle configure script can find. For example,
-  on a 32-bit system, Oracle Instant Client is installed in 
-  /usr/lib/oracle/11.2/client/lib. On a 64-bit system, it is installed in
-  /usr/lib/oracle/11.2/client64/lib. After installing the Oracle Instant
-  Client, change LD_LIBRARY_PATH as follows:
+  build with 11.2 client version and higher, you can get the Instant Client 
+  zip or RPM. It has both Basic and SDK packages.
+  https://www.oracle.com/database/technologies/instant-client/downloads.html
+  Select the LINUX Instant Client compatible with your operating system.
 
-  export LD_LIBRARY_PATH=/usr/lib/oracle/11.2/client64/lib:$LD_LIBRARY_PATH
-  R CMD INSTALL ROracle_1.3-1.tar.gz
- 
-  Alternatively, you can extract Oracle Instant Client from a zip package. In
-  this case, a symbolic link libclntsh.so needs to be created manually before
-  proceeding to install ROracle.
+  1. Extract Oracle Instant Client from a zip package into a single directory
+     such as /path/to/instantclient_23_6 that is accessible to your application
+     
+     Update your PATH environment variable, for example:
+     export PATH=/path/to/instantclient_23_6:$PATH
 
-  Change directories to the directory where Oracle Instant Client is 
-  installed and then issue the following command:
-  ln -s libclntsh.so.11.1   libclntsh.so
+     Before installing ROracle, a symbolic link libclntsh.so needs to be 
+     created manually for Instant Client versions lower than 18.3:
+
+     Change directories to the directory where Oracle Instant Client is
+     installed and then issue the following command:
+     ln -s libclntsh.so.11.1   libclntsh.so
+
+  2. RPM installation places the files in standard locations that the ROracle
+     configure script can find. 
+     For example,
+     On a 32-bit system, Oracle Instant Client is installed in 
+     /usr/lib/oracle/21/client/lib
+     On a 64-bit system, Oracle Instant Client is installed in
+     /usr/lib/oracle/23/client64/lib
+
+     After installing the Oracle Instant Client, change LD_LIBRARY_PATH:
+     export LD_LIBRARY_PATH=/usr/lib/oracle/23/client64/lib:$LD_LIBRARY_PATH
+     export OCI_INC=/usr/include/oracle/23/client64/
+     R CMD INSTALL ROracle_1.5-1.tar.gz
 
   Next, set the LD_LIBRARY_PATH environment variable. Additionally, specify 
   the location of Oracle Client libraries and header files via either the 
   environment variable OCI_LIB or the configure option --with-oci-lib. 
  
   For example, if Oracle Instant Client was installed in
-  /scratch/instantclient_11_2, then you need to do the following:
+  /scratch/instantclient_23_6, then you need to do the following:
   
-  export OCI_LIB=/scratch/instantclient_11_2
-  export LD_LIBRARY_PATH=/scratch/instantclient_11_2:$LD_LIBRARY_PATH
-  R CMD INSTALL ROracle_1.3-1.tar.gz
+  export OCI_LIB=/scratch/instantclient_23_6
+  export OCI_INC=/scratch/instantclient_23_6
+  export LD_LIBRARY_PATH=/scratch/instantclient_23_6:$LD_LIBRARY_PATH
+  R CMD INSTALL ROracle_1.5-1.tar.gz
 
   Alternatively, if using the --with-oci-lib configure option, you can do 
   the following:
 
-  export LD_LIBRARY_PATH=/scratch/instantclient_11_2:$LD_LIBRARY_PATH
-  R CMD INSTALL --configure-args='--with-oci-lib=/scratch/instantclient_11_2' ROracle_1.3-1.tar.gz
+  export LD_LIBRARY_PATH=/scratch/instantclient_23_6:$LD_LIBRARY_PATH
+  R CMD INSTALL --configure-args='--with-oci-lib=/scratch/instantclient_23_6' ROracle_1.5-1.tar.gz
 
-  Both methods assume that the Basic and SDK packages were unzipped into the 
-  same directory and Oracle Client headers are located under 
-  $OCI_LIB/sdk/include. If this is not the case, then set either the OCI_INC 
-  environment variable or the --with-oci-inc configure option appropriately.
+  Both methods assume that both the Basic and SDK packages were unzipped
+  into the same directory, and Oracle Client headers are located under
+  $OCI_LIB/sdk/include. If this is not the case, then set either the OCI_INC
+  environment variable, or the --with-oci-inc configure option appropriately.
+  Ensure that $PATH includes the Instant Client path.
 
-  Linux - Oracle Client (Oracle home installation)
-  ------------------------------------------------
+  To validate a successful ROracle Installation, follow the instructions in
+  Section 3.12.
 
-  As in the previous section, set LD_LIBRARY_PATH  to include the path to
-  the Oracle Client libraries. Additionally, set ORACLE_HOME. Then install the
-  ROracle package by running
+  3.2 Linux - Oracle Client (Oracle home installation)
+  ----------------------------------------------------
 
-  R CMD INSTALL ROracle_1.3-1.tar.gz
+  Set LD_LIBRARY_PATH  to include the path to the Oracle Client libraries.
+  Additionally, set ORACLE_HOME. Then, install the ROracle package by running
 
+  R CMD INSTALL ROracle_1.5-1.tar.gz
 
-  Mac OS X - Instant Client
-  -------------------------
+  To validate a successful ROracle installation, follow the instructions in 
+  Section 3.12.
+
+  3.3 macOS - Instant Client
+  --------------------------
 
   The ROracle build depends on Oracle Client libraries and header files. To
-  build with 11.2 client version, you can get Instant Client 11.2 from zip
-  package. It has both the Basic and the SDK packages. 
-  You can extract Oracle Instant Client from a zip package. In this case, 
-  a symbolic link libclntsh.so needs to be created manually before
-  proceeding to install ROracle.
+  build with Oracle Instant Client 23.3 version, you can get Instant Client 23.3
+  dmg files, which includes Basic and SDK dmg files. 
 
-  To Install Oracle Instant Client and ROracle package, do the following:
-  1. Download Instant Client from:
-     http://www.oracle.com/technetwork/topics/intel-macsoft-096467.html
-     into (for example):
+  To install the Oracle Instant Client and the ROracle package, do the following:
+  1. Download Instant Client Basic or Basic Light packages:
+     For macOS (Intel x86) use: 
+     https://www.oracle.com/database/technologies/instant-client/macos-intel-x86-downloads.html
+     For macOS (ARM64) use:
+     https://www.oracle.com/database/technologies/instant-client/macos-arm64-downloads.html 
+     to the path (for example):
      /path/to/dnlds/
-  2. Extract Oracle Instant Client from zip packages:
-     cd /path/to/dnlds
-     unzip -o instantclient-basic-macos.x64-12.1.0.2.0.zip     -d /opt/ora12
-     unzip -o instantclient-sdk-macos.x64-12.1.0.2.0.zip       -d /opt/ora12
-  3. Change directories to the directory where Oracle Instant Client is
-     installed and then issue the following command: 
-     cd /opt/ora12/instantclient_12_1
-     ln -s libclntsh.dylib.12.1 libclntsh.dylib
-  4. Download the ROracle source package (ROracle_1.3-1.tar.gz) from CRAN
-     into (for example):
+  2. Mount the dmg either by double-clicking on the package or run:
+     hdiutil mount instantclient-basic-macos.arm64-23.3.0.23.09.dmg
+  3. To install the Basic package:
+     cd /Volumes/instantclient-basic-macos.arm64-23.3.0.23.09
+     sh ./install_ic.sh  
+  4. This should create an instantclient_23_3 folder in the
+     /Users/<user>/Downloads directory
+  5. Follow steps 1-3 to install the SDK package, which will be
+     installed in the same /Users/<user>/Downloads directory
+  6. Add the installation directory to your path:
+     export PATH=$PATH:/Users/user-name/Downloads/instantclient_23_3
+  7. Download the ROracle source package (ROracle_1.5-1.tar.gz) from CRAN
+     to (for example):
      /path/to/pkg/
-  5. Install ROracle package by issuing following command:
-     cd /path/to/pkg
-     R CMD INSTALL --configure-args='--with-oci-lib=/opt/ora12/instantclient_12_1' ROracle_1.3-1.tar.gz
+  8. Install the ROracle package by issuing the following command:
+     R CMD INSTALL --configure-args='--with-oci-lib=/opt/ora12/instantclient_23_3 --with-oci-inc=/opt/ora12/instantclient_23_3/sdk/include' ROracle_1.5-1.tar.gz
      Or, within R, using the modified package:
-     install.packages('ROracle_1.3-1.tar.gz', repos=NULL, configure.args='--with-oci-lib=/opt/ora12/instantclient_12_1')
+     install.packages('ROracle_1.5-1.tar.gz', repos=NULL, configure.args='--with-oci-lib=/opt/ora12/instantclient_23_3')
 
+  To validate a successful ROracle installation, follow the instructions in 
+  Section 3.12.
 
-  Windows
-  -------
+  3.4 Windows
+  -----------
 
   For compiling on Windows, ROracle needs either the Oracle Instant Client or
   only the Oracle Database Client part of the Oracle Database distribution
   (ORACLE_HOME-based client).
-  When using Oracle Instant Client you need either the Basic or Basic Lite
-  package in addition to the SDK package. Once ROracle is built with any
-  supported version of Oracle Client, at run-time you can use an appropriate
-  supported version of Oracle Instant Client or ORACLE_HOME-based client
-  without requiring a re-build of ROracle.
+  When using Oracle Instant Client, you need either the Basic or the Basic Light
+  package, in addition to the SDK package. Once ROracle is built with any 
+  supported version of Oracle Client, at run-time, you can use an appropriate
+  supported version of Oracle Instant Client or ORACLE_HOME-based client 
+  without requiring a rebuild of ROracle.
 
   Once ROracle is built and installed, the 64-bit version of R uses the 
-  64-bit version of Oracle Client and the 32-bit version of R uses the 
-  32-bit  version of Oracle Client. If there are multiple versions of Oracle
+  64-bit version of Oracle Client and the 32-bit version of R use the 
+  32-bit version of Oracle Client. If there are multiple versions of Oracle
   Client in the PATH, the first one in the PATH that corresponds to the R 
   architecture is loaded by ROracle.
   For example, if the PATH has
-  c:\temp\i386\instantclient_10_2;c:\temp\x64\instantclient_11_1;c:\temp\i386\instantclient_11_2;c:\temp\x64\instantclient_11_2;%PATH%, then R 32-bit uses instantclient_10_2 and R 64-bit uses
-  instantclient_11_1; the rest of the PATH is ignored. The version that is 
-  required must be in the PATH first, Oracle recommendeds that you have only one
+  c:\temp\32-bit\instantclient_21_18;c:\temp\x64\instantclient_23_6;c:\temp\32-bit\instantclient_21_18;c:\temp\x64\instantclient_23_6;%PATH%,
+  then R 32-bit uses instantclient_21_18 and R 64-bit uses
+  instantclient_23_6; the rest of the PATH is ignored. The version that is 
+  required must be in the PATH first. Oracle recommends that you have only one
   version for each architecture in the PATH. Refer to item 8 of the 
-  Troubleshooting section to determine the architecture of Oracle Client being 
-  used.
+  Troubleshooting section to determine the architecture of the Oracle Client  
+  being used.
+
+  Install Rtools for Windows from: https://cran.r-project.org/bin/windows/Rtools/rtools44/rtools.html
+  Set the Rtools path as follows:
+  set path=%path%;C:\Rtools44\mingw64\bin
+  set path=%path%;C:\Rtools44\usr\bin
 
   For process interoperability on Windows, refer to
   http://msdn.microsoft.com/en-us/library/windows/desktop/aa384231%28v=vs.85%29.aspx
 
-  Windows - Instant Client
-  ------------------------
+  3.5 Windows - Instant Client
+  ----------------------------
 
-  To use the 64-bit version of instant Client, do the following:
+  To use the 64-bit version of Instant Client, do the following:
   1. Create an installation directory for the Oracle R Enterprise client 
-     components. 
+     components.
      For example: c:\oreclient_install_dir 
   2. Go to the Oracle Database Instant Client page on the Oracle Technology 
      Network at: 
-     http://www.oracle.com/technetwork/database/features/instant-client/ 
-  3. Select See Instant Client downloads for all platforms.
-  4. On the Instant Client Downloads page, select Instant Client for Microsoft 
-     Windows (x64).
-  5. On the Instant Client Downloads for Microsoft Windows (x64) page, accept 
-     the license agreement.
-  6. Select the Basic or Basic Lite Instant Client Package for your version of
+     https://www.oracle.com/database/technologies/instant-client/downloads.html
+  3. Select See Instant Client downloads for all platforms and select the
+     Instant Client Downloads for Microsoft Windows (x64) page 
+  4. Select the Basic or Basic Light Instant Client Package for your version of
      Oracle Database.
-  7. Save the file in the installation directory that you created in Step 1. 
+  5. Save the file in the installation directory that you created in Step 1. 
      For example: 
-     c:\oreclient_install_dir\instantclient-basic-windows.x64-11.2.0.1.0.zip 
-  8. Unzip the file. The files are extracted into a subdirectory named
+     c:\oreclient_install_dir\ instantclient-basic-windows.x64-23.6.0.24.10.zip
+  6. Unzip the file. The files are extracted into a subdirectory named
      instantclient_version, where version is your version of Oracle Database. 
      For example: 
-     c:\oreclient_install_dir\instantclient_11_2 
-  9. Return to the Instant Client Downloads for Microsoft Windows (x64) page at:
-     http://www.oracle.com/technetwork/topics/winx64soft-089540.html.
-  10.Accept the license agreement and select Instant Client Package - SDK for 
-     your version of Oracle Database. 
-  11.Save the file in the installation directory that you created in Step 1. 
+     c:\oreclient_install_dir\instantclient_23_6 
+  7. Return to the Instant Client Downloads for Microsoft Windows (x64) page at:
+     https://www.oracle.com/database/technologies/instant-client/winx64-64-downloads.html
+  8. Select Instant Client Package - SDK for your version of Oracle Database.
+     Save the file in the installation directory that you created in Step 1. 
      The directory should now contain the file 
-     instantclient-sdk-windows.x64-11.2.0.1.0.zip.
-  12.Unzip the file. The files are extracted into the instantclient_version 
+     instantclient-sdk-windows.x64-23.6.0.24.10.zip
+  9. Unzip the files. The files are extracted into the instantclient_version 
      subdirectory. 
-  13.Add the full path of the Instant Client to the environment variables 
+  10. Add the full path of the Instant Client to the environment variables 
      OCI_LIB64 and PATH. 
 
      The following steps set the variables to the PATH used in this example, 
-     c:\myoreclient\instantclient_11_2. 
+     c:\myoreclient\instantclient_23_6. 
   1. In Windows Control Panel, select System, then click Advanced system 
      settings.
   2. On the Advanced tab, click Environment Variables. 
   3. Under System variables, create OCI_LIB64 if it does not already exist. 
-  4. Set the value of OCI_LIB64 to c:\oreclient\instantclient_11_2. 
+  4. Set the value of OCI_LIB64 to c:\oreclient\instantclient_23_6. 
   5. Under System variables, edit PATH to include 
-     c:\oreclient\instantclient_11_2.
+     c:\oreclient\instantclient_23_6.
   
-  To use 32-bit version of instant Client, 
+  To use the 32-bit version of the Oracle Instant Client: 
   1. Create an installation directory for the Oracle R Enterprise client 
      components.
      For example: c:\oreclient_install_dir
   2. Go to the Oracle Database Instant Client page on the Oracle Technology
-     Network at:
-     http://www.oracle.com/technetwork/database/features/instant-client/
-  3. Select See Instant Client downloads for all platforms.
-  4. On the Instant Client Downloads page, select Instant Client for Microsoft
-     Windows (i386).
-  5. On the Instant Client Downloads for Microsoft Windows (i386) page, accept 
-     the license agreement.
-  6. Select the Basic or Basic Lite Instant Client Package for your version
+     https://www.oracle.com/database/technologies/instant-client/downloads.html
+  3. On the Instant Client Downloads page, select Instant Client for Microsoft
+     Windows (32-bit).
+  4. On the Instant Client Downloads for Microsoft Windows (32-bit) page, 
+     Select the Basic or Basic Light Instant Client Package for your version
      of Oracle Database.
-  7. Save the file in the installation directory that you created in Step 1. 
+  5. Save the file in the installation directory that you created in Step 1. 
      The directory should now contain the file 
-     instantclient-basic-windows.i386-11.2.0.1.0.zip.
-  8. Unzip the file.The files are extracted into a subdirectory named
+     instantclient-basic-nt-21.18.0.0.0dbru.zip
+  6. Unzip the file. The files are extracted into a subdirectory named
      instantclient_version, where version is your version of Oracle Database. 
      For example:
-     c:\oreclient_install_dir\instantclient_11_2
-  9. Return to the Instant Client Downloads for Microsoft Windows (i386) page 
+     c:\oreclient_install_dir\instantclient_21_18
+  7. Return to the Instant Client Downloads for Microsoft Windows (32-bit) page 
      at:
-     http://www.oracle.com/technetwork/topics/wini386soft-089540.html.
-  10.Accept the license agreement and select Instant Client Package - SDK for 
-     your version of Oracle Database.
-  11.Save the file in the installation directory that you created in Step 1.
-     The directory should now contain the file 
-     instantclient-sdk-windows.i386-11.2.0.1.0.zip.
-  12.Unzip the file. The files are extracted into the instantclient_version
+     https://www.oracle.com/database/technologies/instant-client/microsoft-windows-32-downloads.html
+  8. Select Instant Client Package - SDK for your version of Oracle Database.
+  9. Save the file in the installation directory that you created in Step 1.
+     The directory should now contain the file
+     instantclient-sdk-nt-21.18.0.0.0dbru.zip 
+  10. Unzip the files. The files are extracted into the instantclient_version
      subdirectory.
-  13.Add the full path of the Instant Client to the environment variables
+  11. Add the full path of the Instant Client to the environment variables
      OCI_LIB32 and PATH.
 
      The following steps set the variables to the PATH used in this example,
-     c:\myoreclient\instantclient_11_2.
+     c:\myoreclient\instantclient_21_18.
   1. In Windows Control Panel, select System, then click Advanced system 
      settings. On the Advanced tab, click Environment Variables.
   2. Under System variables, create OCI_LIB32 if it does not already exist. Set
-     the value of OCI_LIB32 to c:\oreclient\instantclient_11_2.
+     the value of OCI_LIB32 to c:\oreclient\instantclient_21_18.
   3. Under System variables, edit PATH to include 
-     c:\oreclient\instantclient_11_2.
+     c:\oreclient\instantclient_21_18.
 
-  Windows - Oracle Client (ORACLE_HOME-Based Client)
-  --------------------------------------------------
+     To validate a successful ROracle installation, follow the instructions in 
+     Section 3.12.
+
+  3.6 Windows - Oracle Client (ORACLE_HOME-Based Client)
+  ------------------------------------------------------
 
   As in the previous section, PATH should be set to include the path to the 
   Oracle Client libraries. Oracle Universal Installer should have set the 
-  PATH and ORACLE_HOME environment varibles in the registry database.
+  PATH and ORACLE_HOME environment variables in the registry database.
 
   Set OCI_LIB32 or OCI_LIB64 depending on your current platform architecture
   for Windows.
 
-  For example, if user "xyz" has installed the Oracle Client version 11.2 using
+  For example, if user "xyz" has installed the Oracle Client version 23.6 using
   the default location in the Oracle Universal Installer on 64-bit Windows,
   set OCI_INC and OCI_LIB64 as follows:
 
-  set OCI_INC=C:/app/xyz/product/11.2.0/client_1/oci/include
-  set OCI_LIB64=C:/app/xyz/product/11.2.0/client_1/bin
+  set OCI_INC=C:/app/xyz/product/23.6.0/client_1/oci/include
+  set OCI_LIB64=C:/app/xyz/product/23.6.0/client_1/bin
 
   Build the ROracle package using:
 
-  R CMD INSTALL ROracle_1.3-1.tar.gz
+  R CMD INSTALL ROracle_1.5-1.tar.gz
 
-  To build both 32-bit and 64-bit versions of ROracle, add both the 32-bit and
-  64-bit versions of Oracle Client to the PATH environment variable before
-  building ROracle. Once ROracle is built and installed, 64-bit version of R
-  will use the 64-bit version of Oracle Client and 32-bit the 32-bit version of
-  Oracle Client.
-
-  To build both the 32-bit and 64-bit versions of ROracle, execute the following 
-  commands:
-
-  set OCI_INC=C:/app/xyz/product/11.2.0/32_bit_client_1/oci/include
-  set OCI_LIB32=C:/app/xyz/product/11.2.0/32_bit_client_1/bin
-  set OCI_LIB64=C:/app/xyz/product/11.2.0/64_bit_client_1/bin
-  R CMD INSTALL --build --merge-multiarch ROracle_1.3-1.tar.gz
-
-  When mixing Oracle Instant Client and ORACLE_HOME-based client, above
+  When mixing Oracle Instant Client and ORACLE_HOME-based client, the above
   environment variables must be set carefully to point to the specific Client
   installation. To simplify administration, Oracle recommends that you have only
   one version of the client.
 
-
-  TimesTen
-  --------
+  3.7 TimesTen
+  ------------
   
-  When building ROracle for TimesTen connection support on Windows or Linux, the 
+  When building ROracle for TimesTen connection support on Windows or Linux, the
   Instant Client included in the local TimesTen installation directory should 
   be used. For example, if TimesTen 64-bit is installed on Windows in the 
   c:/TimesTen/tt1122_64 directory, then issue the following commands:
   
   set OCI_LIB64=c:/TimesTen/tt1122_64/ttoracle_home/instantclient_11_2
-  R CMD INSTALL --build ROracle_1.3-1.tar.gz
+  R CMD INSTALL --build ROracle_1.5-1.tar.gz
   
-  At runtime the directories for both the TimesTen Instant Client shared 
+  At runtime, the directories for both the TimesTen Instant Client shared 
   libraries and the TimesTen database shared libraries must be present on the
   system's shared library search path (PATH on Windows or LD_LIBRARY_PATH on 
   Linux) in order to establish a TimesTen database connection. An easy way to 
@@ -344,43 +397,129 @@
   
   c:/TimesTen/tt1122_64/bin/ttenv.bat
   
-  For more information on TimesTen, see http://www.oracle.com/technetwork/
-  database/timesten/documentation/.
+  For more information on TimesTen, see 
+  https://www.oracle.com/database/technologies/related/timesten.html
  
-  Installing ROracle on Windows Directly from Binary File
-  -------------------------------------------------------
+  3.8 Installing ROracle on Windows Directly from Binary File
+  -----------------------------------------------------------
 
-  1. Download the binary from oracle: http://www.oracle.com/technetwork/
-     database/database-technologies/r/roracle/downloads/index.html
+  1. Download the binary from Oracle: 
+     https://www.oracle.com/database/technologies/roracle-downloads.html
   2. Run the following command in R, substituting the file path:
      setwd('xxxxx')   # set to path of download
-     install.packages('ROracle_1.3-1.zip', repos = NULL)
+     install.packages('ROracle_1.5-1.zip', repos = NULL)
   3. Load the library and use the package; you may have to change DBNAME to the
      one listed in your tnsnames.ora file, as in the following example:
      library('ROracle')
      drv <- dbDriver("Oracle")
-     con <- dbConnect(drv, "USERNAME", "PASSWORD", dbname='DBNAME')
+     con <- dbConnect(drv, "USERNAME", "PASSWORD", dbname="DBNAME")
   4. Test connection:
      dbReadTable(con, 'DUAL')
 
-  Installing ROracle on AIX and Solaris platforms
-  -----------------------------------------------
+  To validate a successful ROracle installation, follow the instructions in 
+  Section 3.12.
+
+  3.9 Installing ROracle on AIX and Solaris platforms
+  ---------------------------------------------------
+
+  The Instant Client for AIX and Solaris can be downloaded in zip format for 
+  Basic and SDK packages. The packages can be downloaded from:
+  https://www.oracle.com/database/technologies/instant-client/aix-ppc64-downloads.html  
 
   The requirements and installation instructions for AIX and Solaris platforms
-  are the same as those for Linux platforms with the following exceptions:
+  are the same as those for Linux platforms, with the following exceptions:
   - For AIX, use the LIBPATH environment variable instead of LD_LIBRARY_PATH.
   - For Solaris, use LD_LIBRARY_PATH_64 instead of LD_LIBRARY_PATH.
 
+  To validate a successful ROracle installation, follow the instructions in 
+  Section 3.12.
+
+  3.10 Optional Oracle Net Configuration
+  --------------------------------------
+
+  ROracle can use optional Oracle Net configuration files such as tnsnames.ora
+  and sqlnet.ora.
+ 
+  - tnsnames.ora: Contains net service names and Oracle Net options for
+    databases that can be connected to.  This file is not needed if connection
+    strings use the Easy Connect syntax.
+
+  - sqlnet.ora: A configuration file controlling the network transport
+    behavior.  For example, it can set call timeouts for high availability, or
+    be used to encrypt network traffic, or be used to configure logging and
+    tracing.
+
+  The directory containing configuration files is looked for in a search order
+  that includes:
+
+  - $TNS_ADMIN  You can set this variable to the name of the directory 
+                containing the configuration files
+  - /opt/oracle/instantclient_23_6/network/admin if Instant Client is in
+                /opt/oracle/instantclient_23_6, for example.
+  - /usr/lib/oracle/23/client64/lib/network/admin if, for example, Oracle 23.6 
+                Instant Client RPMs are used on Linux.
+  - $ORACLE_HOME/network/admin if ROracle is using libraries from the database 
+                installation.
+
+
+  3.11 Oracle client connection settings
+  -------------------------------------
+
+  ROracle connection strings can be one of the following:
+ 
+  - An Easy Connect string such as "hostname:port/service_name"
+  - A Connect Descriptor string such as "(DESCRIPTION=(ADDRESS=...)"
+  - A Net Service Name from a local tnsnames.ora file or external naming
+    service (see below)
+  - The SID of a local Oracle Database instance
+
+  Connect Descriptor Strings are commonly stored in a tnsnames.ora file and
+  associated with a Net Service Name. This name can be used directly for the
+  dbname parameter of dbConnect().  For example, given a tnsnames.ora file with
+  the following contents:
+
+    ORCLPDB1 =
+      (DESCRIPTION =
+        (ADDRESS = (PROTOCOL = TCP)(HOST = dbhost.example.com)(PORT = 1521))
+        (CONNECT_DATA =
+          (SERVER = DEDICATED)
+          (SERVICE_NAME = orclpdb1)
+        )
+      )
+
+  Then you could connect using the following code:
+  >library(ROracle)
+  >dbConnect(Oracle(), username = "user_name", password = "password", dbname = "ORCLPDB1")
+
+  3.12 Post-Installation Validation
+  ---------------------------------
+
+  Instant Client:
+  1. Download the SQLPLUS package compatible with your OS from
+     https://www.oracle.com/database/technologies/instant-client/downloads.html
+  2. Install SQLPLUS .zip or .rpm, or .dmg in the instantclient_23_6 or
+     similar folder along with Basic and SDK packages
+  3. Ensure Oracle Net Configuration is complete, as mentioned in Sections 3.10
+     and 3.11.
+  4. Ensure Instant Client path is included in your $PATH and $LD_LIBARRY_PATH
+     (or $LIBPATH)
+  5. Run the command "sqlplus <user_name>/<password>@<dbname>" 
+     Instant client is successfully installed if you are connected to SQLPLUS.
+
+  ROracle:
+  Ensure R is working successfully and try the following from within R:
+  >library(ROracle)
+  >dbConnect(Oracle(), username, password, dbname) 
 
 4. Troubleshooting:
 -------------------
 
-  Linux
-  -----
+  4.1 Linux
+  ---------
 
   If you see an error about opening an Oracle Client library libclntsh.so
   when issuing the library(ROracle) command, you probably did not add the path
-  to Oracle Client libraries to LD_LIBRARY_PATH environment variable.
+  to Oracle Client libraries to the LD_LIBRARY_PATH environment variable.
 
   > library(ROracle)
   Loading required package: DBI
@@ -391,102 +530,104 @@
  
   See the Installation section above for details on setting LD_LIBRARY_PATH.
 
-  Windows
-  -------
+  4.2 Windows
+  -----------
 
-1. If you see the following error during the build of ROracle, then the oci.dll
-   loaded from the PATH environment variable by R does not correspond to the 
-   same architecture as R.
+  1. If you see the following error during the build of ROracle, then the 
+     oci.dll loaded from the PATH environment variable by R does not correspond
+     to the same architecture as R.
 
-    ** testing if installed package can be loaded
-    Error in inDL(x, as.logical(local), as.logical(now), ...) :
-      unable to load shared object '.../library/ROracle/libs/i386/ROracle.dll':
-        LoadLibrary failure:  %1 is not a valid Win32 application.
+      ** testing if installed package can be loaded
+      Error in inDL(x, as.logical(local), as.logical(now), ...) :
+       unable to load shared object '.../library/ROracle/libs/i386/ROracle.dll':
+          LoadLibrary failure:  %1 is not a valid Win32 application.
 
-   To resolve this, set PATH to include 32-bit version of Oracle Client
-   when the 32-bit version of R is used and 64-bit version of Oracle Client when
-   the 64-bit version of R is used. You cannot build the 64-bit version of 
-   ROracle using the 32-bit version of R and vice versa.
+     To resolve this, set PATH to include the 32-bit version of Oracle Client
+     when the 32-bit version of R is used and the 64-bit version of 
+     Oracle Client when the 64-bit version of R is used. You cannot build 
+     the 64-bit version of ROracle using the 32-bit version of R and vice versa.
 
-2. You may also see the error message 
-   ".../i686-w64-mingw32/bin/ld.exe: i386:x86-64 architecture of input file
-     `.../oci.dll' is incompatible with i386 output"
-   when installing a 32-bit version of ROracle with a 64-bit version of
-   oci.dll. This error is followed by undefined references to OCI functions
-   as shown below:
+  2. You may also see the error message 
+     ".../i686-w64-mingw32/bin/ld.exe: i386:x86-64 architecture of input file
+       `.../oci.dll' is incompatible with i386 output"
+     when installing a 32-bit version of ROracle with a 64-bit version of
+     oci.dll. This error is followed by undefined references to OCI functions
+     as shown below:
 
-    rooci.o:rooci.c:(.text+0x9d): undefined reference to `OCIDescriptorAlloc'
-    rooci.o:rooci.c:(.text+0x17e): undefined reference to `OCIDateTimeFromText'
-    ...
-    rooci.o:rooci.c:(.text+0x22a4): undefined reference to `OCIDateTimeConvert'
-    collect2: ld returned 1 exit status
-    ERROR: compilation failed for package 'ROracle'
+      rooci.o:rooci.c:(.text+0x9d): undefined reference to `OCIDescriptorAlloc'
+      rooci.o:rooci.c:(.text+0x17e): undefined reference to `OCIDateTimeFromText'
+      ...
+      rooci.o:rooci.c:(.text+0x22a4): undefined reference to `OCIDateTimeConvert'
+      collect2: ld returned 1 exit status
+      ERROR: compilation failed for package 'ROracle'
  
-   The above errors may also be seen when oci.dll is missing in the directory
-   specified by the OCI_LIB32 or OCI_LIB64 environment variables.
+     The above errors may also be seen when oci.dll is missing in the directory
+     specified by the OCI_LIB32 or OCI_LIB64 environment variables.
 
-3. The following error occurs during installation of ROracle when the oci.dll
-   not compatible with the R architecture:
-     collect2: ld returned 5 exit status
-     ERROR: compilation failed for package 'ROracle'
+  3. The following error occurs during the installation of ROracle when the 
+     oci.dll not compatible with the R architecture:
+       collect2: ld returned 5 exit status
+       ERROR: compilation failed for package 'ROracle'
 
-   Solution: Set OCI_LIB32 to point to the 32-bit version of the client and
-                     OCI_LIB64 to point to the 64-bit version of the client.
+     Solution: Set OCI_LIB32 to point to the 32-bit version of the client and
+                   OCI_LIB64 to point to the 64-bit version of the client.
 
-4. If you see a dialog box with the title "Rterm.exe - System Error" with the
-   the message "OCI.dll missing from your system, try installing it"
-   followed by the error below when issuing the library(ROracle) command or 
-   during the installation, then the Oracle Client libraries were not found in
-   the PATH environment variable.
+  4. If you see a dialog box with the title "Rterm.exe - System Error" with the
+     the message "OCI.dll missing from your system, try installing it"
+     followed by the error below when issuing the library(ROracle) command, or 
+     during the installation, then the Oracle Client libraries were not found in
+     the PATH environment variable.
 
-    Error in inDL(x, as.logical(local), as.logical(now), ...) :
-      unable to load shared object '.../library/ROracle/libs/.../ROracle.dll':
-      LoadLibrary failure:  The specified module could not be found.
+      Error in inDL(x, as.logical(local), as.logical(now), ...) :
+        unable to load shared object '.../library/ROracle/libs/.../ROracle.dll':
+        LoadLibrary failure:  The specified module could not be found.
 
-5. If you see an error about oci.dll not being found, then either the OCI_LIB32
-   or the OCI_LIB64 environment variable points to a location that does not have
-   the Oracle Client installed.
+  5. If you see an error about oci.dll not being found, then either the
+     OCI_LIB32 or the OCI_LIB64 environment variable points to a location that
+     does not have the Oracle Client installed.
 
-     gcc.exe: error: .../oci.dll: No such file or directory
-     ERROR: compilation failed for package 'ROracle'
+       gcc.exe: error: .../oci.dll: No such file or directory
+       ERROR: compilation failed for package 'ROracle'
 
-6. If you see one of the following error messages when building ROracle, then
-   oci.dll is not compatible with the R architecture. One of the messages
-   below will be displayed with 11.X or higher version of Oracle Instant Client
-   or ORACLE_HOME-based client instead of the messages listed in 1, 2, or 3 above.
+  6. If you see one of the following error messages when building ROracle, then
+     oci.dll is not compatible with the R architecture. One of the messages
+     below will be displayed with 11.X or higher version of Oracle Instant 
+     Client or ORACLE_HOME-based client instead of the messages listed in 1, 2
+     or 3 above.
 
-    Client Shared Library 32-bit - ... cannot be used to install with 64-bit R.
-    Client Shared Library 64-bit - ... cannot be used to install with 32-bit R.
+      Client Shared Library 32-bit - ... cannot be used to install with 64-bit R.
+      Client Shared Library 64-bit - ... cannot be used to install with 32-bit R.
 
-7. If you see the following error when loading the ROracle library, then the 
-   oci.dll loaded from PATH by R does not correspond to the same architecture 
-   as R.
+  7. If you see the following error when loading the ROracle library, then the 
+     oci.dll loaded from PATH by R does not correspond to the same architecture 
+     as R.
 
-   > library(ROracle)
-   Loading required package: DBI
-   Error in inDL(x, as.logical(local), as.logical(now), ...) :
-     unable to load shared object '.../library/ROracle/libs/.../ROracle.dll':
-     LoadLibrary failure:  %1 is not a valid Win32 application.
+     > library(ROracle)
+     Loading required package: DBI
+     Error in inDL(x, as.logical(local), as.logical(now), ...) :
+       unable to load shared object '.../library/ROracle/libs/.../ROracle.dll':
+       LoadLibrary failure:  %1 is not a valid Win32 application.
 
-   Error: package/namespace load failed for 'ROracle'
+     Error: package/namespace load failed for 'ROracle'
 
-   To resolve this, set PATH to include the 32-bit version of Oracle Client
-   when using the 32-bit version of R and the 64-bit version of Oracle Client 
-   when using the 64-bit version of R. You cannot build or run the 64-bit 
-   version of ROracle using the 32-bit version of R and vice versa.
+     To resolve this, set PATH to include the 32-bit version of Oracle Client
+     when using the 32-bit version of R and the 64-bit version of Oracle Client 
+     when using the 64-bit version of R. You cannot build or run the 64-bit 
+     version of ROracle using the 32-bit version of R and vice versa.
 
-8. Determining the architecture of Oracle Client:
+  8. Determining the architecture of Oracle Client:
 
-   Oracle Instant Client provides BASIC_README and BASIC_LITE_README files
-   showing the architecture they were built on.
+     Oracle Instant Client provides BASIC_README and BASIC_LITE_README files
+     showing the architecture they were built on.
 
-   For ORACLE_HOME-based Client, inspect the registry. A 32-bit home will be
-   located in HKEY_LOCAL_MACHINE->Software->WOW6432Node->Oracle, and a 64-bit
-   home will be in HKEY_LOCAL_MACHINE->Software->Oracle. Inspect the path to
-   the home to try to infer whether it is 32-bit or 64-bit based on the
-   location of dlls.
+     For an ORACLE_HOME-based Client, inspect the registry. A 32-bit home will 
+     be located in HKEY_LOCAL_MACHINE->Software->WOW6432Node->Oracle, and a 
+     64-bit home will be in HKEY_LOCAL_MACHINE->Software->Oracle. Inspect the 
+     path to the home to try to infer whether it is 32-bit or 64-bit based on 
+     the location of dlls.
 
-   If the PATH environment variable includes paths to both the 32-bit and 64-bit
-   clients, then Oracle depends on the operating system to load the 32-bit DLLs 
-   for the 32-bit R process and the 64-bit DLLs for the 64-bit R process.
+     If the PATH environment variable includes paths to both the 32-bit and
+     64-bit clients, then Oracle depends on the operating system to load the 
+     32-bit DLLs for the 32-bit R process and the 64-bit DLLs for the 64-bit
+     R process.
 

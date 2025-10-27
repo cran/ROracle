@@ -11,7 +11,8 @@
 }
 \usage{
 \S4method{oracleProc}{OraConnection,character}(conn, statement, data = NULL,
-          prefetch = FALSE, bulk_read = 1000L, bulk_write = 1000L, ...)
+          prefetch = FALSE, bulk_read = 1000L, bulk_write = 1000L, sparse=FALSE,
+          ...)
 }
 \arguments{
   \item{conn}{An \code{OraConnection} object.}
@@ -48,6 +49,13 @@
     value results in more memory being allocated based on the number of columns
     in the insert list and the types of columns.
   }
+  \item{sparse}{
+    A logical indicating whether to use sparseVector method from Matrix
+    library to construct sparse vectors returned by Oracle database. When
+    TRUE, sparse vectors are constructed using sparseVector method of Matrix
+    package. When FALSE, dense vector is returned and one can use any of the
+    R methods/packages to transform to sparse format.
+  }
   \item{\dots}{Currently unused.}
 }
 \value{
@@ -61,7 +69,7 @@
 }
 \section{References}{
   For Oracle Database documentation see
-  \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
+  \url{https://docs.oracle.com/en/}.
 }
 \seealso{
   \code{\link{Oracle}},

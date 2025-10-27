@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2025, Oracle and/or its affiliates.
 #
 #    NAME
 #      oci.R - OCI based implementaion for DBI
@@ -10,6 +10,13 @@
 #    NOTES
 #
 #    MODIFIED   (MM/DD/YY)
+#    rpingte     05/06/25 - add support for sparse vector when Matrix is loaded
+#    rpingte     09/25/24 - add vector support
+#    rpingte     03/25/24 - add boolean and vector support
+#    rpingte     04/25/19 - object support
+#    msavanur    07/24/19 - [30087742] add insertion of values for
+#                           selected columns
+#    rpingte     12/07/16 - use attributes in data frame to create table
 #    ssjaiswa    08/25/16 - Handled upper and lower cases in ora.type, 
 #                           ora.parameter_mode and ora.encoding attributes
 #                           accept both cases (upper and lower)
@@ -73,10 +80,19 @@
 ###############################################################################
 
 .oci.Driver <- function(drv, interruptible = FALSE, extproc.ctx = NULL,
-                        unicode_as_utf8 = TRUE, ora.attributes = FALSE)
+                        unicode_as_utf8 = TRUE, ora.attributes = FALSE,
+                        ora.objects = TRUE, sparse = FALSE)
 {
+  if (sparse)
+  {
+    if (exists("sparseVector", mode = "function"))
+      sparse = TRUE
+    else
+      stop("'when sparse is specified Matrix library must be loaded in order to use sparseVector method'")
+  }
+
   .Call("rociDrvInit", drv@handle, interruptible, extproc.ctx, unicode_as_utf8,
-        ora.attributes, PACKAGE = "ROracle")
+        ora.attributes, ora.objects, sparse, PACKAGE = "ROracle")
   drv
 }
 
@@ -223,7 +239,8 @@
 }
 
 .oci.SendQuery <- function(con, stmt, data = NULL, prefetch = FALSE,
-                           bulk_read = 1000L, bulk_write = 1000L)
+                           bulk_read = 1000L, bulk_write = 1000L,
+                           sparse = FALSE)
 {
   #validate
   if (!is.logical(prefetch))
@@ -258,6 +275,15 @@
   if (bulk_write < 1L)
     stop(gettextf("argument '%s' must be greater than 0", "bulk_write"))
 
+  if (!is.logical(sparse))
+    stop(gettextf(
+         "argument '%s' must be a single logical value and cannot be '%s'",
+         "sparse", sparse))
+
+  sparse <- as.logical(sparse)
+  if (length(sparse) != 1L)
+    stop(gettextf("argument '%s' must be a single logical value", "sparse"))
+
   stmt <- as.character(stmt)
   .oci.ValidateString("statement",stmt)
 
@@ -265,12 +291,13 @@
     data <- .oci.data.frame(data, TRUE)
 
   hdl <- .Call("rociResInit", con@handle, stmt, data, prefetch,
-               bulk_read, bulk_write, PACKAGE = "ROracle")
+               bulk_read, bulk_write, sparse, PACKAGE = "ROracle")
   new("OraResult", handle = hdl)
 }
 
 .oci.oracleProc <- function(con, stmt, data = NULL, prefetch = FALSE,
-                           bulk_read = 1000L, bulk_write = 1000L)
+                           bulk_read = 1000L, bulk_write = 1000L,
+                           sparse = FALSE)
 {
   #validate
   if (!is.logical(prefetch))
@@ -305,6 +332,15 @@
   if (bulk_write < 1L)
     stop(gettextf("argument '%s' must be greater than 0", "bulk_write"))
 
+  if (!is.logical(sparse))
+    stop(gettextf(
+         "argument '%s' must be a single logical value and cannot be '%s'",
+         "sparse", sparse))
+
+  sparse <- as.logical(sparse)
+  if (length(sparse) != 1L)
+    stop(gettextf("argument '%s' must be a single logical value", "sparse"))
+
   stmt <- as.character(stmt)
   .oci.ValidateString("statement",stmt)
 
@@ -326,7 +362,7 @@
                         "ora.parameter_mode", mode))
     }    
     
-    # verify maxlength for CLOB/BLOB/NCLOB 
+    # verify maxlength for CLOB/BLOB/NCLOB/VECTOR
     oratype = attr(data, "ora.type", exact=TRUE)
     if (!is.null(oratype))
     {
@@ -337,6 +373,22 @@
         stop(gettextf("attribute '%s' must not be specified for CLOB", "ora.maxlength"))
       else if ((oratype == "blob") && !is.null(maxlen))
         stop(gettextf("attribute '%s' must not be specified for BLOB", "ora.maxlength"))
+      else if ((oratype == "vector") && !is.null(maxlen))
+        stop(gettextf("attribute '%s' must not be specified for VECTOR", "ora.maxlength"))
+      vecfmt = attr(data, "ora.format", exact=TRUE)
+      if ((oratype == "vector") && !is.null(vecfmt))
+      {
+        fmt <- tolower(vecfmt)
+        if ((fmt == "*") ||
+            (fmt == "float16") ||
+            (fmt == "float32") ||
+            (fmt == "float64") ||
+            (fmt == "int8") ||
+            (fmt == "binary"))
+          attr(data, "ora.format", exact=TRUE) < fmt
+        else
+          stop(gettextf("format %s specified in attribute '%s' is invalid, must be '*', 'float16', 'float32', float64', 'int8', or 'binary'. '*' indicates flex format.", vecfmt, "ora.format"))
+      }
     }
     for (i in seq_len(ncol(data)))
     {
@@ -364,12 +416,28 @@
           stop(gettextf("attribute '%s' must not be specified for CLOB", "ora.maxlength"))
         else if ((type == "blob") && !is.null(max))
           stop(gettextf("attribute '%s' must not be specified for BLOB", "ora.maxlength"))
+        else if ((type == "vector") && !is.null(max))
+          stop(gettextf("attribute '%s' must not be specified for VECTOR", "ora.maxlength"))
+        vecfmt = attr(data, "ora.format", exact=TRUE)
+        if ((oratype == "vector") && !is.null(vecfmt))
+        {
+          fmt <- tolower(vecfmt)
+          if ((fmt == "*") ||
+              (fmt == "float16") ||
+              (fmt == "float32") ||
+              (fmt == "float64") ||
+              (fmt == "int8") ||
+              (fmt == "binary"))
+            attr(data, "ora.format", exact=TRUE) < fmt
+          else
+            stop(gettextf("format %s specified in attribute '%s' is invalid, must be '*', 'float16', 'float32', float64', 'int8', or 'binary'. '*' indicates flex format.", vecfmt, "ora.format"))
+        }
       }
     }
   }
 
   hdl <- .Call("rociResInit", con@handle, stmt, data,
-               prefetch, bulk_read, bulk_write, PACKAGE = "ROracle")
+               prefetch, bulk_read, bulk_write, sparse, PACKAGE = "ROracle")
   res <- try(
   {
     eof_res <- .Call("rociEOFRes", hdl, PACKAGE = "ROracle")
@@ -388,7 +456,8 @@
 }
 
 .oci.GetQuery <- function(con, stmt, data = NULL, prefetch = FALSE,
-                          bulk_read = 1000L, bulk_write = 1000L)
+                          bulk_read = 1000L, bulk_write = 1000L,
+                          sparse = FALSE)
 {
   #validate
   if (!is.logical(prefetch))
@@ -423,6 +492,15 @@
   if (bulk_write < 1L)
     stop(gettextf("argument '%s' must be greater than 0", "bulk_write")) 
 
+  if (!is.logical(sparse))
+    stop(gettextf(
+         "argument '%s' must be a single logical value and cannot be '%s'",
+         "sparse", sparse))
+
+  sparse <- as.logical(sparse)
+  if (length(sparse) != 1L)
+    stop(gettextf("argument '%s' must be a single logical value", "sparse"))
+
   stmt <- as.character(stmt)
   .oci.ValidateString("statement",stmt)
 
@@ -430,7 +508,7 @@
     data <- .oci.data.frame(data, TRUE)
 
   hdl <- .Call("rociResInit", con@handle, stmt, data,
-               prefetch, bulk_read, bulk_write, PACKAGE = "ROracle")
+               prefetch, bulk_read, bulk_write, sparse, PACKAGE = "ROracle")
   res <- try(
   {
     eof_res <- .Call("rociEOFRes", hdl, PACKAGE = "ROracle")
@@ -526,7 +604,8 @@
     res[, 2L]
 }
 
-.oci.ReadTable <- function(con, name, schema = NULL, row.names = NULL)
+.oci.ReadTable <- function(con, name, schema = NULL, row.names = NULL,
+                           sparse = FALSE)
 {
   # validate name
   name <- as.character(name)
@@ -548,7 +627,7 @@
   # read table
   qry <- paste('select *',
                  'from', tab)
-  res <- .oci.GetQuery(con, qry)
+  res <- .oci.GetQuery(con, qry, sparse = sparse)
 
   # add row.names
   if (!is.null(row.names))
@@ -576,7 +655,8 @@
 
 .oci.WriteTable <- function(con, name, value, row.names = FALSE,
                             overwrite = FALSE, append = FALSE,
-                            ora.number = TRUE, schema = NULL, date = FALSE)
+                            ora.number = TRUE, schema = NULL, date = FALSE,
+                            sparse = FALSE)
 {
   # commit
   .oci.Commit(con)
@@ -603,14 +683,23 @@
     names(value)[1L] <- "row.names"
   }
 
+  if (!is.logical(sparse))
+    stop(gettextf(
+         "argument '%s' must be a single logical value and cannot be '%s'",
+         "sparse", sparse))
+
+  sparse <- as.logical(sparse)
+  if (length(sparse) != 1L)
+    stop(gettextf("argument '%s' must be a single logical value", "sparse"))
+
   # coerce data
   value <- .oci.data.frame(value)
 
   # get column names and types
   if (con@timesten)
-    ctypes <- sapply(head(value,0), .oci.dbType, ora.number = ora.number, TRUE, date)
+    ctypes <- sapply(head(value,0), .oci.dbType, ora.number = ora.number, TRUE, date, sparse = sparse)
   else
-    ctypes <- sapply(value, .oci.dbType, ora.number = ora.number, FALSE, date)
+    ctypes <- sapply(value, .oci.dbType, ora.number = ora.number, FALSE, date, sparse = sparse)
 
   cnames <- sprintf('"%s"', names(value))
 
@@ -637,13 +726,17 @@
     # [17383542] create query to insert data in table of global space also
     if (is.null(schema))
     {
-      stmt <- sprintf('insert into "%s" values (%s)', name,
+      stmt <- sprintf('insert into "%s" (%s) values (%s)', 
+                      name,
+                      paste(cnames, collapse = ","),
                       paste(":", seq_along(cnames), sep = "",
                       collapse = ","))
     }
     else
     {
-      stmt <- sprintf('insert into "%s"."%s" values (%s)', schema, name,
+      stmt <- sprintf('insert into "%s"."%s" (%s) values (%s)', 
+                      schema, name,
+                      paste(cnames, collapse = ","),
                       paste(":", seq_along(cnames), sep = "",
                       collapse = ","))
     }
@@ -889,12 +982,46 @@
 
 .ext.drv <- function() get("ext.driver", envir = .oci.GlobalEnv)
 
+.oci.isColAList <- function(obj)
+{
+  len <- length(obj)
+  if (len > 1)
+  {
+    for (i in 1:len) {
+      if (is.list(obj[[i]])) {
+        isVec = TRUE
+        break
+      }
+      else {
+        isVec = FALSE
+        break;
+      }
+    }
+  }
+  else
+  {
+    if (is.list(obj))
+      isVec = TRUE
+    else
+      isVec = FALSE
+  }
+  isVec
+}
+
 .oci.dbTypeCheck <- function(obj)
 {
   (inherits(obj, c("logical", "integer", "numeric", "character",
                     "difftime")) ||
    (inherits(obj, "POSIXct") && typeof(obj) == "double") ||
    (is.list(obj) && all(unlist(lapply(obj, is.raw), use.names = FALSE))))
+}
+
+.oci.wrapToListOfLists <- function(x) {
+  if (!is.list(x)) return(x)  # only modify if list
+  if (all(vapply(x, is.list, logical(1L)))) return(x)  # already list-of-lists
+  result <- lapply(x, function(e) list(e))
+  attributes(result) <- attributes(x)
+  return(result)
 }
 
 .oci.data.frame <- function(obj, datetime = FALSE)
@@ -914,10 +1041,18 @@
   for (i in seq_len(ncol(obj)))
   {
     col <- obj[[i]]
+    atr <- attr(col, "ora.type")
+    
+    # wrap vectors with list if needed
+    if (!is.null(atr) && atr == "vector") {
+      col <- .oci.wrapToListOfLists(col)
+      obj[[i]] <- col
+    }
+
     if (!is.null(attr(col, "ora.parameter_mode")))
       stop(gettextf("argument '%s' must be NULL for SQL query",
                     "ora.parameter_mode"))
-    if (!.oci.dbTypeCheck(col))
+    if (!.oci.isColAList(col) && !.oci.dbTypeCheck(col))
     {
       if (inherits(col, "Date"))
       {
@@ -947,11 +1082,13 @@
         typ <- attr(col, "ora.type")
         enc <- attr(col, "ora.encoding")
         mxl <- attr(col, "ora.maxlength")
+        vecfmt <- attr(col, "ora.format")
         obj[[i]] <- as.character(col)
         attr(obj, "ora.parameter_name") <- name
         attr(obj[[i]], "ora.type") <- typ
         attr(obj[[i]], "ora.encoding") <- enc
         attr(obj[[i]], "ora.maxlength") <- mxl
+        attr(obj[[i]], "ora.format") <- vecfmt
       }
     }
     else if (inherits(col, "POSIXct") && datetime)
@@ -964,6 +1101,19 @@
     }
     else if (inherits(col, "difftime"))
       obj[[i]] <- as.difftime(as.numeric(col, units = "secs"), units = "secs")
+    else
+    {
+      name <- attr(obj, "ora.parameter_name")
+      typ <- attr(col, "ora.type")
+      enc <- attr(col, "ora.encoding")
+      mxl <- attr(col, "ora.maxlength")
+      vecfmt <- attr(col, "ora.format")
+      attr(obj, "ora.parameter_name") <- name
+      attr(obj[[i]], "ora.type") <- typ
+      attr(obj[[i]], "ora.encoding") <- enc
+      attr(obj[[i]], "ora.maxlength") <- mxl
+      attr(obj[[i]], "ora.format") <- vecfmt
+    }
   }
   obj
 }  
@@ -979,18 +1129,28 @@
     typ <- attr(obj, "ora.type")
     enc <- attr(obj, "ora.encoding")
     mxl <- attr(obj, "ora.maxlength")
+    vecfmt <- attr(obj, "ora.format")
     obj <- as.data.frame(obj)
     attr(obj, "ora.parameter_mode") <- mode
     attr(obj, "ora.parameter_name") <- name
     attr(obj, "ora.type") <- typ
     attr(obj, "ora.encoding") <- enc
     attr(obj, "ora.maxlength") <- mxl
+    attr(obj, "ora.format") <- vecfmt
   }
 
   for (i in seq_len(ncol(obj)))
   {
     col <- obj[[i]]
-    if (!.oci.dbTypeCheck(col))
+    atr <- attr(obj[[i]], "ora.type")
+    
+    # wrap vectors with list if needed
+    if (!is.null(atr) && atr == "vector") {
+      col <- .oci.wrapToListOfLists(col)
+      obj[[i]] <- col
+    }
+
+    if (!.oci.isColAList(col) && !.oci.dbTypeCheck(col))
     {
       if (inherits(col, "Date"))
       {
@@ -1025,12 +1185,14 @@
         typ <- attr(col, "ora.type")
         enc <- attr(col, "ora.encoding")
         mxl <- attr(col, "ora.maxlength")
+        vecfmt <- attr(col, "ora.format")
         obj[[i]] <- as.character(col)
         attr(obj[[i]], "ora.parameter_mode") <- mode
         attr(obj[[i]], "ora.parameter_name") <- name
         attr(obj[[i]], "ora.type") <- typ
         attr(obj[[i]], "ora.encoding") <- enc
         attr(obj[[i]], "ora.maxlength") <- mxl
+        attr(obj[[i]], "ora.format") <- vecfmt
       }
     }
     else if (inherits(col, "POSIXct") && datetime)
@@ -1049,11 +1211,25 @@
       attr(obj[[i]], "ora.parameter_mode") <- mode
       attr(obj[[i]], "ora.parameter_name") <- name
     }
+    else
+    {
+      name <- attr(obj, "ora.parameter_name")
+      typ <- attr(col, "ora.type")
+      enc <- attr(col, "ora.encoding")
+      mxl <- attr(col, "ora.maxlength")
+      vecfmt <- attr(col, "ora.format")
+      attr(obj, "ora.parameter_name") <- name
+      attr(obj[[i]], "ora.type") <- typ
+      attr(obj[[i]], "ora.encoding") <- enc
+      attr(obj[[i]], "ora.maxlength") <- mxl
+      attr(obj[[i]], "ora.format") <- vecfmt
+    }
   }
   obj
 }
 
-.oci.dbType <- function(obj, ora.number = FALSE, timesten = FALSE, date = FALSE)
+.oci.dbType <- function(obj, ora.number = FALSE, timesten = FALSE, date = FALSE,
+                        sparse = FALSE)
 {
 
   if (timesten)
@@ -1108,25 +1284,44 @@
                        {
                          if (oratype == "timestamp with time zone")
                          {
-                          fsec = attr(obj, "ora.fractional_seconds_precision",
-                                      exact=TRUE)
-                          if (!is.null(fsec))
-                           sprintf('timestamp(%d) with time zone', fsec)
-                          else
-                           "timestamp with time zone"
+                           fsec = attr(obj, "ora.fractional_seconds_precision",
+                                       exact=TRUE)
+                           if (!is.null(fsec))
+                             sprintf('timestamp(%d) with time zone', fsec)
+                           else
+                             "timestamp with time zone"
                          }
                          else if (oratype == "timestamp with local time zone")
                          { 
                            fsec = attr(obj, "ora.fractional_seconds_precision",
                                        exact=TRUE)
                            if (!is.null(fsec))
-                            sprintf('timestamp(%d) with local time zone', fsec)
+                             sprintf('timestamp(%d) with local time zone', fsec)
                            else
-                            "timestamp with local time zone"
+                             "timestamp with local time zone"
                          }
+                         else if (oratype == "date")
+                           "date"
+                         else if (oratype == "boolean")
+                           "boolean"
+                         else if (oratype == "timestamp")
+                           "timestamp"
+                         else
+                           stop(gettextf("attribute '%s' is invalid", "ora.type"))
                        }
                        else
-                        "timestamp"
+                         "timestamp"
+                     }
+                     else if (!is.null(oratype))
+                     {
+                       if (oratype == "number")
+                         "number"
+                       else if (oratype == "binary_float")
+                         "binary_float"
+                       else if (oratype == "binary_double")
+                         "binary_double"
+                       else
+                         stop(gettextf("attribute '%s' is invalid", "ora.type"))
                      }
                      else if (inherits(obj, "difftime"))
                        "interval day to second"
@@ -1134,7 +1329,7 @@
                        "number"
                      else
                        "binary_double",
-           character = if(is.null(oratype))
+           character = if (is.null(oratype))
                        {
                          maxlen = attr(obj, "ora.maxlength", exact=TRUE)
                          if (is.null(maxlen))
@@ -1151,16 +1346,58 @@
                        }
                        else if (oratype == "clob")
                        {
-                        maxlen = attr(obj, "ora.maxlength", exact=TRUE)
-                        if (is.null(maxlen))
-                        {
-                         if (enc == "UTF-8")
-                          "nclob"
+                         maxlen = attr(obj, "ora.maxlength", exact=TRUE)
+                         if (is.null(maxlen))
+                         {
+                           if (enc == "UTF-8")
+                             "nclob"
+                           else
+                             "clob"
+                         }
+                         else 
+                           stop(gettextf("attribute '%s' must not be specified for CLOB", "ora.maxlength"))
+                       }
+                       else if (!is.null(oratype) && (oratype == "vector"))
+                       {
+                         maxlen = attr(obj, "ora.maxlength", exact=TRUE)
+                         vecfmt = attr(obj, "ora.format", exact=TRUE)
+                         if (is.null(maxlen))
+                         {
+                           if (is.null(vecfmt))
+                             if(sparse)
+                               sprintf('vector(*,*,SPARSE)')
+                             else
+                               sprintf('vector(*,*)')
+                           else
+                             if(sparse)
+                               sprintf('vector(*,%s,SPARSE)', vecfmt)
+                             else
+                               sprintf('vector(*,%s)', vecfmt)
+                         }
                          else
-                          "clob"
-                        }
-                        else
-                         stop(gettextf("attribute '%s' must not be specified for CLOB", "ora.maxlength"))
+                         {
+                           if (is.null(vecfmt))
+                             if(sparse)
+                               sprintf('vector(%s,*,SPARSE)', as.character(maxlen))
+                             else
+                               sprintf('vector(%s,*)', as.character(maxlen))
+                           else
+                           {
+                             fmt <- tolower(vecfmt)
+                             if ((fmt == "*") ||
+                                 (fmt == "float16") ||
+                                 (fmt == "float32") ||
+                                 (fmt == "float64") ||
+                                 (fmt == "int8") ||
+                                 (fmt == "binary"))
+                               if(sparse)
+                                 sprintf('vector(%s,%s,SPARSE)', as.character(maxlen), fmt)
+                               else
+                                 sprintf('vector(%s,%s)', as.character(maxlen), fmt)
+                             else
+                               stop(gettextf("format %s specified in attribute '%s' is invalid, must be '*', 'float16', 'float32', float64', 'int8', or 'binary'. '*' indicates flex format.", vecfmt, "ora.format"))
+                           }
+                         }
                        }
                        else if (oratype == "char")
                        {
@@ -1185,7 +1422,53 @@
                          else
                            stop(gettextf("attribute '%s' must not be specified for BLOB", "ora.maxlength"))
                        }
-                       else
+                       else if (!is.null(oratype) && (oratype == "vector"))
+                       {
+                         maxlen = attr(obj, "ora.maxlength", exact=TRUE)
+                         vecfmt = attr(obj, "ora.format", exact=TRUE)
+                         if (is.null(maxlen))
+                         {
+                           if (is.null(vecfmt))
+                             if(sparse)
+                               sprintf('vector(*,*,SPARSE)')
+                             else
+                               sprintf('vector(*,*)')
+                           else
+                             if(sparse)
+                               sprintf('vector(*,%s,SPARSE)', vecfmt)
+                             else
+                               sprintf('vector(*,%s)', vecfmt)
+                         }
+                         else
+                         {
+                           if (is.null(vecfmt))
+                             if(sparse)
+                               sprintf('vector(%s,*,SPARSE)', as.character(maxlen))
+                             else
+                               sprintf('vector(%s,*)', as.character(maxlen))
+                           else
+                           {
+                             fmt <- tolower(vecfmt)
+                             if ((fmt == "*") ||
+                                 (fmt == "float16") ||
+                                 (fmt == "float32") ||
+                                 (fmt == "float64") ||
+                                 (fmt == "int8") ||
+                                 (fmt == "binary"))
+                               if(sparse)  
+                                 sprintf('vector(%s,%s,SPARSE)', as.character(maxlen), fmt)
+                               else  
+                                 sprintf('vector(%s,%s)', as.character(maxlen), fmt)
+                             else
+                               stop(gettextf("format %s specified in attribute '%s' is invalid, must be '*', 'float16', 'float32', float64', 'int8', or 'binary'. '*' indicates flex format.", fmt, "ora.format"))
+                           }
+                         }
+                       }
+                       else if (!is.null(oratype) && (oratype != "raw"))
+                       {
+                         sprintf('%s', oratype)
+                       }
+		       else
                        {
                          maxlen = attr(obj, "ora.maxlength", exact=TRUE)
                          if (is.null(maxlen))

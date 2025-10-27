@@ -57,7 +57,7 @@ Ein logischer Wert, der angibt, ob ROracle Prefetch-Puffer oder einen
 }
   \item{bulk_read}{
 Ein ganzzahliger Wert, der die Anzahl von Zeilen angibt, die jeweils abgerufen werden soll.
-    Der Standardwert beträgt 1000L. Wenn die Prefetch-Option aktiviert ist, wird Speicher für
+    Der Standardwert ist 1000L. Wenn die Prefetch-Option aktiviert ist, wird Speicher für
     Prefetch-Puffer zugewiesen, und OCI ruft jeweils die angegebene Anzahl von Zeilen ab.
     Wenn Prefetch nicht verwendet wird (Standard), wird Speicher in RODBI/ROOCI-
     Define-Puffern zugewiesen. Wenn Sie hier einen hohen Wert festlegen, wird mehr Speicher

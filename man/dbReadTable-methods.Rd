@@ -26,11 +26,14 @@
   \code{names}.
 }
 \usage{
-\S4method{dbReadTable}{OraConnection,character}(conn, name, schema = NULL, row.names = NULL, ...)
-\S4method{dbWriteTable}{OraConnection,character,data.frame}(conn, name, value, row.names = FALSE, overwrite = FALSE,
-             append = FALSE, ora.number = TRUE, schema = NULL, date = FALSE, ...)
+\S4method{dbReadTable}{OraConnection,character}(conn, name, schema = NULL,
+               row.names = NULL, sparse = FALSE, ...)
+\S4method{dbWriteTable}{OraConnection,character,data.frame}(conn, name, value,
+               row.names = FALSE, overwrite = FALSE, append = FALSE, ora.number = TRUE,
+               schema = NULL, date = FALSE, sparse = FALSE, ...)
 \S4method{dbExistsTable}{OraConnection,character}(conn, name, schema = NULL, ...)
-\S4method{dbRemoveTable}{OraConnection,character}(conn, name, purge = FALSE, schema = NULL, ...)
+\S4method{dbRemoveTable}{OraConnection,character}(conn, name, purge = FALSE,
+               schema = NULL, ...)
 \S4method{dbListTables}{OraConnection}(conn, schema = NULL, all = FALSE, full = FALSE, ...)
 \S4method{dbListFields}{OraConnection,character}(conn, name, schema = NULL, ...)
 }
@@ -98,6 +101,16 @@
     table and the columns represent the schema names and table names
     respectively.
   }
+  \item{sparse}{
+    A logical indicating whether to use sparseVector method from Matrix
+    library to construct sparse vectors returned by Oracle database. When
+    TRUE, sparse vectors are constructed using sparseVector method of Matrix
+    package. When FALSE, dense vector is returned and one can use any of the
+    R methods/packages to transform to sparse format. For \code{dbWriteTable}, 
+    specifying \code{sparse=TRUE} will create the vector column in the database 
+    as a sparse vector type, otherwise a dense vector type 
+    is created.
+  }  
   \item{\dots}{currently unused.}
 }
 \details{
@@ -106,34 +119,40 @@
   object names should not include double quotes as they are enclosed in
   double quotes when the corresponding SQL statement is generated.
 
-   The following attributes are used for mapping BLOB, CLOB, NCLOB, NCHAR, VARCHAR2,
-   NVARCHAR2, CHAR, TIMESTAMP WITH TIME ZONE and TIMESTAMP WITH LOCAL TIME ZONE
-   columns correctly in \code{dbWriteTable}:
-   1) Attribute Name: \code{ora.type}
+   The following attributes are used for correctly mapping BLOB, CLOB, NCLOB,
+   NCHAR, VARCHAR2, NVARCHAR2, CHAR, TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH 
+   LOCAL TIME ZONE and VECTOR columns in \code{dbWriteTable}:
+   \itemize{
+      \item 1) Attribute Name: \code{ora.type}
    This attribute indicates the type of the underlying column and can be
-   "CLOB", "BLOB", "CHAR", "VARCHAR2", or "RAW". The user can specify
+   "CLOB", "BLOB", "CHAR", "VARCHAR2", "RAW", or "VECTOR". The user can specify
    TIMESTAMP, DATE, TIMESTAMP WITH TIME ZONE or any other column types
-   supported by Oracle Database. ROacle does not parse the value; it is
+   supported by Oracle Database. ROracle does not parse the value; it is
    validated by the database. The user can provide one of the following
    values for \code{ora.type}: CLOB, BLOB, CHAR, TIMESTAMP WITH TIME
-   ZONE, TIMESTAMP WITH LOCAL TIME ZONE and fractional_seconds_precision.
-   2) Attribute Name: \code{ora.encoding}
+   ZONE, TIMESTAMP WITH LOCAL TIME ZONE, VECTOR and fractional_seconds_precision.
+      \item 2) Attribute Name: \code{ora.encoding}
    When UTF-8 is specified, the database uses NCLOB, NCHAR or NVARCHAR based on
    \code{ora.type}.
-   3) Attribute Name: \code{ora.maxlength}
+      \item 3) Attribute Name: \code{ora.maxlength}
    One can specify the maximum length of CHAR, VARCHAR, NCHAR, NVARCHAR2, or
    RAW columns. For other data types, \code{ora.maxlength} does not
    apply and is ignored. The following default values are used for
    certain data types when \code{ora.maxlength} is not specified.
-   CHAR                                       2000
-   NCHAR                                      1000
-   VARCHAR2                                   4000
-   NVARCHAR2                                  2000
-   RAW                                        2000
-   4) Attribute Name: \code{ora.fractional_seconds_precision}
+   CHAR                                   2000
+   NCHAR                                  1000
+   VARCHAR2                               4000
+   NVARCHAR2                              2000
+   RAW                                    2000
+      \item 4) Attribute Name: \code{ora.format}
+   For vector data type when \code{ora.maxlength} and \code{ora.format} are
+   not specified flex dimension and format are used.
+   Type VECTOR(*) column info indicates flex format and length NA denotes flex dimension.
+      \item 5) Attribute Name: \code{ora.fractional_seconds_precision}
    One can specify the fractional part of the SECOND datetime field of
    TIMESTAMP, TIMESTAMP WITH TIME ZONE and TIMESTAMP WITH LOCAL TIME ZONE
    columns. It can be a number in the range 0 to 9. The default value is 6.
+   }
 
   \pkg{ROracle} methods such as \code{dbReadTable}, \code{dbGetQuery},
   \code{fetch}, and \code{dbWriteTable} use the following mapping
@@ -165,6 +184,10 @@
     \item \code{list} of \code{raw} vectors map to Oracle \code{BLOB} if 
     attribute \code{ora.type} is \code{"BLOB"} or Oracle 
     \code{RAW(ora.maxlength)}
+    \item \code{list} of \code{raw}, \code{numeric}, \code{character},
+    \code{integer} vectors map to Oracle \code{VECTOR} if 
+    attribute \code{ora.type} is \code{"VECTOR"} or Oracle 
+    \code{RAW(ora.maxlength)} \code{CHAR(ora.maxlength)}, \code{NUMBER(ora.maxlength)}
     \item other \R types such as \code{factor} are converted to
     \code{character}
   }
@@ -369,9 +392,9 @@ and Oracle session time zone" for details on valid time zones.
 }
 \section{References}{
   For the Oracle Database documentation see 
-  \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
+  \url{https://docs.oracle.com/en/}.
   For Datetime Data Types and Time Zone Support in Oracle see
-  \url{http://docs.oracle.com/cd/E11882_01/server.112/e10729/ch4datetime.htm}.
+  \url{https://docs.oracle.com/cd/E11882_01/server.112/e10729/ch4datetime.htm}.
 }
 \seealso{
   \code{\link{Oracle}},

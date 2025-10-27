@@ -33,8 +33,8 @@
 \details{
   \describe{
     \item{dbListConnections}{
-      implementation return a list of all associated connections.
-      It shows information about all associated connections.
+      implementation return a list of all the associated connections.
+      It shows information about all the associated connections.
     }
     \item{dbListResults}{
       implementation return a list of all associated result sets.
@@ -43,8 +43,8 @@
   }
 }
 \section{References}{
-  For the Oracle Database documentaion see
-  \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
+  For the Oracle Database documentation see
+  \url{https://docs.oracle.com/en/}.
 }
 \seealso{
   \code{\link{Oracle}},

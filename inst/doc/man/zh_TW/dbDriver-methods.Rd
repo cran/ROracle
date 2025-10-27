@@ -27,7 +27,7 @@ Oracle 驅動程式初始化與關閉.
 \item{dbDriver}{
     一個其類別擴充 \code{OraDriver} 的物件 \code{ExtDriver} 或 
     \code{DBIDriver}. 可利用 \code{dbConnect} 函數, 使用此物件來建立
-    與一或多個 Oracle 資料庫引擎的連線.
+    與一或多個 Oracle Database 引擎的連線.
   }
   \item{dbUnloadDriver}{
     釋出驅動程式物件佔用的所有資源.
@@ -53,7 +53,7 @@ Oracle 驅動程式初始化與關閉.
 \details{
 \\describe{
     \item{dbDriver}{
-       此物件為單一個體, 亦即後續呼叫 \code{dbDriver} 時,
+       此物件為單一實體, 亦即後續呼叫 \code{dbDriver} 時,
        會傳回相同的已初始化物件.
       此實行可讓您連線至多部主機伺服器,
       並在每部伺服器上同時執行多個連線.

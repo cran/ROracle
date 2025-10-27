@@ -8,7 +8,7 @@
 Gestion des transactions SGBD
 }
 \description{
-Valide (commit) ou annule la transaction en cours 
+Valide ou annule la transaction en cours 
   dans une connexion Oracle
 }
 \usage{

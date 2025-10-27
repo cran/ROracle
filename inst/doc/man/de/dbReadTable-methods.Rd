@@ -218,7 +218,7 @@ Bei Tabellen-, Schema- und Spaltennamen ist die Groß-/Kleinschreibung zu beacht
    Um Daten aus Spalten mit Zeitstempel mit Zeitzone oder Zeitstempel
    mit lokaler Zeitzone abzurufen, müssen Client und Server dieselbe Zeitzonendatendatei haben,
    andernfalls wird ein Fehler gemeldet.
-   Werden diese Datentypen aus der Datenbank gewählt, werden sie
+   Werden diese Datentypen aus der Datenbank ausgewählt, werden sie
    in R in eine Zeichenfolgedarstellung des Formats NLS_TIMESTAMP_TZ_FORMAT
    "YYYY-MM-DD HH24:MI:SSXFF" konvertiert, das "\%Y-\%m-\%d \%H:\%M:\%OS6" entspricht.
    Eine Zwischenklasse "datetime" wird erstellt,
@@ -367,7 +367,7 @@ Ein \code{data.frame} im Fall von \code{dbReadTable};
   ein \code{logical} im Fall von \code{dbExistsTable}, was angibt, 
   ob die Tabelle vorhanden ist;
   anderenfalls \code{TRUE}, wenn der Vorgang erfolgreich war, 
-  bzw. eine Exception.
+  bzw. eine Ausnahme.
 }
 \section{References}{
   For the Oracle Database documentation see 

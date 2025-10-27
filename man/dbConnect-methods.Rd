@@ -13,7 +13,8 @@
    generic functions.
 }
 \usage{
-\S4method{dbConnect}{OraDriver}(drv, username = "", password = "", dbname = "", prefetch = FALSE,
+\S4method{dbConnect}{OraDriver}(drv, username = "", password = "",
+          dbname = "", prefetch = FALSE,
           bulk_read = 1000L, bulk_write = 1000L, stmt_cache = 0L,
           external_credentials = FALSE, sysdba = FALSE, ...)
 \S4method{dbConnect}{ExtDriver}(drv, prefetch = FALSE, bulk_read = 1000L,
@@ -155,7 +156,7 @@
 }
 \section{References}{
   For the Oracle Database documentation see
-  \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
+  \url{https://docs.oracle.com/en/}.
 }
 \seealso{
   \code{\link{Oracle}},
@@ -169,8 +170,8 @@
 }
 \examples{
   \dontrun{
-    ## Create an Oracle Database instance and create one connection on the
-    ## same machine.
+    ## Create an Oracle Database instance and create one connection
+    ## on the same machine.
     drv <- dbDriver("Oracle")
 
     ## Use username/password authentication.
@@ -184,11 +185,11 @@
     dim(data)
   }
   \dontrun{
-    ## Create an Oracle Database instance and create one connection to a
-    ## remote database using the SID in the connect string. 
+    ## Create an Oracle Database instance and create one connection
+    ## to a remote database using the SID in the connect string. 
     drv <- dbDriver("Oracle")
 
-    ## Refer to Oracle Database Net Services Administator's Guide for
+    ## Refer to Oracle Database Net Services Administrator's Guide for
     ## details on connect string specification.
     host <- "myhost"
     port <- 1521
@@ -210,11 +211,11 @@
     dim(data)
   }
   \dontrun{
-    ## Create an Oracle Database instance and create one connection to a
-    ## remote database using the service name.
+    ## Create an Oracle Database instance and create one connection
+    ## to a remote database using the service name.
     drv <- dbDriver("Oracle")
 
-    ## Refer to Oracle Database Net Services Administator's Guide for
+    ## Refer to Oracle Database Net Services Administrator's Guide for
     ## details on connect string specification.
 
     host <- "myhost"
@@ -299,7 +300,7 @@
     drv <- dbDriver("Oracle")
     
     ## Use OS authentication as an example of external authentication
-    ## Make sure that databse user exist to allow an OS authentication
+    ## Make sure that database user exist to allow an OS authentication
 
     ## Create connection authenticated with external credentials.
     con <- dbConnect(drv, username ="", password="",

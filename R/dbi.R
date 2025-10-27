@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2025, Oracle and/or its affiliates.
 #
 #    NAME
 #      dbi.R - DBI implementation for Oracle RDBMS based on OCI
@@ -10,6 +10,8 @@
 #    NOTES
 #
 #    MODIFIED   (MM/DD/YY)
+#    rpingte     05/06/25 - add support for sparse vector when Matrix is loaded
+#    rpingte     11/22/19 - add ora.objects
 #    ssjaiswa    03/10/16 - add oracleProc() to invoke PLSQL stored procedures/
 #                           functions
 #    ssjaiswa    02/18/16 - remove deprecated fun dbCallProc & dbSetDataMappings
@@ -44,11 +46,14 @@ setClass("OraDriver",
 )
 
 Oracle <- function(interruptible = FALSE, unicode_as_utf8 = TRUE,
-                   ora.attributes = FALSE)
+                   ora.attributes = FALSE, ora.objects = FALSE,
+                   sparse = FALSE)
 {
   .oci.Driver(.oci.drv(), interruptible = interruptible,
               unicode_as_utf8 = unicode_as_utf8,
-              ora.attributes = ora.attributes)
+              ora.attributes = ora.attributes,
+              ora.objects = ora.objects,
+              sparse = sparse)
 }
 
 setMethod("dbUnloadDriver",
@@ -161,17 +166,19 @@ function(conn, ...) .oci.Disconnect(conn)
 setMethod("dbSendQuery",
 signature(conn = "OraConnection", statement = "character"),
 function(conn, statement, data = NULL, prefetch = FALSE, 
-         bulk_read = 1000L, bulk_write = 1000L, ...)
+         bulk_read = 1000L, bulk_write = 1000L, sparse = FALSE, ...)
 .oci.SendQuery(conn, statement, data = data, prefetch = prefetch,
-               bulk_read = bulk_read , bulk_write = bulk_write)
+               bulk_read = bulk_read , bulk_write = bulk_write,
+               sparse = sparse)
 )
 
 setMethod("dbGetQuery",
 signature(conn = "OraConnection", statement = "character"),
 function(conn, statement, data = NULL, prefetch = FALSE, 
-         bulk_read = 1000L, bulk_write = 1000L, ...)
+         bulk_read = 1000L, bulk_write = 1000L, sparse = FALSE, ...)
 .oci.GetQuery(conn, statement, data = data, prefetch = prefetch,
-              bulk_read = bulk_read, bulk_write = bulk_write)
+              bulk_read = bulk_read, bulk_write = bulk_write,
+              sparse = sparse)
 )
 
 setGeneric("oracleProc",
@@ -181,9 +188,10 @@ function(conn, statement, ...) standardGeneric("oracleProc"),
 setMethod("oracleProc",
 signature(conn = "OraConnection", statement = "character"),
 function(conn, statement, data = NULL, prefetch = FALSE,
-         bulk_read = 1000L, bulk_write = 1000L, ...)
+         bulk_read = 1000L, bulk_write = 1000L, sparse = FALSE, ...)
 .oci.oracleProc(conn, statement, data = data, prefetch = prefetch,
-                bulk_read = bulk_read , bulk_write = bulk_write)
+                bulk_read = bulk_read , bulk_write = bulk_write,
+                sparse = sparse)
 )
 
 setMethod("dbGetException",
@@ -232,17 +240,20 @@ function(conn, schema = NULL, all = FALSE, full = FALSE, ...)
 
 setMethod("dbReadTable",
 signature(conn = "OraConnection", name = "character"),
-function(conn, name, schema = NULL, row.names = NULL, ...)
-.oci.ReadTable(conn, name, schema = schema, row.names = row.names)
+function(conn, name, schema = NULL, row.names = NULL, sparse = FALSE, ...)
+.oci.ReadTable(conn, name, schema = schema, row.names = row.names,
+               sparse = sparse)
 )
 
 setMethod("dbWriteTable",
 signature(conn = "OraConnection", name = "character", value = "data.frame"),
 function(conn, name, value, row.names = FALSE, overwrite = FALSE,
-         append = FALSE, ora.number = TRUE, schema = NULL, date = FALSE, ...)
+         append = FALSE, ora.number = TRUE, schema = NULL, date = FALSE,
+         sparse = FALSE, ...)
 .oci.WriteTable(conn, name, value, row.names = row.names,
                 overwrite = overwrite, append = append,
-                ora.number = ora.number, schema = schema, date = date)
+                ora.number = ora.number, schema = schema, date = date, 
+                sparse = sparse)
 )
 
 setMethod("dbExistsTable",

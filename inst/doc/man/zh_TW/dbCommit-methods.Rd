@@ -5,11 +5,11 @@
 \alias{dbCommit,OraConnection-method}
 \alias{dbRollback,OraConnection-method}
 \title{
-DBMS 交易管理
+DBMS 異動管理
 }
 \description{
 確認或倒回 Oracle 連線中的 
-  目前交易
+  目前異動
 }
 \usage{
 \S4method{dbCommit}{OraConnection}(conn, ...)

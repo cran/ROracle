@@ -38,13 +38,13 @@
       Changes can not be undone once saved permanently.
     }
     \item{dbRollback}{
-      implementation undo all chnages done after last savepoint.
+      implementation undo all changes done after last savepoint.
     }
   }
 }
 \section{References}{
-  For the Oracle Database documentaion see 
-  \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
+  For the Oracle Database documentation see 
+  \url{https://docs.oracle.com/en/}.
 }
 \seealso{
    \code{\link{Oracle}},

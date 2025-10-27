@@ -51,34 +51,35 @@
        This object is a singleton, that is, subsequent invocations of
        \code{dbDriver} return the same initialized object.
 
-      This implementation allows you to connect to multiple host servers and
-      run multiple connections on each server simultaneously.
+      This implementation allows you to connect to multiple host servers
+      and run multiple connections on each server simultaneously.
 
-      When \code{interruptible} is set to TRUE, it allows for interrupting
-      long-running queries on the server by executing the query in a thread.
-      Main thread checks for Ctrl-C and issues OCIBreak/OCIReset to cancel the
-      operation on the server. By default, \code{interruptible} is FALSE.
+      When \code{interruptible} is set to TRUE, it allows for
+      interrupting long-running queries on the server by executing the
+      query in a thread.  Main thread checks for Ctrl-C and issues 
+      OCIBreak/OCIReset to cancel the operation on the server. By
+      default, \code{interruptible} is FALSE.
 
-      When \code{unicode_as_utf8} is set to FALSE, NCHAR, NVARCHAR and NCLOB
-      data is fetched using the character set specified by the NLS_LANG
-      setting. By default, \code{unicode_as_utf8} is set to TRUE.
+      When \code{unicode_as_utf8} is set to FALSE, NCHAR, NVARCHAR and
+      NCLOB data is fetched using the character set specified by the
+      NLS_LANG setting. By default, \code{unicode_as_utf8} is set to TRUE.
 
       When \code{ora.attributes} is set to TRUE, the result set from
-      \code{dbGetQuery} and \code{fetch} contains DBMS-specific attributes like
-      \code{ora.encoding}, \code{ora.type}, and \code{ora.maxlength} for the
-      corresponding column.
+      \code{dbGetQuery} and \code{fetch} contains DBMS-specific
+      attributes like \code{ora.encoding}, \code{ora.type}, and
+      \code{ora.maxlength} for the corresponding column.
 
     }
     \item{dbUnloadDriver}{
-      This implementation removes communication links between the \R client and
-      the database. It frees all connections and all result sets associated
-      with those connection objects.
+      This implementation removes communication links between the \R client
+      and the database. It frees all connections and all result sets
+      associated with those connection objects.
     }
   }
 }
 \section{References}{
   For Oracle Database documentation, see
-  \url{http://www.oracle.com/technetwork/indexes/documentation/index.html}.
+  \url{https://docs.oracle.com/en/}.
 }
 \seealso{
   \code{\link{Oracle}},

@@ -1,4 +1,4 @@
-AC_INIT([ROracle],[1.3-1])
+AC_INIT([ROracle], 1.5-0)
 
 dnl find standard Instant Client installation
 : ${R_HOME=`R RHOME`}
@@ -31,14 +31,136 @@ else
     else
       if test [ -d "$oci_client_lib" ] ; then
         ROCI_LIBS=${oci_client_lib}
-      else
-        AC_MSG_ERROR([OCI libraries not found])
       fi
     fi
   fi
 fi
+
+dnl If no libraries found locally, attempt download
+AC_PATH_PROG([CURL], [curl])
+
 if test [ ! -d "${ROCI_LIBS}" ] ; then
-  AC_MSG_ERROR(["${ROCI_LIBS}" directory does not exist])
+  if test -n "$CURL"; then
+    AC_DEFINE(HAVE_CURL, 1, [Define if curl is present])
+  else
+    AC_DEFINE(HAVE_CURL, 0, [Define if curl is NOT present])
+  fi
+
+  AC_SUBST(CURL)
+
+  AC_DEFINE(CURL_LOCATION, "$CURL", [Path to wget if available])
+
+  if test "$CURL" != ""; then
+    dnl Normalize OS type
+    os=$(uname)
+
+    case "$os" in
+      aix*|AIX*)           os="aix" ;;
+      Darwin*|darwin*|*BSD*|*bsd*) os="darwin" ;;
+      hpux*|HP-UX*)        os="hpux" ;;
+      linux*|Linux*|mklinux*) os="linux" ;;
+      solaris*|SunOS*)     os="solaris" ;;
+    esac
+
+    arch=`uname -m`
+    case "$os" in
+      aix)
+        bit_arch=$(getconf KERNEL_BITMODE)
+        case "$bit_arch" in
+          32)
+            downloaded_file_url="https://download.oracle.com/otn_software/aix/instantclient/instantclient-sdk-aix-ppc32.zip";
+            downloaded_file_name="instantclient-sdk-aix-ppc32.zip";;
+          *)
+            downloaded_file_url="https://download.oracle.com/otn_software/aix/instantclient/instantclient-sdk-aix.zip";
+            downloaded_file_name="instantclient-sdk-aix.zip";;
+        esac
+        ;;
+      darwin)
+        case "$arch" in
+            arm64*) 
+              downloaded_file_url="https://download.oracle.com/otn_software/mac/instantclient/instantclient-sdk-macos-arm64.dmg"; 
+              downloaded_file_name="instantclient-sdk-macos-arm64.dmg";;
+            *) 
+            downloaded_file_url="https://download.oracle.com/otn_software/mac/instantclient/instantclient-sdk-macos.zip"; 
+            downloaded_file_name="instantclient-sdk-macos.zip";;
+        esac;;
+      hpux)
+        downloaded_file_url="https://download.oracle.com/otn_software/hp/instantclient/instantclient-sdk-hpia64.zip"; 
+        downloaded_file_name="instantclient-sdk-hpia64.zip";;
+      linux)
+        case "$arch" in
+          x86_64) 
+            downloaded_file_url="https://download.oracle.com/otn_software/linux/instantclient/instantclient-sdk-linuxx64.zip"; 
+            downloaded_file_name="instantclient-sdk-linuxx64.zip";;
+          *86*) 
+              downloaded_file_url="https://download.oracle.com/otn_software/linux/instantclient/instantclient-sdk-linux.zip"; 
+              downloaded_file_name="instantclient-sdk-linux.zip";;
+          aarch64*) 
+            downloaded_file_url="https://download.oracle.com/otn_software/linux/instantclient/instantclient-sdk-linux-arm64.zip"; 
+            downloaded_file_name="instantclient-sdk-linux-arm64.zip";;
+          ppc64le*) 
+            downloaded_file_url="https://download.oracle.com/otn_software/linux/instantclient/instantclient-sdk-linuxleppc.zip"; 
+            downloaded_file_name="instantclient-sdk-linuxleppc.zip";;
+          s390*) 
+            downloaded_file_url="https://download.oracle.com/otn_software/linux/instantclient/instantclient-sdk-linuxz64.zip"; 
+            downloaded_file_name="instantclient-sdk-linuxz64.zip";;
+        esac;;
+      solaris)
+        case "$arch" in
+          sun*) 
+            downloaded_file_url="https://download.oracle.com/otn_software/solaris/instantclient/instantclient-sdk-solaris64.zip"; 
+            downloaded_file_name="instantclient-sdk-solaris64.zip";;
+          *86*) 
+            downloaded_file_url="https://download.oracle.com/otn_software/solaris/instantclient/instantclient-sdk-solarisx64.zip"; 
+            downloaded_file_name="instantclient-sdk-solarisx64.zip";;
+        esac;;
+      *) 
+        downloaded_file_url="https://download.oracle.com/otn_software/$(uname)/instantclient/instantclient-sdk-$(uname).zip"; 
+        downloaded_file_name="instantclient-sdk-$(uname).zip";;
+    esac
+
+    AC_MSG_CHECKING([downloading $downloaded_file_name])
+    if $CURL -O $downloaded_file_url; then
+      AC_MSG_RESULT([downloaded $downloaded_file_name])
+    else
+      AC_MSG_ERROR([Failed to download $downloaded_file_name])
+    fi
+
+    AC_MSG_CHECKING([extracting $downloaded_file_name])
+
+    case "$downloaded_file_name" in
+      *.zip)
+        AC_PATH_PROG([UNZIP], [unzip])
+        if $UNZIP -u "$downloaded_file_name"; then
+          AC_MSG_RESULT([unzipped $downloaded_file_name])
+        else
+          AC_MSG_ERROR([Failed to extract $downloaded_file_name. OCI headers required for compilation are missing.])
+        fi
+
+        directory=`$UNZIP -l "$downloaded_file_name" | grep -m1 'instantclient_' | awk '{print $4}' | awk -F/ '{print $1}'`
+        ROCI_LIBS="./$directory"
+        ROCI_LIBS=$(cd "$ROCI_LIBS"; pwd)
+        ;;
+
+      *.dmg)
+        AC_PATH_PROG([HDIUTIL], [hdiutil])
+        RAND_ID=$RANDOM$$
+        MOUNT_POINT="/Volumes/InstantClientMount_$RAND_ID"
+        if $HDIUTIL attach "$downloaded_file_name" -mountpoint "$MOUNT_POINT" -nobrowse -quiet; then
+          AC_MSG_RESULT([mounted $downloaded_file_name at $MOUNT_POINT])
+        else
+          AC_MSG_ERROR([Failed to mount $downloaded_file_name. OCI headers required for compilation are missing.])
+        fi
+        directory=`ls "$MOUNT_POINT" | grep -m1 'instantclient_'`
+        ROCI_LIBS="$MOUNT_POINT/$directory"
+
+        cp -R "$ROCI_LIBS" ./ && $HDIUTIL detach "$MOUNT_POINT" -quiet
+        ROCI_LIBS="./$directory"
+        ROCI_LIBS=$(cd "$ROCI_LIBS"; pwd)
+
+        AC_MSG_RESULT([mounted and found $ROCI_LIBS]);;
+    esac
+  fi
 fi
 
 dnl select include path from a configure option or from an environment
@@ -71,15 +193,15 @@ if test [ ! -d "${ROCI_CPPFLAGS}" ] ; then
   AC_MSG_ERROR(["${ROCI_CPPFLAGS}" directory does not exist])
 fi
 
+os=$(uname)
 dnl set complier flags
-ROCI_LIBS="-L${ROCI_LIBS} -lclntsh -Wl,-rpath,${ROCI_LIBS}"
-ROCI_CPPFLAGS="-I${ROCI_CPPFLAGS}"
-## For Mac use rpath to link
-case "${host_os}" in
-  darwin*)
-    ROCI_LIBS="-L${ROCI_LIBS} -lclntsh -Wl,-rpath,${ROCI_LIBS}"
-  ;;
+case "$os" in
+  AIX)
+    ROCI_LIBS="-L${ROCI_LIBS} -Wl,-blibpath:${ROCI_LIBS}";;
+  *)
+    ROCI_LIBS="-L${ROCI_LIBS} -Wl,-rpath,${ROCI_LIBS}";;
 esac
+ROCI_CPPFLAGS="-I${ROCI_CPPFLAGS}"
 
 dnl substitute complier flags
 AC_SUBST(ROCI_CPPFLAGS)

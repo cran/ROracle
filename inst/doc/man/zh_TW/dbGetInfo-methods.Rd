@@ -108,7 +108,7 @@
   \itemize{
     \item {\\$username} 此連線上使用者的名稱
     \item {\\$dbname} 所使用的連線別名或連線字串
-    \item {\\$serverVersion} Oracle 資料庫伺服器的版本
+    \item {\\$serverVersion} Oracle Database 伺服器的版本
     \item {\\$serverType} 值 "Oracle RDBMS"
     \item {\\$resTotal} 此連線上的結果集數
     \item {\\$resOpen} 此連線上已開啟的結果集數
